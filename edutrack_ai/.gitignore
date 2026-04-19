@@ -1,0 +1,46 @@
+# EduTrack AI - .gitignore
+
+# Firebase credentials (NEVER commit these)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+python/service_account.json
+python/.env
+python/models/
+
+# Build outputs
+build/
+*.aab
+*.apk
+
+# Android keystore
+*.jks
+*.keystore
+android/key.properties
+
+# iOS
+ios/Pods/
+*.xcworkspace
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env

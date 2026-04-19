@@ -1,0 +1,171 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper Functions ────────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    function isAdmin() { return hasRole('admin'); }
+    function isTeacher() { return hasRole('teacher'); }
+    function isStudent() { return hasRole('student'); }
+    function isParent() { return hasRole('parent'); }
+
+    function isAdminOrTeacher() {
+      return isAdmin() || isTeacher();
+    }
+
+    function isOwnUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isParentOfStudent(studentId) {
+      return isParent() && getUserData().parent_of == studentId;
+    }
+
+    function isTeacherOfClass(classId) {
+      return isTeacher() && getUserData().class_id == classId;
+    }
+
+    // ── users ──────────────────────────────────────────────────────────────────
+    // Read: only own document
+    // Write: only admin
+    match /users/{userId} {
+      allow read: if isOwnUser(userId) || isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isOwnUser(userId);
+      allow delete: if isAdmin();
+    }
+
+    // ── students ───────────────────────────────────────────────────────────────
+    // Read: teacher of that class, parent of that student, admin
+    // Write: admin only
+    match /students/{studentId} {
+      allow read: if isAdmin()
+        || (isTeacher() && resource.data.class_id == getUserData().class_id)
+        || isParentOfStudent(studentId);
+      allow write: if isAdmin();
+    }
+
+    // ── classes ────────────────────────────────────────────────────────────────
+    // Read: all authenticated users
+    // Write: admin, teacher of that class
+    match /classes/{classId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isTeacherOfClass(classId);
+      allow delete: if isAdmin();
+    }
+
+    // ── attendance ─────────────────────────────────────────────────────────────
+    // Read: teacher of that class, parent of student, admin, own student
+    // Write: teacher, admin
+    match /attendance/{docId} {
+      allow read: if isAdmin()
+        || isTeacher()
+        || (isStudent() && resource.data.student_id == request.auth.uid)
+        || (isParent() && isParentOfStudent(resource.data.student_id));
+      allow create: if isAdminOrTeacher();
+      allow update: if isAdminOrTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // ── assignments ────────────────────────────────────────────────────────────
+    // Read: all authenticated users
+    // Write: teacher, admin
+    match /assignments/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdminOrTeacher();
+      allow update: if isAdminOrTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // ── submissions ────────────────────────────────────────────────────────────
+    // Read: own student, teacher, admin
+    // Write: student (own), teacher (for grading), admin
+    match /submissions/{docId} {
+      allow read: if isAdmin()
+        || isTeacher()
+        || (isStudent() && resource.data.student_id == request.auth.uid);
+      allow create: if isStudent()
+        && request.resource.data.student_id == request.auth.uid;
+      allow update: if isAdmin()
+        || isTeacher()
+        || (isStudent() && resource.data.student_id == request.auth.uid
+            && resource.data.status == 'pending');
+      allow delete: if isAdmin();
+    }
+
+    // ── quizzes ────────────────────────────────────────────────────────────────
+    // Read: all authenticated
+    // Write: teacher, admin
+    match /quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdminOrTeacher();
+      allow update: if isAdminOrTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // ── quiz_results ───────────────────────────────────────────────────────────
+    // Read: own student, teacher, admin
+    // Write: student (own), Cloud Functions (via admin SDK bypasses rules)
+    match /quiz_results/{resultId} {
+      allow read: if isAdmin()
+        || isTeacher()
+        || (isStudent() && resource.data.student_id == request.auth.uid);
+      allow create: if isStudent()
+        && request.resource.data.student_id == request.auth.uid;
+      allow update: if isAdmin() || isTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // ── ai_predictions ─────────────────────────────────────────────────────────
+    // Read: teacher, parent of student, admin, own student
+    // Write: Cloud Functions only (admin SDK bypasses rules) — deny all client writes
+    match /ai_predictions/{studentId} {
+      allow read: if isAdmin()
+        || isTeacher()
+        || (isStudent() && request.auth.uid == studentId)
+        || isParentOfStudent(studentId);
+      allow write: if false; // Cloud Functions only
+    }
+
+    // ── notifications ──────────────────────────────────────────────────────────
+    // Read: own user only
+    // Write: Cloud Functions only — deny all client writes
+    match /notifications/{docId} {
+      allow read: if isAuthenticated()
+        && resource.data.user_id == request.auth.uid;
+      allow update: if isAuthenticated()
+        && resource.data.user_id == request.auth.uid
+        && request.resource.data.keys().hasOnly(['is_read'])
+        && request.resource.data.is_read == true;
+      allow create, delete: if false; // Cloud Functions only
+    }
+
+    // ── homework_chats ─────────────────────────────────────────────────────────
+    match /homework_chats/{docId} {
+      allow read, write: if isAuthenticated()
+        && docId.matches(request.auth.uid + '_.*');
+
+      match /messages/{msgId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // ── homework_usage ─────────────────────────────────────────────────────────
+    match /homework_usage/{docId} {
+      allow read, write: if isAuthenticated()
+        && docId.matches(request.auth.uid + '_.*');
+    }
+  }
+}
