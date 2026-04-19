@@ -7,6 +7,7 @@ import '../../widgets/premium_card.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../utils/config.dart';
 
 class SubmissionListScreen extends StatefulWidget {
   final AssignmentModel assignment;
@@ -93,7 +94,7 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
     setState(() => _isChecking = true);
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8080/check-originality'),
+        Uri.parse(Config.endpoint('/check-originality')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'content': widget.submission.content}),
       );

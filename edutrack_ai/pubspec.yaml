@@ -11,10 +11,10 @@ dependencies:
     sdk: flutter
 
   # Firebase (NO firebase_storage — using Cloudinary instead)
-  firebase_core: ^3.0.0
-  firebase_auth: ^5.0.0
-  cloud_firestore: ^5.0.0
-  firebase_messaging: ^15.0.0
+  firebase_core: ^3.10.0
+  firebase_auth: ^5.4.0
+  cloud_firestore: ^5.6.0
+  firebase_messaging: ^15.2.0
 
   # State Management
   provider: ^6.1.2
@@ -46,11 +46,10 @@ dependencies:
   # File Handling
   file_picker: ^8.1.4
   image_picker: ^1.1.2
-  path_provider: ^2.1.4
   open_file: ^3.3.2
   url_launcher: ^6.3.1
-  speech_to_text: ^6.6.2
-  flutter_tts: ^4.2.0
+  # speech_to_text removed — causes jni/NDK 28 linker error (0xC1) on Windows
+  # flutter_tts removed — causes NDK 28 dependency via jni transitive chain
 
   # Local Storage
   shared_preferences: ^2.3.2
@@ -73,11 +72,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
-# Prevent jni native C++ on Windows (ld.lld.exe error 0xC1)
 dependency_overrides:
   sqflite: 2.3.3+1
   sqflite_common: 2.5.4
   js: ^0.7.1
+  # Pin path_provider_android to pre-jni version (2.3.x uses jni which requires broken NDK 28)
+  path_provider_android: 2.2.12
 
 flutter:
   uses-material-design: true

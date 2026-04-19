@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../utils/config.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/analytics_provider.dart';
 import '../../utils/app_theme.dart';
@@ -33,7 +34,7 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8080/generate-smart-schedule'),
+        Uri.parse(Config.endpoint('/generate-smart-schedule')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'subject_avg': data?['subject_avg'] ?? {},

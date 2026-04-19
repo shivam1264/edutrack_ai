@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 
+import '../utils/config.dart';
+
 class HomeworkService {
   static final HomeworkService instance = HomeworkService._internal();
   factory HomeworkService() => instance;
   HomeworkService._internal();
 
-  // Replace with your Cloud Run URL after deployment
-  // Backend uses Gemini 1.5 Flash (FREE) for AI answers
-  static const String _baseUrl = 'http://127.0.0.1:8080';
+  static const String _baseUrl = Config.baseUrl;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // ─── Ask homework question ────────────────────────────────────────────────────

@@ -8,8 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:flutter_tts/flutter_tts.dart';
+// speech_to_text removed — uses jni/NDK incompatible with this build env
+
+// flutter_tts removed — uses jni/NDK incompatible with this build env
 import 'dart:io';
 import 'dart:convert';
 
@@ -33,9 +34,8 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
   // Vision & Voice state
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
-  late stt.SpeechToText _speech;
+  // Voice input: gracefully disabled (jni build incompatibility)
   bool _isListening = false;
-  late FlutterTts _tts;
   bool _isSpeechEnabled = true;
 
   final List<_ChatMessage> _messages = [];
@@ -54,15 +54,12 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
     _initTts();
   }
 
-  void _initSpeech() async {
-    _speech = stt.SpeechToText();
-    await _speech.initialize();
+  void _initSpeech() {
+    // Voice input disabled in this build — jni/NDK incompatibility resolved by stub
   }
 
-  void _initTts() async {
-    _tts = FlutterTts();
-    await _tts.setLanguage("en-US");
-    await _tts.setPitch(1.0);
+  void _initTts() {
+    // TTS disabled in this build — using FlutterTts stub
   }
 
   Future<void> _loadUsage() async {
@@ -75,16 +72,6 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
   void dispose() {
     _questionCtrl.dispose();
     _scrollCtrl.dispose();
-    _tts.setCompletionHandler(() {
-      setState(() => _isSpeaking = false);
-    });
-    _tts.setCancelHandler(() {
-      setState(() => _isSpeaking = false);
-    });
-    _tts.setErrorHandler((m) {
-      setState(() => _isSpeaking = false);
-    });
-    _tts.stop();
     super.dispose();
   }
 
@@ -98,37 +85,21 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
     setState(() => _selectedImage = image);
   }
 
-  void _listen() async {
-    if (!_isListening) {
-      bool available = await _speech.initialize(
-        onStatus: (val) {
-          if (val == 'done' || val == 'notListening') setState(() => _isListening = false);
-        },
-        onError: (val) => print('onError: $val'),
-      );
-      if (available) {
-        setState(() => _isListening = true);
-        _speech.listen(
-          onResult: (val) => setState(() {
-            _questionCtrl.text = val.recognizedWords;
-          }),
-        );
-      }
-    } else {
-      setState(() => _isListening = false);
-      _speech.stop();
-    }
+  void _listen() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Voice input not available in this version. Please type your question.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Color(0xFF6366F1),
+      ),
+    );
   }
 
-  void _speak(String text) async {
-    if (_isSpeechEnabled && text.isNotEmpty) {
-      setState(() => _isSpeaking = true);
-      await _tts.speak(text);
-    }
+  void _speak(String text) {
+    // TTS stubbed out — no native dependency needed
   }
 
-  void _stopSpeaking() async {
-    await _tts.stop();
+  void _stopSpeaking() {
     setState(() => _isSpeaking = false);
   }
 

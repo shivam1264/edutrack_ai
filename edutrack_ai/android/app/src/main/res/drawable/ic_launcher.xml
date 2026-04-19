@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EduTrack AI App Icon - Graduation cap with neural network nodes -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <!-- Navy blue background circle -->
+  <path
+      android:fillColor="#1A237E"
+      android:pathData="M54,2 a52,52 0 1,0 0.001,0 Z"/>
+  <!-- White graduation cap body -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M54,26 L18,44 L54,62 L90,44 Z"/>
+  <!-- Cap brim -->
+  <path
+      android:fillColor="#E3F2FD"
+      android:pathData="M36,51 L36,68 Q54,78 72,68 L72,51 L54,62 Z"/>
+  <!-- Tassel string -->
+  <path
+      android:strokeWidth="3"
+      android:strokeColor="#90CAF9"
+      android:strokeLineCap="round"
+      android:pathData="M90,44 L90,62 Q90,70 82,70"/>
+  <!-- Tassel end -->
+  <path
+      android:fillColor="#90CAF9"
+      android:pathData="M78,68 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"/>
+  <!-- AI neural dots -->
+  <path
+      android:fillColor="#64B5F6"
+      android:pathData="M26,82 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0"/>
+  <path
+      android:fillColor="#64B5F6"
+      android:pathData="M50.5,86 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0"/>
+  <path
+      android:fillColor="#64B5F6"
+      android:pathData="M75,82 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0"/>
+  <!-- Neural connections -->
+  <path
+      android:strokeWidth="1.5"
+      android:strokeColor="#42A5F5"
+      android:pathData="M29.5,82 L54,86 L78.5,82"/>
+</vector>

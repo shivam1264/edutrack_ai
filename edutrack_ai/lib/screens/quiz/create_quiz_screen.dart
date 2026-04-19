@@ -7,6 +7,7 @@ import '../../utils/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../utils/config.dart';
 
 class CreateQuizScreen extends StatefulWidget {
   final String classId;
@@ -86,7 +87,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     setState(() => _isSaving = true);
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8080/generate-quiz'),
+        Uri.parse(Config.endpoint('/generate-quiz')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'topic': topicCtrl.text.trim(),

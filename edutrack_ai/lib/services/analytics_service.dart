@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../utils/config.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../utils/config.dart';
 
 class AnalyticsService {
   static final AnalyticsService instance = AnalyticsService._internal();
@@ -9,9 +12,7 @@ class AnalyticsService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Replace with your Cloud Run URL after deploying predict_api.py
-  // API uses Gemini 1.5 Flash (FREE) instead of OpenAI
-  static const String _baseUrl = 'http://127.0.0.1:8080';
+  static const String _baseUrl = Config.baseUrl;
 
   // ─── Get student overall average ─────────────────────────────────────────────
   Future<Map<String, dynamic>> getStudentAnalytics(String studentId) async {

@@ -12,6 +12,7 @@ import '../parent/parent_chat_screen.dart';
 import '../parent/request_leave_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../utils/config.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -552,7 +553,7 @@ class _AIProgressReportCardState extends State<_AIProgressReportCard> {
   Future<void> _fetchReport() async {
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8080/parent-report'),
+        Uri.parse(Config.endpoint('/parent-report')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': widget.studentName,
