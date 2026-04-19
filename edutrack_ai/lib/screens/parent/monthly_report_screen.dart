@@ -30,7 +30,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
 
   Future<void> _fetchStudentData() async {
     final user = context.read<AuthProvider>().user;
-    final studentId = user?.parentId; // In our schema parentId stores linked studentId, or children array.
+    final studentId = user?.parentOf; // In our schema parentOf stores linked studentId, or children array.
     // For simplicity, finding the first student linked to this parent.
     if (studentId == null || studentId.isEmpty) {
       final snap = await FirebaseFirestore.instance.collection('users')

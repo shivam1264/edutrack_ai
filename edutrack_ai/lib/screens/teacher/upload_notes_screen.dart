@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -59,7 +60,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
     setState(() => _isUploading = true);
     try {
       // Upload to Cloudinary
-      final result = await CloudinaryService.instance.uploadFile(_filePath!, _fileType ?? 'pdf');
+      final result = await CloudinaryService.instance.uploadFile(File(_filePath!));
       if (result == null) throw Exception('Upload failed');
       final url = result.secureUrl;
 
