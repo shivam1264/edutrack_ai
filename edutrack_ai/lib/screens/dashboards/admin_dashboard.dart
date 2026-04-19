@@ -11,6 +11,9 @@ import '../admin/announcement_screen.dart';
 import '../admin/class_management_screen.dart';
 import '../admin/reports_screen.dart';
 import '../admin/permissions_screen.dart';
+import '../admin/school_analytics_screen.dart';
+import '../admin/timetable_manager_screen.dart';
+import '../admin/teacher_performance_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -185,6 +188,13 @@ class AdminDashboard extends StatelessWidget {
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen())),
       },
       {
+        'icon': Icons.supervisor_account_rounded,
+        'label': 'Teacher Tracking',
+        'subtitle': 'Monitor staff performance metrics',
+        'color': const Color(0xFFC026D3),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherPerformanceScreen())),
+      },
+      {
         'icon': Icons.security_rounded,
         'label': 'Permissions',
         'subtitle': 'Audit and adjust access protocols',
@@ -197,6 +207,20 @@ class AdminDashboard extends StatelessWidget {
         'subtitle': 'Send global system alerts',
         'color': AppTheme.accent,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementScreen())),
+      },
+      {
+        'icon': Icons.analytics_rounded,
+        'label': 'School Analytics',
+        'subtitle': 'Institution-wide performance overview',
+        'color': const Color(0xFF0F766E),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SchoolAnalyticsScreen())),
+      },
+      {
+        'icon': Icons.calendar_today_rounded,
+        'label': 'Timetable',
+        'subtitle': 'Configure class schedules',
+        'color': const Color(0xFF0F766E),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TimetableManagerScreen())),
       },
       {
         'icon': Icons.refresh_rounded,

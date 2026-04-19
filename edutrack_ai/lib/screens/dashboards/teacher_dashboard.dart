@@ -12,6 +12,10 @@ import '../admin/reports_screen.dart';
 import '../assignments/assignment_audit_screen.dart';
 import '../teacher/leave_approval_screen.dart';
 import '../quiz/create_quiz_screen.dart';
+import '../teacher/doubt_answer_screen.dart';
+import '../teacher/upload_notes_screen.dart';
+import '../teacher/lesson_planner_screen.dart';
+import '../teacher/bulk_grade_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -266,6 +270,30 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         'label': 'Leaves',
         'color': Colors.teal,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => LeaveApprovalScreen(classId: classId))),
+      },
+      {
+        'icon': Icons.help_center_rounded,
+        'label': 'Doubts',
+        'color': const Color(0xFF7C3AED),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DoubtAnswerScreen())),
+      },
+      {
+        'icon': Icons.upload_file_rounded,
+        'label': 'Upload Notes',
+        'color': const Color(0xFF059669),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadNotesScreen())),
+      },
+      {
+        'icon': Icons.auto_awesome_rounded,
+        'label': 'AI Lesson Plan',
+        'color': const Color(0xFF1D4ED8),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LessonPlannerScreen())),
+      },
+      {
+        'icon': Icons.grading_rounded,
+        'label': 'Bulk Grading',
+        'color': const Color(0xFFD946EF),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BulkGradeScreen())),
       },
     ];
 

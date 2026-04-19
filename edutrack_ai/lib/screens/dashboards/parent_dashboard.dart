@@ -10,6 +10,7 @@ import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../parent/parent_chat_screen.dart';
 import '../parent/request_leave_screen.dart';
+import '../parent/monthly_report_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../utils/config.dart';
@@ -194,6 +195,18 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.primary,
                             side: const BorderSide(color: AppTheme.primary),
+                            minimumSize: const Size(double.infinity, 54),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
+                          icon: const Icon(Icons.assessment_rounded),
+                          label: const Text('AI Monthly Progress Report'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0EA5E9),
+                            side: const BorderSide(color: Color(0xFF0EA5E9)),
                             minimumSize: const Size(double.infinity, 54),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),

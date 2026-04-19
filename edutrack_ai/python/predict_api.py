@@ -339,6 +339,130 @@ def analyze_leave_doc():
         print(f"    [LEAVE AI ERROR] {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# ─────────────────────────────────────────────────────────────────────────────
+# AI LESSON PLAN GENERATOR
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/generate-lesson-plan', methods=['POST', 'OPTIONS'])
+def generate_lesson_plan():
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        data = request.get_json()
+        subject  = data.get('subject', 'Mathematics')
+        topic    = data.get('topic', 'Unknown Topic')
+        duration = data.get('duration', '45 minutes')
+        grade    = data.get('grade', 'Grade 8')
+
+        prompt = f"""You are an expert school teacher. Create a detailed, professional lesson plan for:
+Subject: {subject}
+Topic: {topic}
+Grade: {grade}
+Class Duration: {duration}
+
+Include these sections:
+1. 🎯 Learning Objectives (3-4 points)
+2. ⏱️ Lesson Structure with time breakdown
+3. 📋 Teaching Methods & Activities
+4. 📚 Resources Needed
+5. ✅ Assessment Strategy
+6. 📝 Homework/Follow-up
+
+Format clearly with emojis for each section. Keep it practical and engaging."""
+
+        response = gemini_model.generate_content(prompt)
+        return jsonify({'plan': response.text, 'subject': subject, 'topic': topic})
+    except Exception as e:
+        print(f"    [LESSON PLAN ERROR] {str(e)}")
+        # Return offline template
+        fallback = f"""📚 LESSON PLAN
+Subject: {subject} | Topic: {topic} | Grade: {grade} | Duration: {duration}
+
+🎯 LEARNING OBJECTIVES
+1. Understand the core concept of {topic}
+2. Apply the concept in practical scenarios
+3. Demonstrate understanding through examples
+
+⏱️ LESSON STRUCTURE
+• Introduction (5 min): Review previous lesson
+• Concept Explanation (15 min): Detailed explanation with examples  
+• Guided Practice (10 min): Solve problems together
+• Independent Practice (10 min): Student worksheet
+• Summary & Q&A (5 min): Key takeaways
+
+📋 TEACHING METHODS
+• Direct instruction with visual aids
+• Collaborative problem-solving
+• Think-pair-share activities
+
+📚 RESOURCES NEEDED
+• Whiteboard/Smartboard
+• Textbook (relevant chapter)
+• Practice worksheet
+• Visual aids/diagrams
+
+✅ ASSESSMENT
+• Quick oral quiz at end of lesson
+• Homework assignment for reinforcement
+
+📝 HOMEWORK
+• 5-10 practice problems from today's topic
+• Read next chapter introduction"""
+        return jsonify({'plan': fallback, 'subject': subject, 'topic': topic})
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI MONTHLY REPORT GENERATOR FOR PARENTS
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/generate-monthly-report', methods=['POST', 'OPTIONS'])
+def generate_monthly_report():
+    if request.method == 'OPTIONS':
+        return '', 204
+    try:
+        data = request.get_json()
+        student_name = data.get('studentName', 'the student')
+        attendance   = data.get('attendance', '85%')
+        avg_score    = data.get('avgScore', '75%')
+        behavior     = data.get('behavior', 'Good')
+        month        = data.get('month', datetime.now().strftime('%B %Y'))
+
+        prompt = f"""You are an empathetic, professional school principal. Write a concise, encouraging 1-page monthly progress report for the parents of {student_name} for the month of {month}.
+        
+Data:
+- Attendance: {attendance}
+- Average Academic Score: {avg_score}
+- General Behavior/Engagement: {behavior}
+
+Format clearly:
+1. 🌟 Academic Performance Summary
+2. 📅 Attendance & Consistency
+3. 💡 Strengths & Areas to Improve
+4. 👨‍👩‍👦 Suggestions for Parents
+
+Keep it warm, professional, and visually appealing with emojis. Do not output markdown codeblocks around the text."""
+
+        response = gemini_model.generate_content(prompt)
+        return jsonify({'report': response.text, 'student': student_name, 'month': month})
+    except Exception as e:
+        print(f"    [MONTHLY REPORT ERROR] {str(e)}")
+        fallback = f"""📄 MONTHLY PROGRESS REPORT: {student_name} ({month})
+
+🌟 ACADEMIC PERFORMANCE
+Average Score: {avg_score}
+{student_name} has shown steady academic progress this month.
+
+📅 ATTENDANCE & CONSISTENCY
+Attendance: {attendance}
+Regular attendance is key to success.
+
+💡 STRENGTHS & AREAS TO IMPROVE
+Behavior: {behavior}
+Strengths: Active participation.
+Areas to improve: Consistent revision at home.
+
+👨‍👩‍👦 SUGGESTIONS FOR PARENTS
+Please review homework daily and encourage reading reading habits. Feel free to contact teachers for specific queries.
+"""
+        return jsonify({'report': fallback, 'student': student_name, 'month': month})
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
     print(f"🚀 EduTrack AI Backend listening on 0.0.0.0:{port}")

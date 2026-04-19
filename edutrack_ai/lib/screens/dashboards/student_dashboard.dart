@@ -14,6 +14,11 @@ import '../attendance/student_attendance_screen.dart';
 import '../homework/homework_chat_screen.dart';
 import '../planner/smart_planner_screen.dart';
 import '../../providers/gamification_provider.dart';
+import '../student/leaderboard_screen.dart';
+import '../student/doubt_box_screen.dart';
+import '../student/notes_library_screen.dart';
+import '../student/timetable_screen.dart';
+import '../student/achievements_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -514,6 +519,36 @@ class _StudentDashboardState extends State<StudentDashboard> {
         'label': 'Study Plan',
         'color': const Color(0xFF8B5CF6),
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartPlannerScreen())),
+      },
+      {
+        'icon': Icons.emoji_events_rounded,
+        'label': 'Leaderboard',
+        'color': const Color(0xFFFF6B35),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
+      },
+      {
+        'icon': Icons.help_center_rounded,
+        'label': 'Doubt Box',
+        'color': const Color(0xFF7C3AED),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DoubtBoxScreen())),
+      },
+      {
+        'icon': Icons.menu_book_rounded,
+        'label': 'Notes',
+        'color': const Color(0xFF059669),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotesLibraryScreen())),
+      },
+      {
+        'icon': Icons.calendar_today_rounded,
+        'label': 'Timetable',
+        'color': const Color(0xFF0F766E),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TimetableScreen())),
+      },
+      {
+        'icon': Icons.workspace_premium_rounded,
+        'label': 'Badges',
+        'color': const Color(0xFFD97706),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsScreen())),
       },
     ];
 
