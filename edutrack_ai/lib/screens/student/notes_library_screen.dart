@@ -140,8 +140,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
   Stream<QuerySnapshot> _getNotesStream(String classId) {
     var query = FirebaseFirestore.instance
         .collection('notes')
-        .where('classId', isEqualTo: classId)
-        .orderBy('createdAt', descending: true);
+        .where('classId', isEqualTo: classId);
     if (_selectedSubject != 'All') {
       query = query.where('subject', isEqualTo: _selectedSubject);
     }
