@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:io';
 import '../../utils/config.dart';
 import '../../utils/app_theme.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:record/record.dart';
-import 'package:path_provider/path_provider.dart';
 
 class AIVivaScreen extends StatefulWidget {
   const AIVivaScreen({super.key});
@@ -21,80 +17,13 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
   bool _isLoadingReply = false;
   final ScrollController _scrollController = ScrollController();
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  
-  bool _isRecording = false;
-  String? _recordPath;
-
   @override
   void initState() {
     super.initState();
-    _messages.add({
-      "role": "assistant", 
-      "text": "Hello! I am your AI examiner. Connect via Voice! Press and hold the Mic button to record your answer, or just type it out."
-    });
+    _messages.add({"role": "assistant", "text": "Hello! I am your AI Examiner. We are directly connected to the Backend now. Use your phone keyboard's Mic 🎤 to speak your answers!"});
   }
 
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    _audioRecorder.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _startRecording() async {
-    try {
-      if (await _audioRecorder.hasPermission()) {
-        final dir = await getApplicationDocumentsDirectory();
-        _recordPath = '${dir.path}/viva_audio.m4a';
-        
-        await _audioRecorder.start(
-          const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 128000), 
-          path: _recordPath!
-        );
-        setState(() {
-          _isRecording = true;
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Microphone permission required!')));
-      }
-    } catch (e) {
-      debugPrint("Record error: $e");
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    try {
-      final path = await _audioRecorder.stop();
-      setState(() {
-        _isRecording = false;
-      });
-
-      if (path != null) {
-        final File file = File(path);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          final base64Audio = base64Encode(bytes);
-          _sendMessage("[Sent Audio Answer]", base64Audio: base64Audio);
-        }
-      }
-    } catch (e) {
-      debugPrint("Stop record error: $e");
-    }
-  }
-
-  Future<void> _playBase64Audio(String base64Audio) async {
-    try {
-      final bytes = base64Decode(base64Audio);
-      await _audioPlayer.play(BytesSource(bytes));
-    } catch (e) {
-      debugPrint("Audio play error: $e");
-    }
-  }
-
-  Future<void> _sendMessage(String message, {String? base64Audio}) async {
+  Future<void> _sendMessage(String message) async {
     setState(() {
       _messages.add({"role": "user", "text": message});
       _isLoadingReply = true;
@@ -107,30 +36,21 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
         Uri.parse(Config.endpoint('/ai-viva')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'message': base64Audio == null ? message : '',
-          'history': _messages.where((m) => !m['text']!.startsWith('[Sent')).map((m) => {'role': m['role'], 'text': m['text']}).toList(),
+          'message': message,
+          'history': _messages.map((m) => {'role': m['role'], 'text': m['text']}).toList(),
           'topic': 'General Knowledge',
-          'use_tts': true,
-          'audio_base64': base64Audio ?? ''
+          'use_tts': false,
+          'audio_base64': ''
         }),
       );
 
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        final replyText = jsonResponse['reply'] ?? 'I cannot evaluate that.';
-        final replyBase64Audio = jsonResponse['reply_audio_base64'];
-
+        final reply = jsonDecode(response.body)['reply'] ?? 'I cannot evaluate that.';
         setState(() {
-          _messages.add({"role": "assistant", "text": replyText});
+          _messages.add({"role": "assistant", "text": reply});
           _isLoadingReply = false;
         });
         _scrollToBottom();
-        
-        if (replyBase64Audio != null) {
-          _playBase64Audio(replyBase64Audio);
-        }
-      } else {
-        throw Exception("Server Error");
       }
     } catch (e) {
       setState(() {
@@ -158,34 +78,29 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('Real Voice AI Viva', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+        title: const Text('AI Viva Simulator', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: Colors.teal,
-        elevation: 0,
-        centerTitle: true,
+        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.teal.shade50,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))]
-            ),
+            color: Colors.teal.shade50,
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 35,
                   backgroundColor: Colors.teal,
-                  backgroundImage: const NetworkImage('https://i.pravatar.cc/150?img=47'),
                   child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 40),
                 ),
                 const SizedBox(width: 16),
-                Expanded(
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Dr. Gemini (Examiner)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
-                      Text(_isRecording ? 'Listening carefully...' : 'Hold Mic 🎤 to speak your answer', style: TextStyle(color: _isRecording ? Colors.red : Colors.black54, fontSize: 13, fontWeight: _isRecording ? FontWeight.bold : FontWeight.normal)),
+                      Text('Dr. Gemini (Examiner)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
+                      Text('Use keyboard mic to answer!', style: TextStyle(color: Colors.black54, fontSize: 13)),
                     ],
                   ),
                 )
@@ -208,12 +123,7 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
                     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                     decoration: BoxDecoration(
                       color: isUser ? Colors.teal : Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(20),
-                        topRight: const Radius.circular(20),
-                        bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(0),
-                        bottomRight: isUser ? const Radius.circular(0) : const Radius.circular(20),
-                      ),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
                     ),
                     child: Text(
@@ -245,7 +155,7 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
                     child: TextField(
                       controller: _msgController,
                       decoration: InputDecoration(
-                        hintText: 'Type answer here...',
+                        hintText: 'Type answer or use Keyboard Mic...',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
                         filled: true,
                         fillColor: Colors.grey.shade100,
@@ -258,28 +168,15 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTapDown: (_) => _startRecording(),
-                    onTapUp: (_) => _stopRecording(),
-                    onTapCancel: () => _stopRecording(),
                     onTap: () {
                       if (_msgController.text.trim().isNotEmpty) {
                         _sendMessage(_msgController.text.trim());
                       }
                     },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: _isRecording ? 60 : 50,
-                      height: _isRecording ? 60 : 50,
-                      decoration: BoxDecoration(
-                        color: _isRecording ? Colors.red : Colors.teal,
-                        shape: BoxShape.circle,
-                        boxShadow: _isRecording ? [BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 15, spreadRadius: 5)] : [],
-                      ),
-                      child: Icon(
-                        _isRecording ? Icons.mic : (_msgController.text.isEmpty ? Icons.mic_none_rounded : Icons.send_rounded), 
-                        color: Colors.white,
-                        size: _isRecording ? 30 : 24,
-                      ),
+                    child: CircleAvatar(
+                      radius: 25,
+                      backgroundColor: Colors.teal,
+                      child: const Icon(Icons.send_rounded, color: Colors.white),
                     ),
                   ),
                 ],

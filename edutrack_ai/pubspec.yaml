@@ -50,8 +50,6 @@ dependencies:
   url_launcher: ^6.3.1
   # speech_to_text removed
   # flutter_tts removed
-  record: ^5.0.5
-  audioplayers: ^5.2.1
   path_provider: ^2.1.2
 
   # Local Storage
