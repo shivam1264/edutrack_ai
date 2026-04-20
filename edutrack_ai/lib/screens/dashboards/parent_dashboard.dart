@@ -48,31 +48,41 @@ class _ParentDashboardState extends State<ParentDashboard> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 200,
             floating: false,
             pinned: true,
             stretch: true,
-            backgroundColor: const Color(0xFF6366F1),
+            backgroundColor: const Color(0xFFD97706),
             elevation: 0,
             actions: [
               IconButton(
-                icon: const Icon(Icons.power_settings_new_rounded, color: Colors.white),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  child: const Icon(Icons.power_settings_new_rounded, color: Colors.white, size: 18),
+                ),
                 onPressed: () => _showLogoutDialog(context),
               ),
+              const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground],
+              stretchModes: const [StretchMode.zoomBackground],
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Container(decoration: const BoxDecoration(gradient: AppTheme.parentGradient)),
                   Positioned(
-                    top: -10,
-                    right: -10,
-                    child: Icon(Icons.family_restroom_rounded, color: Colors.white.withOpacity(0.1), size: 180),
+                    top: -40, right: -40,
+                    child: Container(width: 200, height: 200,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.06))),
+                  ),
+                  Positioned(
+                    bottom: -30, left: -20,
+                    child: Container(width: 140, height: 140,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.04))),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 16, 20),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,29 +90,37 @@ class _ParentDashboardState extends State<ParentDashboard> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                              padding: const EdgeInsets.all(2.5),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withOpacity(0.7), width: 2),
+                              ),
                               child: CircleAvatar(
-                                radius: 32,
-                                backgroundColor: Colors.white.withOpacity(0.2),
+                                radius: 26,
+                                backgroundColor: Colors.white.withOpacity(0.25),
                                 child: Text(
                                   (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'P',
-                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Hi, ${user?.name.split(' ').first ?? 'Parent'}',
-                                    style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800),
+                                    'Hello, ${user?.name.split(' ').first ?? 'Parent'}! 👨‍👩‍👧',
+                                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, height: 1.2),
                                   ),
-                                  Text(
-                                    "Your child's progress is our priority",
-                                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Text('Guardian Portal • Live Tracking', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                                   ),
                                 ],
                               ),
@@ -138,31 +156,23 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   ),
                   const SizedBox(height: 24),
 
+                  // ── Quick Stats Row ──────────────────────────────────
                   Row(
                     children: [
                       Expanded(
-                        child: _ChildAttendanceCard(studentId: user!.parentOf!),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: PremiumCard(
-                          opacity: 1,
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.stars_rounded, color: AppTheme.accent, size: 28),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${(childData?['avg_score'] as num? ?? 0).toStringAsFixed(1)}%',
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                              ),
-                              const Text('Avg Score', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                            ],
-                          ),
+                        child: _ParentStatCard(
+                          icon: Icons.stars_rounded,
+                          label: 'Avg Score',
+                          value: '${(childData?['avg_score'] as num? ?? 0).toStringAsFixed(1)}%',
+                          color: AppTheme.parentColor,
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ChildAttendanceCard(studentId: user!.parentOf!),
+                      ),
                     ],
-                  ).animate().fadeIn(delay: 200.ms).scale(),
+                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
 
                   const SizedBox(height: 24),
 
@@ -176,48 +186,39 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   _buildChildProfile(user.parentOf!),
                   const SizedBox(height: 24),
 
-                  SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentChatScreen())),
-                          icon: const Icon(Icons.forum_rounded),
-                          label: const Text('Chat with AI Parent Assistant'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 54),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
+                  // ── Action Buttons ────────────────────────────────────
+                  const Text('Parent Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ParentActionButton(
+                          icon: Icons.forum_rounded,
+                          label: 'AI Assistant',
+                          color: AppTheme.primary,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentChatScreen())),
                         ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RequestLeaveScreen())),
-                          icon: const Icon(Icons.calendar_today_rounded),
-                          label: const Text('AI Leave Application'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primary,
-                            side: const BorderSide(color: AppTheme.primary),
-                            minimumSize: const Size(double.infinity, 54),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ParentActionButton(
+                          icon: Icons.calendar_today_rounded,
+                          label: 'Leave Apply',
+                          color: AppTheme.parentColor,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RequestLeaveScreen())),
                         ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
-                          icon: const Icon(Icons.assessment_rounded),
-                          label: const Text('AI Monthly Progress Report'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF0EA5E9),
-                            side: const BorderSide(color: Color(0xFF0EA5E9)),
-                            minimumSize: const Size(double.infinity, 54),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ParentActionButton(
+                          icon: Icons.assessment_rounded,
+                          label: 'AI Report',
+                          color: const Color(0xFF0EA5E9),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    ],
+                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
                 ],
               ]),
             ),
@@ -700,3 +701,74 @@ class _AIBurnoutDetectorCardState extends State<_AIBurnoutDetectorCard> {
   }
 }
 
+// ─── Parent Stat Card ───────────────────────────────────────────────────────
+class _ParentStatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _ParentStatCard({required this.icon, required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        boxShadow: AppTheme.cardShadow,
+        border: Border.all(color: color.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color)),
+              Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.textHint)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Parent Action Button ───────────────────────────────────────────────────
+class _ParentActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ParentActionButton({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color), textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+}

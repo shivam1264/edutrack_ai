@@ -52,31 +52,36 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 200,
             floating: false,
             pinned: true,
             stretch: true,
-            backgroundColor: AppTheme.secondary,
+            backgroundColor: const Color(0xFF059669),
             elevation: 0,
             actions: [
               IconButton(
-                icon: const Icon(Icons.power_settings_new_rounded, color: Colors.white),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  child: const Icon(Icons.power_settings_new_rounded, color: Colors.white, size: 18),
+                ),
                 onPressed: () => _showLogoutDialog(context),
               ),
+              const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground],
+              stretchModes: const [StretchMode.zoomBackground],
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Container(decoration: const BoxDecoration(gradient: AppTheme.teacherGradient)),
                   Positioned(
-                    top: -10,
-                    right: -10,
-                    child: Icon(Icons.school_rounded, color: Colors.white.withOpacity(0.1), size: 180),
+                    top: -40, right: -40,
+                    child: Container(width: 200, height: 200,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.06))),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 16, 20),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,29 +89,37 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                              padding: const EdgeInsets.all(2.5),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+                              ),
                               child: CircleAvatar(
-                                radius: 32,
-                                backgroundColor: Colors.white.withOpacity(0.2),
+                                radius: 26,
+                                backgroundColor: Colors.white.withOpacity(0.25),
                                 child: Text(
                                   (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'T',
-                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Welcome, ${user?.name.split(' ').first ?? 'Teacher'}',
-                                    style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800),
+                                    'Welcome, ${user?.name.split(' ').first ?? 'Teacher'}!',
+                                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
                                   ),
-                                  Text(
-                                    'Your class command center is ready',
-                                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Text('Class Lead • Educator', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                                   ),
                                 ],
                               ),
