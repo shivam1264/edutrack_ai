@@ -248,6 +248,30 @@ def generate_quiz():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ─── Auto Flashcard Generator (Swipe Study) ──────────────────────────────────
+@app.route('/generate-flashcards', methods=['POST'])
+def generate_flashcards():
+    data = request.get_json(silent=True) or {}
+    content = data.get('content', '')
+    
+    if not content:
+        return jsonify({'error': 'No content provided'}), 400
+
+    system_instruction = (
+        "You are an AI Study Assistant. Your task is to summarize the provided academic content "
+        "into short, highly effective Flashcards (Question on Front, Answer on Back). "
+        "Return the output STRICTLY as a JSON list of objects: [{'q': 'Short Question?', 'a': 'Short Answer'}]. "
+        "Generate 5 to 10 flashcards maximum. Keep answers concise."
+    )
+    
+    try:
+        response = gemini_model.generate_content(f"{system_instruction}\n\nContent:\n{content}")
+        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        flashcards = json.loads(clean_json)
+        return jsonify({'flashcards': flashcards})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # ─── Plagiarism & AI Detector ──────────────────────────────────────────────
 @app.route('/check-originality', methods=['POST'])
 def check_originality():
@@ -266,6 +290,30 @@ def check_originality():
     
     try:
         response = gemini_model.generate_content(f"{system_instruction}\n\nContent: {content}")
+        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        return jsonify(json.loads(clean_json))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ─── Student Burnout & Mental Health Detector ──────────────────────────────
+@app.route('/detect-burnout', methods=['POST'])
+def detect_burnout():
+    data = request.get_json(silent=True) or {}
+    student_name = data.get('student_name', 'Student')
+    study_hours = data.get('study_hours_per_day', 6)
+    late_night_activity = data.get('late_night_active', True)
+    drop_in_scores = data.get('grades_dropping', False)
+    
+    system_instruction = (
+        "You are an empathetic AI School Counselor and Child Psychologist. "
+        "Analyze the provided student data to determine if the child is experiencing academic burnout or mental stress. "
+        "Return a JSON object ONLY with no markdown: {'risk_level': 'High' | 'Medium' | 'Low', 'message': 'Counselor advice for parent'}"
+    )
+    
+    prompt = f"Student: {student_name}, Study Hours: {study_hours}/day, Active Late Night: {late_night_activity}, Grades Dropping: {drop_in_scores}."
+    
+    try:
+        response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
         clean_json = response.text.replace('```json', '').replace('```', '').strip()
         return jsonify(json.loads(clean_json))
     except Exception as e:

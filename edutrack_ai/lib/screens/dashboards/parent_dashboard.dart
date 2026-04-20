@@ -128,6 +128,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   _buildRiskCard(prediction).animate().fadeIn().slideY(begin: 0.1),
                   const SizedBox(height: 24),
 
+                  const SizedBox(height: 12),
+                  _AIBurnoutDetectorCard(studentName: childData?['name'] ?? 'Your Child'),
+                  const SizedBox(height: 24),
+
                   _AIProgressReportCard(
                     studentName: childData?['name'] ?? 'Your Child',
                     stats: childData ?? {},
@@ -613,3 +617,86 @@ class _AIProgressReportCardState extends State<_AIProgressReportCard> {
     );
   }
 }
+
+class _AIBurnoutDetectorCard extends StatefulWidget {
+  final String studentName;
+  const _AIBurnoutDetectorCard({required this.studentName});
+
+  @override
+  State<_AIBurnoutDetectorCard> createState() => _AIBurnoutDetectorCardState();
+}
+
+class _AIBurnoutDetectorCardState extends State<_AIBurnoutDetectorCard> {
+  Map<String, dynamic>? _result;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBurnoutData();
+  }
+
+  Future<void> _fetchBurnoutData() async {
+    try {
+      final response = await http.post(
+        Uri.parse(Config.endpoint('/detect-burnout')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'student_name': widget.studentName,
+          'study_hours_per_day': 7, 
+          'late_night_active': true,
+          'grades_dropping': false,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _result = jsonDecode(response.body);
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_result == null || _result!['error'] != null) return const SizedBox.shrink();
+
+    final risk = _result!['risk_level'] ?? 'Low';
+    final message = _result!['message'] ?? '';
+    final isHigh = risk == 'High' || risk == 'Medium';
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isHigh ? AppTheme.danger.withOpacity(0.08) : AppTheme.secondary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isHigh ? AppTheme.danger.withOpacity(0.3) : AppTheme.secondary.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(isHigh ? Icons.favorite_border_rounded : Icons.favorite_rounded, color: isHigh ? AppTheme.danger : AppTheme.secondary, size: 24),
+              const SizedBox(width: 10),
+              Text('STUDENT BURNOUT ALERT', style: TextStyle(fontWeight: FontWeight.w900, color: isHigh ? AppTheme.danger : AppTheme.secondary, letterSpacing: 1.0, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(color: isHigh ? AppTheme.danger : AppTheme.secondary, borderRadius: BorderRadius.circular(8)),
+            child: Text('Risk Level: $risk', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          const SizedBox(height: 12),
+          Text(message, style: TextStyle(fontSize: 14, height: 1.5, color: isHigh ? AppTheme.danger : AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+

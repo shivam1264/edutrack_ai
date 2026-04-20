@@ -19,6 +19,7 @@ import '../student/doubt_box_screen.dart';
 import '../student/notes_library_screen.dart';
 import '../student/timetable_screen.dart';
 import '../student/achievements_screen.dart';
+import '../student/flashcard_generator_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -497,10 +498,22 @@ class _StudentDashboardState extends State<StudentDashboard> {
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentAssignmentsScreen())),
       },
       {
+        'icon': Icons.quiz_rounded,
+        'label': 'Quizzes',
+        'color': const Color(0xFFE11D48),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuizListScreen())),
+      },
+      {
         'icon': Icons.bolt_rounded,
         'label': 'Challenge',
         'color': AppTheme.accent,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BattleLobbyScreen())),
+      },
+      {
+        'icon': Icons.style_rounded,
+        'label': 'Flashcards',
+        'color': Colors.deepOrange,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashcardGeneratorScreen())),
       },
       {
         'icon': Icons.calendar_month_rounded,
