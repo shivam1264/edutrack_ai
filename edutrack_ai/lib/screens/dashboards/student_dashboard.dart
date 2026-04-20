@@ -20,6 +20,7 @@ import '../student/notes_library_screen.dart';
 import '../student/timetable_screen.dart';
 import '../student/achievements_screen.dart';
 import '../student/flashcard_generator_screen.dart';
+import '../student/ai_viva_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -498,10 +499,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentAssignmentsScreen())),
       },
       {
+        'icon': Icons.record_voice_over_rounded,
+        'label': 'AI Viva',
+        'color': Colors.teal,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AIVivaScreen())),
+      },
+      {
         'icon': Icons.quiz_rounded,
         'label': 'Quizzes',
         'color': const Color(0xFFE11D48),
-        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuizListScreen())),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => QuizListScreen(classId: classId))),
       },
       {
         'icon': Icons.bolt_rounded,

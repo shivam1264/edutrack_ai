@@ -48,8 +48,11 @@ dependencies:
   image_picker: ^1.1.2
   open_file: ^3.3.2
   url_launcher: ^6.3.1
-  # speech_to_text removed — causes jni/NDK 28 linker error (0xC1) on Windows
-  # flutter_tts removed — causes NDK 28 dependency via jni transitive chain
+  # speech_to_text removed
+  # flutter_tts removed
+  record: ^5.0.5
+  audioplayers: ^5.2.1
+  path_provider: ^2.1.2
 
   # Local Storage
   shared_preferences: ^2.3.2

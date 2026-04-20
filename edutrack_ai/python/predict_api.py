@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 import base64
 import io
 from PIL import Image
+from gtts import gTTS
 
 load_dotenv()
 
@@ -316,6 +317,62 @@ def detect_burnout():
         response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
         clean_json = response.text.replace('```json', '').replace('```', '').strip()
         return jsonify(json.loads(clean_json))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ─── AI Voice Viva (Mock Examiner) ─────────────────────────────────────────
+@app.route('/ai-viva', methods=['POST'])
+def ai_viva():
+    data = request.get_json(silent=True) or {}
+    student_response = data.get('message', '')
+    history = data.get('history', [])
+    topic = data.get('topic', 'General Science')
+    use_tts = data.get('use_tts', False)
+    audio_b64 = data.get('audio_base64', '')
+    
+    system_instruction = (
+        f"You are a strict but fair School Teacher conducting an oral viva on the topic: {topic}. "
+        "The user will speak or type answers. Evaluate their answer briefly, then ask the NEXT question. "
+        "Keep your reply strictly under 3 sentences. If they are wrong, explain in 1 sentence and ask an easier question."
+    )
+    
+    formatted_prompt = f"{system_instruction}\n\n"
+    for msg in history[-4:]:
+        role = "Student: " if msg['role'] == 'user' else "Examiner: "
+        formatted_prompt += f"{role}{msg['text']}\n"
+    
+    contents_to_generate = []
+    
+    if audio_b64:
+        # User spoke audio
+        audio_bytes = base64.b64decode(audio_b64)
+        contents_to_generate.append({
+            "mime_type": "audio/m4a", # Standard flutter recorder format
+            "data": audio_bytes
+        })
+        formatted_prompt += f"\nStudent: [Sent Audio Answer]\nExaminer: "
+    else:
+        # Text based
+        formatted_prompt += f"\nStudent: {student_response}\nExaminer: "
+        
+    contents_to_generate.append(formatted_prompt)
+    
+    try:
+        response = gemini_model.generate_content(contents_to_generate)
+        reply_text = response.text.strip()
+        
+        resp_data = {'reply': reply_text}
+        
+        # If frontend wants spoken audio back
+        if use_tts:
+            tts = gTTS(text=reply_text, lang='en')
+            fp = io.BytesIO()
+            tts.write_to_fp(fp)
+            fp.seek(0)
+            audio_response_b64 = base64.b64encode(fp.read()).decode('utf-8')
+            resp_data['reply_audio_base64'] = audio_response_b64
+            
+        return jsonify(resp_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
