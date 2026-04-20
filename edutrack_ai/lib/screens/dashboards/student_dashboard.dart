@@ -444,7 +444,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
         SizedBox(
           height: 180,
           child: scores.isEmpty
-              ? const Center(child: Text('Build your path by taking a quiz!', style: TextStyle(color: AppTheme.textSecondary)))
+              ? _buildEmptyChart(
+                  icon: Icons.show_chart_rounded,
+                  color: AppTheme.primary,
+                  title: 'No Quiz Data Yet',
+                  subtitle: 'Take your first quiz to see your\nlearning trajectory graph here!',
+                )
               : LineChart(
                   LineChartData(
                     gridData: const FlGridData(show: false),
@@ -485,7 +490,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
         SizedBox(
           height: 200,
           child: entries.isEmpty
-              ? const Center(child: Text('Complete subjects to see performance', style: TextStyle(color: AppTheme.textSecondary)))
+              ? _buildEmptyChart(
+                  icon: Icons.bar_chart_rounded,
+                  color: AppTheme.secondary,
+                  title: 'No Subject Data Yet',
+                  subtitle: 'Complete assignments & quizzes to\nsee your per-subject performance!',
+                )
               : BarChart(
                   BarChartData(
                     gridData: const FlGridData(show: false),
@@ -537,6 +547,50 @@ class _StudentDashboardState extends State<StudentDashboard> {
         ),
       ],
     );
+  }
+
+  Widget _buildEmptyChart({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.04), color.withOpacity(0.01)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: color.withOpacity(0.12), width: 1.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 32),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textHint, height: 1.5),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms);
   }
 
   Widget _buildQuickActions(BuildContext context) {
