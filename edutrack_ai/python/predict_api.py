@@ -16,6 +16,8 @@ import base64
 import io
 from PIL import Image
 from gtts import gTTS
+import PyPDF2
+import requests
 
 load_dotenv()
 
@@ -209,17 +211,29 @@ def _fallback_answer(question, subject):
 @app.route('/generate-study-plan', methods=['POST'])
 def generate_study_plan():
     data = request.get_json(silent=True) or {}
-    student_name = data.get('student_name', 'Student')
-    weak_subjects = data.get('weak_subjects', [])
-    exam_days = data.get('days_to_exam', 30)
     
-    print(f"    [PLAN] Generating plan for {student_name}")
+    # Support both old and new formats
+    student_name = data.get('student_name') or data.get('student_id', 'Student')
+    weak_subjects = data.get('weak_subjects', [])
+    exam_days = data.get('days_to_exam') or 30
+    
+    # New keys from parent dashboard
+    upcoming_deadlines = data.get('upcoming_deadlines', [])
+    study_hours = data.get('study_hours_per_day', 4)
+    
+    print(f"    [PLAN] Generating rescue plan for {student_name}")
 
     if not gemini_model:
         return jsonify({'plan': 'Try again later for a personalized AI study plan.'})
 
     try:
-        prompt = f"Create a {exam_days}-day study plan for {student_name}. focus: {weak_subjects}"
+        prompt = (
+            f"Create a high-impact search study plan for {student_name}. "
+            f"Focus on weak subjects: {', '.join(weak_subjects) if weak_subjects else 'General improvement'}. "
+            f"The student can commit {study_hours} hours per day. "
+            f"Upcoming deadlines: {upcoming_deadlines if upcoming_deadlines else 'None immediately'}. "
+            f"Provide a structured, encouraging plan in Markdown."
+        )
         response = gemini_model.generate_content(prompt)
         return jsonify({'plan': response.text})
     except Exception as e:
@@ -232,14 +246,22 @@ def generate_quiz():
     topic = data.get('topic', 'General Knowledge')
     subject = data.get('subject', 'General')
     num_questions = data.get('count', 5)
+    difficulty = data.get('difficulty', 'Medium')  # Easy, Medium, Hard
+    q_type = data.get('type', 'MCQ')  # MCQ, Short Answer, True/False
     
     system_instruction = (
         "You are an expert Teacher. Generate a high-quality quiz in valid JSON format. "
         "The response MUST be ONLY a JSON list of objects with this structure: "
-        '[{"text": "Sample Question", "options": ["A", "B", "C", "D"], "correctOption": 0, "marks": 1}]'
+        '[{"text": "Sample Question", "options": ["A", "B", "C", "D"], "correctOption": 0, "marks": 1, "type": "mcq"}]'
+        "\nFor 'Short Answer', include empty options and -1 for correctOption, set type to 'short'."
+        "\nFor 'True/False', use ['True', 'False'] as options."
     )
     
-    prompt = f"Create {num_questions} MCQ questions for Class 9/10 students on topic: {topic} and subject: {subject}."
+    prompt = (
+        f"Create {num_questions} {q_type} questions for Class 9/10 students. "
+        f"Topic: {topic} | Subject: {subject} | Difficulty: {difficulty}. "
+        f"Ensure the tone and complexity match the {difficulty} level."
+    )
     
     try:
         response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
@@ -252,11 +274,41 @@ def generate_quiz():
 # ─── Auto Flashcard Generator (Swipe Study) ──────────────────────────────────
 @app.route('/generate-flashcards', methods=['POST'])
 def generate_flashcards():
-    data = request.get_json(silent=True) or {}
-    content = data.get('content', '')
-    
-    if not content:
-        return jsonify({'error': 'No content provided'}), 400
+    content = ""
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        file_url = data.get('file_url', '')
+        
+        if file_url:
+            try:
+                resp = requests.get(file_url)
+                resp.raise_for_status()
+                if 'pdf' in file_url.lower() or file_url.split('?')[0].endswith('.pdf') or 'application/pdf' in resp.headers.get('Content-Type', ''):
+                    pdf_reader = PyPDF2.PdfReader(io.BytesIO(resp.content))
+                    for page in pdf_reader.pages:
+                        extracted = page.extract_text()
+                        if extracted:
+                            content += extracted + "\n"
+                else:
+                    content = resp.content.decode('utf-8', errors='ignore')
+            except Exception as e:
+                return jsonify({'error': f'Failed to fetch/parse from URL: {str(e)}'}), 400
+
+    elif 'file' in request.files:
+        file = request.files['file']
+        if file.filename.lower().endswith('.pdf'):
+            try:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    content += page.extract_text() + "\n"
+            except Exception as e:
+                return jsonify({'error': f'Failed to parse PDF: {str(e)}'}), 400
+        else:
+            content = file.read().decode('utf-8', errors='ignore')
+
+    if not content.strip():
+        return jsonify({'error': 'No content or file provided'}), 400
 
     system_instruction = (
         "You are an AI Study Assistant. Your task is to summarize the provided academic content "
@@ -270,6 +322,60 @@ def generate_flashcards():
         clean_json = response.text.replace('```json', '').replace('```', '').strip()
         flashcards = json.loads(clean_json)
         return jsonify({'flashcards': flashcards})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ─── Auto Mind Map Generator (Hierarchical JSON) ───────────────────────────
+@app.route('/generate-mindmap', methods=['POST'])
+def generate_mindmap():
+    content = ""
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        file_url = data.get('file_url', '')
+
+        if file_url:
+            try:
+                resp = requests.get(file_url)
+                resp.raise_for_status()
+                if 'pdf' in file_url.lower() or file_url.split('?')[0].endswith('.pdf') or 'application/pdf' in resp.headers.get('Content-Type', ''):
+                    pdf_reader = PyPDF2.PdfReader(io.BytesIO(resp.content))
+                    for page in pdf_reader.pages:
+                        extracted = page.extract_text()
+                        if extracted:
+                            content += extracted + "\n"
+                else:
+                    content = resp.content.decode('utf-8', errors='ignore')
+            except Exception as e:
+                return jsonify({'error': f'Failed to fetch/parse from URL: {str(e)}'}), 400
+
+    elif 'file' in request.files:
+        file = request.files['file']
+        if file.filename.lower().endswith('.pdf'):
+            try:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    content += page.extract_text() + "\n"
+            except Exception as e:
+                return jsonify({'error': f'Failed to parse PDF: {str(e)}'}), 400
+        else:
+            content = file.read().decode('utf-8', errors='ignore')
+
+    if not content.strip():
+        return jsonify({'error': 'No content or file provided'}), 400
+
+    system_instruction = (
+        "You are an AI Study Visualizer. Extract the core concepts from the given content and format it as a hierarchical JSON Mind Map. "
+        "The output must EXACTLY follow this structure (max depth 3): "
+        "{\"title\": \"Main Concept\", \"children\": [{\"title\": \"Subtopic 1\", \"children\": [{\"title\": \"Detail 1\"}]}]} "
+        "Return ONLY the raw JSON string. Do not use Markdown formatting or code block wrappers like ```json"
+    )
+    
+    try:
+        response = gemini_model.generate_content(f"{system_instruction}\n\nContent:\n{content}")
+        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        mindmap_data = json.loads(clean_json)
+        return jsonify({'mindmap': mindmap_data})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -324,14 +430,16 @@ def detect_burnout():
 @app.route('/ai-viva', methods=['POST'])
 def ai_viva():
     data = request.get_json(silent=True) or {}
-    student_response = data.get('message', '')
+    message = data.get('message', '')
     history = data.get('history', [])
-    topic = data.get('topic', 'General Science')
-    use_tts = data.get('use_tts', False)
+    # Support both 'subject' and 'topic' from frontend
+    subject = data.get('subject') or data.get('topic', 'General')
+    
+    print(f"    [VIVA] Conversation for {subject}")
     audio_b64 = data.get('audio_base64', '')
     
     system_instruction = (
-        f"You are a strict but fair School Teacher conducting an oral viva on the topic: {topic}. "
+        f"You are a strict but fair School Teacher conducting an oral viva on the topic: {subject}. "
         "The user will speak or type answers. Evaluate their answer briefly, then ask the NEXT question. "
         "Keep your reply strictly under 3 sentences. If they are wrong, explain in 1 sentence and ask an easier question."
     )
@@ -567,6 +675,39 @@ Areas to improve: Consistent revision at home.
 Please review homework daily and encourage reading reading habits. Feel free to contact teachers for specific queries.
 """
         return jsonify({'report': fallback, 'student': student_name, 'month': month})
+
+# ─── AI Best Answer Generator (Doubt Box) ────────────────────────────────────
+@app.route('/generate-best-answer', methods=['POST'])
+def generate_best_answer():
+    data = request.get_json(silent=True) or {}
+    question = data.get('question', '').strip()
+    subject = data.get('subject', 'General')
+    grade = data.get('grade', 'Grade 10')
+    
+    print(f"    [BEST-ANSWER] Generating for {grade} | Subject: {subject}")
+    
+    if not question:
+        return jsonify({'error': 'Question is required'}), 400
+
+    system_instruction = (
+        f"You are an Elite Academic Specialist and Expert Teacher for {grade} level. "
+        f"Your task is to provide the 'BEST ANSWER' for the following {subject} question. "
+        "A 'Best Answer' must be:\n"
+        "1. **Highly Structured**: Use sections like 'Core Concept', 'Explanation', 'Real-world Example'.\n"
+        "2. **Premium Tone**: Encouraging, professional, and very clear.\n"
+        "3. **Visual**: Use Markdown tables, bold text, and lists (no LaTeX/dollar signs).\n"
+        "4. **Concise but Deep**: Don't just give a 1-liner. Give a thorough explanation in 200-300 words."
+    )
+    
+    try:
+        response = gemini_model.generate_content(f"{system_instruction}\n\nQuestion: {question}")
+        return jsonify({
+            'answer': response.text.strip(),
+            'model': 'gemini-high-intent'
+        })
+    except Exception as e:
+        print(f"    [BEST-ANSWER ERROR] {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
