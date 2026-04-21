@@ -153,11 +153,15 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                         Row(
                           children: [
                             const Icon(Icons.calendar_month_rounded, color: Colors.white70, size: 14),
-                            const SizedBox(width: 6),
-                            Text(DateFormat('EEEE, dd MMMM').format(_selectedDate), style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 4),
+                            Text(DateFormat('EEE, dd MMM').format(_selectedDate), style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 8),
+                            Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Text('Sector: ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                           ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         Row(
                           children: [
                             _StatBadge(label: 'Present', count: present, color: const Color(0xFF10B981)),

@@ -128,9 +128,17 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Upload Notes', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                      Text('Share study materials with students', style: TextStyle(color: Colors.white70)),
+                    children: [
+                      const Text('Upload Notes', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                      Row(
+                        children: [
+                          const Text('Share study materials', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          const SizedBox(width: 8),
+                          Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
+                          const SizedBox(width: 8),
+                          Text('Target: Sector $classId', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                        ],
+                      ),
                     ],
                   ),
                 ),

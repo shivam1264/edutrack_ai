@@ -291,7 +291,23 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-                          Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                          Row(
+                            children: [
+                              Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                              if (user?.classId != null) ...[
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  width: 4, height: 4,
+                                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Sector: ${user!.classId}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
+                                ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                     ],

@@ -255,8 +255,16 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Create Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                        Text('Configure your academic assessment', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const Text('Create Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Row(
+                          children: [
+                            Text('Configure academic assessment', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            const SizedBox(width: 8),
+                            Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Text('Target: Sector ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                          ],
+                        ),
                       ],
                     ),
                   ),
