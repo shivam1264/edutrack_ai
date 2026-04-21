@@ -7,6 +7,7 @@ import '../../services/attendance_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 
 class TeacherAttendanceScreen extends StatefulWidget {
   final String classId;
@@ -38,13 +39,15 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   Future<void> _loadStudents() async {
     setState(() => _isLoading = true);
     try {
+      // FIX: Query 'users' collection instead of 'students' and filter by role
       final snap = await FirebaseFirestore.instance
-          .collection('students')
+          .collection('users')
+          .where('role', isEqualTo: 'student')
           .where('class_id', isEqualTo: widget.classId)
           .get();
 
       _students = snap.docs
-          .map((d) => {'uid': d.id, 'name': d.data()['name'] ?? 'Unknown'})
+          .map((d) => {'uid': d.id, 'name': d.data()['name'] ?? 'Incomplete Profile'})
           .toList();
 
       final existing = await AttendanceService().getAttendanceByDate(
@@ -52,13 +55,26 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         date: _selectedDate,
       );
 
+      // Create a fresh map for the new date/data
+      final Map<String, AttendanceStatus> newStatusMap = {};
+      
+      // 1. Fill with existing data from DB
       for (final a in existing) {
-        _statusMap[a.studentId] = a.status;
+        newStatusMap[a.studentId] = a.status;
       }
 
+      // 2. Fill missing students with default status 'present'
       for (final s in _students) {
-        _statusMap.putIfAbsent(s['uid'] as String, () => AttendanceStatus.present);
+        final uid = s['uid'] as String;
+        if (!newStatusMap.containsKey(uid)) {
+          newStatusMap[uid] = AttendanceStatus.present;
+        }
       }
+
+      setState(() {
+        _statusMap.clear();
+        _statusMap.addAll(newStatusMap);
+      });
     } catch (e) {
       _showSnack('Neural link failed: $e', isError: true);
     }
@@ -66,6 +82,11 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   }
 
   Future<void> _saveAttendance() async {
+    if (_students.isEmpty) {
+      _showSnack('No student data detected for finalization.', isError: true);
+      return;
+    }
+    
     setState(() => _isSaving = true);
     try {
       final teacherId = context.read<AuthProvider>().user?.uid ?? '';
@@ -75,7 +96,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           studentId: uid,
           classId: widget.classId,
           date: _selectedDate,
-          status: _statusMap[uid] ?? AttendanceStatus.absent,
+          status: _statusMap[uid] ?? AttendanceStatus.present,
           markedBy: teacherId,
         );
       }
@@ -87,6 +108,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   }
 
   void _showSnack(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message, style: const TextStyle(fontWeight: FontWeight.w700)),
       backgroundColor: isError ? AppTheme.danger : AppTheme.secondary,
@@ -160,7 +182,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
             sliver: _isLoading
                 ? const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
                 : _students.isEmpty
-                    ? const SliverFillRemaining(child: Center(child: Text('No student data found for this class.')))
+                    ? const SliverFillRemaining(child: Center(child: Text('No student data synchronized for this sector.')))
                     : SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
@@ -178,7 +200,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                                 onStatusChange: (newStatus) {
                                   setState(() => _statusMap[uid] = newStatus);
                                 },
-                              ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1),
+                              ).animate().fadeIn(delay: (index * 40).ms).slideX(begin: 0.1),
                             );
                           },
                           childCount: _students.length,
@@ -226,7 +248,6 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
       lastDate: DateTime.now(),
     );
     if (picked != null && picked != _selectedDate) {
-      _statusMap.clear();
       setState(() => _selectedDate = picked);
       await _loadStudents();
     }
