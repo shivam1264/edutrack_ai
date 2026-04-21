@@ -84,6 +84,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Widget _buildInsightsTab() {
+    final user = context.watch<AuthProvider>().user;
     final analytics = context.watch<AnalyticsProvider>();
     final classData = analytics.classAnalytics;
     final top5 = (classData?['top5'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
@@ -398,8 +399,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-
-
   Widget _buildClassDNAHeatmap(String classId) {
     return FutureBuilder<QuerySnapshot>(
       // Aggregating from a sample of students for the visual heatmap
@@ -462,24 +461,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       },
     );
   }
-}
 
-class _DNAKey extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _DNAKey({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-}
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -497,6 +480,23 @@ class _DNAKey extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DNAKey extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _DNAKey({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }
