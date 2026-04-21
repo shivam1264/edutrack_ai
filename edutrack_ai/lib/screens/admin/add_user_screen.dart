@@ -192,7 +192,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                                 selectedColor: AppTheme.primary,
                                                 checkmarkColor: Colors.white,
                                                 backgroundColor: AppTheme.bgLight,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isSelected ? AppTheme.primary : AppTheme.borderLight)),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isSelected ? AppTheme.primary : AppTheme.borderLight)),
                                               );
                                             }).toList(),
                                           ),
