@@ -177,6 +177,20 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                         style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                                       ),
                                     ),
+                                    const SizedBox(width: 8),
+                                    if (user?.classId != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white.withOpacity(0.3)),
+                                        ),
+                                        child: Text(
+                                          'Sector: ${user!.classId}',
+                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+                                        ),
+                                      ),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
