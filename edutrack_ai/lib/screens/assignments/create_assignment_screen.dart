@@ -6,7 +6,9 @@ import '../../models/assignment_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/assignment_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/premium_card.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
   final String classId;
@@ -76,7 +78,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Assignment created successfully! 🎉'),
+            content: Text('Mission Configured! Assignment live. 🚀'),
             backgroundColor: AppTheme.secondary,
             behavior: SnackBarBehavior.floating,
           ),
@@ -85,7 +87,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'),
+          content: Text('System Recall: $e'),
           backgroundColor: AppTheme.danger,
           behavior: SnackBarBehavior.floating,
         ));
@@ -98,213 +100,230 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      appBar: AppBar(
-        title: const Text('Create Assignment'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Title ──
-              _label('Assignment Title'),
-              TextFormField(
-                controller: _titleCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'e.g. Chapter 3 - Algebra Problems',
-                  prefixIcon: Icon(Icons.title_rounded),
-                ),
-                validator: (v) =>
-                    v?.isEmpty == true ? 'Title required' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Subject ──
-              _label('Subject'),
-              DropdownButtonFormField<String>(
-                value: _subject,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.subject_rounded),
-                ),
-                items: _subjects
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: (v) => setState(() => _subject = v!),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Description ──
-              _label('Description'),
-              TextFormField(
-                controller: _descCtrl,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'Describe the assignment in detail...',
-                  alignLabelWithHint: true,
-                  prefixIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 64),
-                    child: Icon(Icons.description_rounded),
-                  ),
-                ),
-                validator: (v) =>
-                    v?.isEmpty == true ? 'Description required' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Max Marks ──
-              Row(
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 160,
+            pinned: true,
+            backgroundColor: AppTheme.primary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('Max Marks'),
-                        TextFormField(
-                          controller: _marksCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.star_rounded),
-                          ),
-                          validator: (v) {
-                            if (v?.isEmpty == true) return 'Required';
-                            if (double.tryParse(v!) == null)
-                              return 'Invalid';
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
+                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Positioned(
+                    top: -10, right: -10,
+                    child: Icon(Icons.add_task_rounded, color: Colors.white.withOpacity(0.1), size: 160),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('Due Date'),
-                        GestureDetector(
-                          onTap: _pickDueDate,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border:
-                                  Border.all(color: AppTheme.borderLight),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.event_rounded,
-                                    color: AppTheme.primary, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  DateFormat('dd MMM').format(_dueDate),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                        Text('Create Assignment', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text('Deploy new academic missions', style: TextStyle(color: Colors.white70, fontSize: 12)),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
-              // ── File Attachment ──
-              _label('Attach File (Optional)'),
-              GestureDetector(
-                onTap: _pickFile,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _pickedFile != null
-                          ? AppTheme.primary
-                          : AppTheme.borderLight,
-                      style: BorderStyle.solid,
-                    ),
-                  ),
-                  child: Row(
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                Form(
+                  key: _formKey,
+                  child: Column(
                     children: [
-                      Icon(
-                        _pickedFile != null
-                            ? Icons.attachment_rounded
-                            : Icons.upload_file_rounded,
-                        color: _pickedFile != null
-                            ? AppTheme.primary
-                            : AppTheme.textSecondary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _pickedFileName ?? 'Tap to attach a file',
-                          style: TextStyle(
-                            color: _pickedFile != null
-                                ? AppTheme.textPrimary
-                                : AppTheme.textSecondary,
+                      _buildFormCard(
+                        title: 'Basic Info',
+                        icon: Icons.info_outline_rounded,
+                        children: [
+                          _label('Assignment Title'),
+                          TextFormField(
+                            controller: _titleCtrl,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g. Quantum Mechanics Intro',
+                              prefixIcon: Icon(Icons.title_rounded, color: AppTheme.primary),
+                            ),
+                            validator: (v) => v?.isEmpty == true ? 'Title required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          _label('Subject'),
+                          DropdownButtonFormField<String>(
+                            value: _subject,
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.subject_rounded, color: AppTheme.primary),
+                            ),
+                            items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            onChanged: (v) => setState(() => _subject = v!),
+                          ),
+                        ],
+                      ).animate().fadeIn().slideY(begin: 0.1),
+                      const SizedBox(height: 20),
+                      _buildFormCard(
+                        title: 'Mission Brief',
+                        icon: Icons.description_outlined,
+                        children: [
+                          _label('Detailed Description'),
+                          TextFormField(
+                            controller: _descCtrl,
+                            maxLines: 4,
+                            decoration: const InputDecoration(
+                              hintText: 'Provide clear instructions for the mission...',
+                              alignLabelWithHint: true,
+                            ),
+                            validator: (v) => v?.isEmpty == true ? 'Description required' : null,
+                          ),
+                        ],
+                      ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 20),
+                      _buildFormCard(
+                        title: 'Deadlines & Rewards',
+                        icon: Icons.stars_outlined,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _label('Max Marks'),
+                                    TextFormField(
+                                      controller: _marksCtrl,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(
+                                        prefixIcon: Icon(Icons.star_rounded, color: AppTheme.accent),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _label('Due Date'),
+                                    GestureDetector(
+                                      onTap: _pickDueDate,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.bgLight,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: AppTheme.borderLight),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.event_rounded, color: AppTheme.primary, size: 18),
+                                            const SizedBox(width: 8),
+                                            Text(DateFormat('dd MMM').format(_dueDate), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 20),
+                      _buildFormCard(
+                        title: 'Intelligence Assets',
+                        icon: Icons.attachment_rounded,
+                        children: [
+                          GestureDetector(
+                            onTap: _pickFile,
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: AppTheme.bgLight,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _pickedFile != null ? AppTheme.primary : AppTheme.borderLight,
+                                  style: BorderStyle.solid,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(_pickedFile != null ? Icons.description_rounded : Icons.cloud_upload_outlined, color: _pickedFile != null ? AppTheme.primary : AppTheme.textHint),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      _pickedFileName ?? 'Attach reference materials',
+                                      style: TextStyle(color: _pickedFile != null ? AppTheme.textPrimary : AppTheme.textHint, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  if (_pickedFile != null) const Icon(Icons.check_circle_rounded, color: AppTheme.primary, size: 18),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: _isSaving ? null : _create,
+                          icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.rocket_launch_rounded),
+                          label: Text(_isSaving ? 'Deploying...' : 'Deploy Assignment', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 8,
+                            shadowColor: AppTheme.primary.withOpacity(0.4),
                           ),
                         ),
-                      ),
-                      if (_pickedFile != null)
-                        GestureDetector(
-                          onTap: () => setState(() {
-                            _pickedFile = null;
-                            _pickedFileName = null;
-                          }),
-                          child: const Icon(Icons.close_rounded,
-                              color: AppTheme.danger, size: 18),
-                        ),
+                      ).animate().fadeIn(delay: 400.ms).scale(),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // ── Create Button ──
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isSaving ? null : _create,
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.add_task_rounded),
-                  label:
-                      Text(_isSaving ? 'Creating...' : 'Create Assignment'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                  ),
-                ),
-              ),
+  Widget _buildFormCard({required String title, required IconData icon, required List<Widget> children}) {
+    return PremiumCard(
+      opacity: 1,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: AppTheme.textHint),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 11, letterSpacing: 1.2)),
             ],
           ),
-        ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
       ),
     );
   }
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text,
-          style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-              fontSize: 13),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8, top: 4),
+    child: Text(text, style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary, fontSize: 13)),
+  );
 
   Future<void> _pickDueDate() async {
     final picked = await showDatePicker(

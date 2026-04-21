@@ -108,42 +108,51 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         slivers: [
           SliverAppBar(
             expandedHeight: 200,
-            floating: false,
             pinned: true,
-            stretch: true,
             backgroundColor: AppTheme.secondary,
+            foregroundColor: Colors.white,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [StretchMode.zoomBackground],
-              title: Text('${widget.className} Roll Call', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
                   Positioned(
-                    bottom: 60,
-                    left: 20,
-                    right: 20,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    top: -10, left: -10,
+                    child: Icon(Icons.how_to_reg_rounded, color: Colors.white.withOpacity(0.1), size: 180),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _StatBadge('P', present, AppTheme.secondary),
-                        const SizedBox(width: 12),
-                        _StatBadge('A', absent, AppTheme.danger),
-                        const SizedBox(width: 12),
-                        _StatBadge('L', lateCount, AppTheme.accent),
+                        Text('${widget.className} Roll Call', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_month_rounded, color: Colors.white70, size: 14),
+                            const SizedBox(width: 6),
+                            Text(DateFormat('EEEE, dd MMMM').format(_selectedDate), style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            _StatBadge(label: 'Present', count: present, color: const Color(0xFF10B981)),
+                            const SizedBox(width: 8),
+                            _StatBadge(label: 'Absent', count: absent, color: AppTheme.danger),
+                            const SizedBox(width: 8),
+                            _StatBadge(label: 'Late', count: lateCount, color: AppTheme.accent),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
-              centerTitle: true,
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.calendar_month_rounded, color: Colors.white),
-                onPressed: _pickDate,
-              ),
+              IconButton(icon: const Icon(Icons.event_note_rounded), onPressed: _pickDate),
             ],
           ),
           SliverPadding(
@@ -151,7 +160,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
             sliver: _isLoading
                 ? const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
                 : _students.isEmpty
-                    ? const SliverFillRemaining(child: Center(child: Text('No agents assigned to this hub.')))
+                    ? const SliverFillRemaining(child: Center(child: Text('No student data found for this class.')))
                     : SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
@@ -161,7 +170,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                             final status = _statusMap[uid] ?? AttendanceStatus.present;
 
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.only(bottom: 12),
                               child: _StudentAttendanceTile(
                                 name: name,
                                 rollNo: index + 1,
@@ -178,30 +187,32 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: ElevatedButton(
-            onPressed: _isSaving ? null : _saveAttendance,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.secondary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 60),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              elevation: 4,
-              shadowColor: AppTheme.secondary.withOpacity(0.4),
-            ),
-            child: _isSaving
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.verified_user_rounded, size: 20),
-                      SizedBox(width: 12),
-                      Text('Finalize Roll Call', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                    ],
-                  ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
+        ),
+        child: ElevatedButton(
+          onPressed: _isSaving ? null : _saveAttendance,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.secondary,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 60),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 8,
+            shadowColor: AppTheme.secondary.withOpacity(0.4),
           ),
+          child: _isSaving
+              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
+              : const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.verified_user_rounded, size: 20),
+                    const SizedBox(width: 12),
+                    Text('Finalize Roll Call', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                  ],
+                ),
         ),
       ),
     );
@@ -211,17 +222,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2024),
+      firstDate: DateTime(2023),
       lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: AppTheme.secondary, onPrimary: Colors.white, onSurface: AppTheme.textPrimary),
-            textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: AppTheme.secondary)),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null && picked != _selectedDate) {
       _statusMap.clear();
@@ -235,19 +237,18 @@ class _StatBadge extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
-  const _StatBadge(this.label, this.count, this.color);
+  const _StatBadge({required this.label, required this.count, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withOpacity(0.3))),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withOpacity(0.2))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$label:', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w800)),
-          const SizedBox(width: 6),
-          Text('$count', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+          Text('$count', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -259,27 +260,25 @@ class _StudentAttendanceTile extends StatelessWidget {
   final int rollNo;
   final AttendanceStatus status;
   final ValueChanged<AttendanceStatus> onStatusChange;
-
   const _StudentAttendanceTile({required this.name, required this.rollNo, required this.status, required this.onStatusChange});
 
   @override
   Widget build(BuildContext context) {
     return PremiumCard(
       opacity: 1,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(12)),
-            child: Center(child: Text('$rollNo', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textSecondary, fontSize: 13))),
+            width: 44, height: 44,
+            decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(14)),
+            child: Center(child: Text('$rollNo', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 14))),
           ),
           const SizedBox(width: 16),
           Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary, fontSize: 15))),
           Row(
             children: [
-              _RollBtn(icon: Icons.check_rounded, color: AppTheme.secondary, isSelected: status == AttendanceStatus.present, onTap: () => onStatusChange(AttendanceStatus.present)),
+              _RollBtn(icon: Icons.check_rounded, color: const Color(0xFF10B981), isSelected: status == AttendanceStatus.present, onTap: () => onStatusChange(AttendanceStatus.present)),
               const SizedBox(width: 8),
               _RollBtn(icon: Icons.close_rounded, color: AppTheme.danger, isSelected: status == AttendanceStatus.absent, onTap: () => onStatusChange(AttendanceStatus.absent)),
               const SizedBox(width: 8),
@@ -297,7 +296,6 @@ class _RollBtn extends StatelessWidget {
   final Color color;
   final bool isSelected;
   final VoidCallback onTap;
-
   const _RollBtn({required this.icon, required this.color, required this.isSelected, required this.onTap});
 
   @override
@@ -305,10 +303,13 @@ class _RollBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(color: isSelected ? color : color.withOpacity(0.08), borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? color : color.withOpacity(0.2))),
+        duration: const Duration(milliseconds: 250),
+        width: 42, height: 42,
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: isSelected ? color : color.withOpacity(0.15)),
+        ),
         child: Icon(icon, color: isSelected ? Colors.white : color, size: 20),
       ),
     );

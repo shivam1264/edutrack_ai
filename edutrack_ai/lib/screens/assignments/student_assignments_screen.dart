@@ -72,31 +72,62 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> wit
         slivers: [
           SliverAppBar(
             expandedHeight: 180,
-            floating: false,
             pinned: true,
-            stretch: true,
             backgroundColor: AppTheme.accent,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [StretchMode.zoomBackground],
-              title: const Text('Mission Logs', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18)),
-              background: Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
-              centerTitle: true,
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Positioned(
+                    top: -20, right: -20,
+                    child: Icon(Icons.assignment_ind_rounded, color: Colors.white.withOpacity(0.1), size: 200),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Mission Logs', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+                        Text('Manage your academic objectives', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Container(
-              color: Colors.white,
-              child: TabBar(
-                controller: _tabController,
-                labelColor: AppTheme.accent,
-                unselectedLabelColor: AppTheme.textSecondary,
-                indicatorColor: AppTheme.accent,
-                indicatorWeight: 4,
-                tabs: const [
-                  Tab(text: 'Pending'),
-                  Tab(text: 'Submitted'),
-                ],
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _SliverAppBarDelegate(
+              child: Container(
+                color: AppTheme.bgLight,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: AppTheme.textSecondary,
+                    indicator: BoxDecoration(
+                      color: AppTheme.accent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [BoxShadow(color: AppTheme.accent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    tabs: const [
+                      Tab(text: '🚨 Pending'),
+                      Tab(text: '✅ Done'),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

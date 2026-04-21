@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 
 class TimetableScreen extends StatelessWidget {
   const TimetableScreen({super.key});
@@ -21,36 +22,38 @@ class TimetableScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 160,
+            expandedHeight: 180,
             pinned: true,
             backgroundColor: const Color(0xFF0F766E),
+            foregroundColor: Colors.white,
+            elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Positioned(
+                    top: -10, right: -10,
+                    child: Icon(Icons.schedule_rounded, color: Colors.white.withOpacity(0.1), size: 180),
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: -10, right: -10,
-                      child: Icon(Icons.calendar_today_rounded, color: Colors.white.withOpacity(0.1), size: 180),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Daily Schedule', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                        Row(
+                          children: [
+                            const Icon(Icons.event_available_rounded, color: Colors.white70, size: 14),
+                            const SizedBox(width: 8),
+                            Text('Today is $today', style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Timetable', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
-                          Text('Today is $today', style: const TextStyle(color: Colors.white70)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -88,44 +91,58 @@ class _TimetableBodyState extends State<_TimetableBody> {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Column(
-        children: [
-          // Day selector
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
+          // High-end Day selector
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SizedBox(
-              height: 44,
+              height: 50,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
                 itemCount: _days.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, i) {
-                  final selected = _days[i] == _selectedDay;
-                  final isToday = _days[i] == widget.today;
+                  final day = _days[i];
+                  final selected = day == _selectedDay;
+                  final isToday = day == widget.today;
+                  
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedDay = _days[i]),
+                    onTap: () => setState(() => _selectedDay = day),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        color: selected ? const Color(0xFF0F766E) : Colors.white,
-                        borderRadius: BorderRadius.circular(22),
-                        border: isToday && !selected ? Border.all(color: const Color(0xFF0F766E), width: 2) : null,
-                        boxShadow: selected ? [BoxShadow(color: const Color(0xFF0F766E).withOpacity(0.3), blurRadius: 8)] : [],
+                        gradient: selected ? AppTheme.meshGradient : null,
+                        color: selected ? null : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: isToday && !selected ? Border.all(color: const Color(0xFF0F766E), width: 1.5) : null,
+                        boxShadow: selected ? [BoxShadow(color: const Color(0xFF0F766E).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))] : [],
                       ),
-                      child: Text(
-                        _days[i].substring(0, 3) + (isToday ? ' •' : ''),
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13,
-                            color: selected ? Colors.white : const Color(0xFF0F766E)),
+                      child: Center(
+                        child: Text(
+                          day.substring(0, 3).toUpperCase(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900, 
+                            fontSize: 12,
+                            letterSpacing: 0.5,
+                            color: selected ? Colors.white : AppTheme.textHint,
+                          ),
+                        ),
                       ),
                     ),
                   );
                 },
               ),
             ),
-          ),
-          // Periods
+          ).animate().fadeIn().slideX(begin: 0.1),
+          
+          const SizedBox(height: 12),
+          
+          // Periods List
           StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('timetable')
@@ -133,51 +150,61 @@ class _TimetableBodyState extends State<_TimetableBody> {
                 .snapshots(),
             builder: (context, snap) {
               if (!snap.hasData || !snap.data!.exists) {
-                return const Padding(
-                  padding: EdgeInsets.all(60),
+                return Padding(
+                  padding: const EdgeInsets.all(80),
                   child: Column(
                     children: [
-                      Icon(Icons.event_busy_rounded, size: 64, color: Colors.grey),
-                      SizedBox(height: 12),
-                      Text('No timetable set yet.\nAsk your admin to configure it.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey)),
+                      Icon(Icons.event_busy_rounded, size: 64, color: AppTheme.textHint.withOpacity(0.2)),
+                      const SizedBox(height: 16),
+                      const Text('Schedule Unavailable', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint)),
+                      const SizedBox(height: 8),
+                      const Text('No data synced for this sector yet.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
                     ],
                   ),
                 );
               }
               final data = snap.data!.data() as Map<String, dynamic>;
               final periods = (data[_selectedDay] as List<dynamic>?) ?? [];
+              
               if (periods.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Text('No classes on this day 🎉', style: TextStyle(color: Colors.grey, fontSize: 16)),
-                );
+                return Padding(
+                  padding: const EdgeInsets.all(60),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.celebration_rounded, size: 64, color: AppTheme.secondary),
+                      const SizedBox(height: 16),
+                      Text('Free Day Sector!', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.secondary, fontSize: 18)),
+                      const Text('No missions assigned for today.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
+                    ],
+                  ),
+                ).animate().scale();
               }
+
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 itemCount: periods.length,
                 itemBuilder: (context, i) {
                   final p = periods[i] as Map<String, dynamic>;
-                  return _PeriodCard(period: p, index: i)
-                      .animate().fadeIn(delay: (i * 80).ms).slideX(begin: 0.3);
+                  return _TimelineNode(period: p, index: i, isLast: i == periods.length - 1)
+                      .animate().fadeIn(delay: (i * 100).ms).slideY(begin: 0.2);
                 },
               );
             },
           ),
-        ],
+        ]),
       ),
     );
   }
 }
 
-class _PeriodCard extends StatelessWidget {
+class _TimelineNode extends StatelessWidget {
   final Map<String, dynamic> period;
   final int index;
+  final bool isLast;
 
-  const _PeriodCard({required this.period, required this.index});
+  const _TimelineNode({required this.period, required this.index, required this.isLast});
 
   @override
   Widget build(BuildContext context) {
@@ -188,50 +215,78 @@ class _PeriodCard extends StatelessWidget {
     ];
     final color = colors[index % colors.length];
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return IntrinsicHeight(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Time Panel
           SizedBox(
-            width: 60,
+            width: 65,
             child: Column(
               children: [
-                Text(period['startTime'] ?? '', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                Text(period['endTime'] ?? '', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                Text(period['startTime'] ?? '00:00', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppTheme.textPrimary)),
+                const SizedBox(height: 4),
+                Text(period['endTime'] ?? '00:00', style: const TextStyle(color: AppTheme.textHint, fontSize: 11, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Container(width: 4, height: 80, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
-          const SizedBox(width: 12),
+          
+          // Timeline indicator
+          Column(
+            children: [
+              Container(
+                width: 12, height: 12,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2), boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 4)]),
+              ),
+              if (!isLast)
+                Expanded(child: Container(width: 2, decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(1)))),
+            ],
+          ),
+          const SizedBox(width: 16),
+          
+          // Lesson Card
           Expanded(
-            child: PremiumCard(
-              opacity: 1,
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(Icons.school_rounded, color: color, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(period['subject'] ?? 'Subject', style: const TextStyle(
-                            fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                        Text(period['teacher'] ?? '', style: const TextStyle(
-                            fontSize: 12, color: AppTheme.textSecondary)),
-                        if (period['room'] != null)
-                          Text('Room: ${period['room']}', style: const TextStyle(
-                              fontSize: 11, color: AppTheme.textSecondary)),
-                      ],
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: PremiumCard(
+                opacity: 1,
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                      child: Icon(Icons.hub_rounded, color: color, size: 20),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(period['subject'] ?? 'System Sync', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.person_outline_rounded, size: 12, color: AppTheme.textHint),
+                              const SizedBox(width: 4),
+                              Text(period['teacher'] ?? 'AI Faculty', style: const TextStyle(fontSize: 11, color: AppTheme.textHint, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                          if (period['room'] != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textHint),
+                                const SizedBox(width: 4),
+                                Text('Sector ${period['room']}', style: const TextStyle(fontSize: 11, color: AppTheme.textHint)),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

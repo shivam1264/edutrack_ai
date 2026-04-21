@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../utils/app_theme.dart';
 import '../../models/user_model.dart';
+import '../../widgets/premium_card.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class AddUserScreen extends StatefulWidget {
   const AddUserScreen({super.key});
@@ -27,117 +29,179 @@ class _AddUserScreenState extends State<AddUserScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add New User'),
-        backgroundColor: AppTheme.danger,
-        foregroundColor: Colors.white,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Create Account',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
+      backgroundColor: AppTheme.bgLight,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 180,
+            pinned: true,
+            backgroundColor: AppTheme.danger,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Positioned(
+                    top: -20, right: -20,
+                    child: Icon(Icons.person_add_alt_1_rounded, color: Colors.white.withOpacity(0.1), size: 200),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Register Hub Member', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                        Text('Onboard new students, teachers, or parents', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    const Text('Enter credentials for the new school member'),
-                    const SizedBox(height: 32),
-
-                    // Role Selection
-                    _buildRoleChip(context),
-                    const SizedBox(height: 24),
-
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                      icon: Icons.person_outline_rounded,
-                      validator: (v) => v!.isEmpty ? 'Name required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _emailController,
-                      label: 'Email Address',
-                      icon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (v) => !v!.contains('@') ? 'Invalid email' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _passwordController,
-                      label: 'Initial Password',
-                      icon: Icons.lock_outline_rounded,
-                      isPassword: true,
-                      validator: (v) => v!.length < 6 ? 'Min 6 characters' : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    if (_selectedRole == 'student' || _selectedRole == 'teacher')
-                      _buildTextField(
-                        controller: TextEditingController(text: _selectedClassId),
-                        label: 'Class ID',
-                        icon: Icons.class_outlined,
-                        onChanged: (v) => _selectedClassId = v,
-                        validator: (v) => v!.isEmpty ? 'Class ID required' : null,
-                      ),
-
-                    if (_selectedRole == 'parent')
-                      _buildTextField(
-                        controller: TextEditingController(text: _parentOf),
-                        label: "Child's Student ID (UID)",
-                        icon: Icons.family_restroom_outlined,
-                        onChanged: (v) => _parentOf = v,
-                        validator: (v) => v!.isEmpty ? 'Child ID required' : null,
-                      ),
-
-                    const SizedBox(height: 40),
-                    ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.danger,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Create User Account', style: TextStyle(fontSize: 16, color: Colors.white)),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                if (_isLoading)
+                  const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+                else
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildRoleSection().animate().fadeIn().slideY(begin: 0.1),
+                        const SizedBox(height: 24),
+                        
+                        PremiumCard(
+                          opacity: 1,
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.badge_outlined, size: 14, color: AppTheme.textHint),
+                                  SizedBox(width: 8),
+                                  Text('IDENTIFICATION DETAILS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              _buildTextField(
+                                controller: _nameController,
+                                label: 'Full Official Name',
+                                icon: Icons.person_rounded,
+                                validator: (v) => v!.isEmpty ? 'Name required' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _emailController,
+                                label: 'Corporate/Personal Email',
+                                icon: Icons.alternate_email_rounded,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (v) => !v!.contains('@') ? 'Invalid email format' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _passwordController,
+                                label: 'Initial Access Password',
+                                icon: Icons.key_rounded,
+                                isPassword: true,
+                                validator: (v) => v!.length < 6 ? 'Minimum 6 security digits' : null,
+                              ),
+                            ],
+                          ),
+                        ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
+                        
+                        const SizedBox(height: 20),
+                        
+                        if (_selectedRole != 'admin')
+                          PremiumCard(
+                            opacity: 1,
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.link_rounded, size: 14, color: AppTheme.textHint),
+                                    SizedBox(width: 8),
+                                    Text('RELATIONAL MAPPING', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                if (_selectedRole == 'student' || _selectedRole == 'teacher')
+                                  _buildTextField(
+                                    controller: TextEditingController(text: _selectedClassId),
+                                    label: 'Assigned Class ID',
+                                    icon: Icons.hub_rounded,
+                                    onChanged: (v) => _selectedClassId = v,
+                                    validator: (v) => v!.isEmpty ? 'Class code required' : null,
+                                  ),
+                                if (_selectedRole == 'parent')
+                                  _buildTextField(
+                                    controller: TextEditingController(text: _parentOf),
+                                    label: "Child's Educational UID",
+                                    icon: Icons.child_care_rounded,
+                                    onChanged: (v) => _parentOf = v,
+                                    validator: (v) => v!.isEmpty ? 'Child link ID required' : null,
+                                  ),
+                              ],
+                            ),
+                          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+
+                        const SizedBox(height: 48),
+                        SizedBox(
+                          height: 60,
+                          child: ElevatedButton.icon(
+                            onPressed: _submitForm,
+                            icon: const Icon(Icons.how_to_reg_rounded),
+                            label: const Text('Initialize Account Creation', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                              elevation: 8,
+                              shadowColor: AppTheme.primary.withOpacity(0.4),
+                            ),
+                          ),
+                        ).animate().fadeIn(delay: 300.ms).scale(),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildRoleChip(BuildContext context) {
+  Widget _buildRoleSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Select User Role', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Text('Designation Priority', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.textHint, letterSpacing: 1)),
         const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: ['student', 'teacher', 'parent', 'admin'].map((role) {
-            final isSelected = _selectedRole == role;
-            return ChoiceChip(
-              label: Text(role[0].toUpperCase() + role.substring(1)),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) setState(() => _selectedRole = role);
-              },
-              selectedColor: AppTheme.danger.withOpacity(0.2),
-              labelStyle: TextStyle(
-                color: isSelected ? AppTheme.danger : AppTheme.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            );
-          }).toList(),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _RoleCard(role: 'student', title: 'Student', icon: Icons.school_rounded, isSelected: _selectedRole == 'student', onTap: () => setState(() => _selectedRole = 'student')),
+              const SizedBox(width: 12),
+              _RoleCard(role: 'teacher', title: 'Faculty', icon: Icons.psychology_rounded, isSelected: _selectedRole == 'teacher', onTap: () => setState(() => _selectedRole = 'teacher')),
+              const SizedBox(width: 12),
+              _RoleCard(role: 'parent', title: 'Guardian', icon: Icons.family_restroom_rounded, isSelected: _selectedRole == 'parent', onTap: () => setState(() => _selectedRole = 'parent')),
+              const SizedBox(width: 12),
+              _RoleCard(role: 'admin', title: 'Admin', icon: Icons.admin_panel_settings_rounded, isSelected: _selectedRole == 'admin', onTap: () => setState(() => _selectedRole = 'admin')),
+            ],
+          ),
         ),
       ],
     );
@@ -159,8 +223,10 @@ class _AddUserScreenState extends State<AddUserScreen> {
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: Icon(icon, color: AppTheme.primary, size: 20),
+        filled: true,
+        fillColor: AppTheme.bgLight,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       validator: validator,
@@ -169,33 +235,70 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
     try {
       await _authService.register(
-        name: _nameController.text,
-        email: _emailController.text,
-        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
         role: _selectedRole,
-        schoolId: _schoolIdController.text,
+        schoolId: _schoolIdController.text.trim(),
         classId: _selectedClassId,
         parentOf: _parentOf,
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User registered successfully!')),
+          const SnackBar(
+            content: Text('Deployment Successful! User account live. ⚡'),
+            backgroundColor: AppTheme.secondary,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text('Deployment Error: $e'), backgroundColor: AppTheme.danger, behavior: SnackBarBehavior.floating),
         );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+}
+
+class _RoleCard extends StatelessWidget {
+  final String role;
+  final String title;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RoleCard({required this.role, required this.title, required this.icon, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isSelected ? AppTheme.primary : AppTheme.borderLight),
+          boxShadow: isSelected ? [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))] : [],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? Colors.white : AppTheme.textSecondary, size: 18),
+            const SizedBox(width: 10),
+            Text(title, style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, fontSize: 13)),
+          ],
+        ),
+      ),
+    );
   }
 }

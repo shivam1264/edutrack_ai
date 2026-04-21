@@ -4,10 +4,12 @@ import '../../models/quiz_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/quiz_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/premium_card.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../utils/config.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class CreateQuizScreen extends StatefulWidget {
   final String classId;
@@ -62,20 +64,35 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Row(
             children: [
-              Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
-              SizedBox(width: 8),
-              Text('AI Question Generator'),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppTheme.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.auto_awesome_rounded, color: AppTheme.accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('AI Magic Generator', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
             ],
           ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: topicCtrl, decoration: const InputDecoration(labelText: 'Topic (e.g. Solar System, Algebra)')),
-                const SizedBox(height: 12),
+                const Text('Generate high-quality questions using EduTrack AI.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: topicCtrl, 
+                  decoration: const InputDecoration(
+                    labelText: 'Topic',
+                    hintText: 'e.g. Thermodynamics, Algebra',
+                    prefixIcon: Icon(Icons.topic_rounded, color: AppTheme.accent),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -86,16 +103,20 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                         onChanged: (v) => setLocalState(() => difficulty = v!),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: TextField(controller: countCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Count')),
+                      child: TextField(
+                        controller: countCtrl, 
+                        keyboardType: TextInputType.number, 
+                        decoration: const InputDecoration(labelText: 'Count', prefixIcon: Icon(Icons.numbers_rounded)),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: type,
-                  decoration: const InputDecoration(labelText: 'Question Type'),
+                  decoration: const InputDecoration(labelText: 'Question Type', prefixIcon: Icon(Icons.list_alt_rounded)),
                   items: ['MCQ', 'True/False', 'Short Answer'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                   onChanged: (v) => setLocalState(() => type = v!),
                 ),
@@ -104,7 +125,11 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Generate ✨')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true), 
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: const Text('Generate ✨', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
       ),
@@ -124,7 +149,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           'difficulty': difficulty,
           'type': type,
         }),
-      );
+      ).timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
         final List<dynamic> generated = jsonDecode(response.body);
@@ -180,9 +205,10 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Quiz created! 🎉'),
+            content: Text('Quiz Broadcasted! Students notified. ⚡'),
             backgroundColor: AppTheme.secondary,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -194,9 +220,10 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
+      content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w700)),
       backgroundColor: isError ? AppTheme.danger : AppTheme.secondary,
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
@@ -204,218 +231,200 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      appBar: AppBar(
-        title: const Text('Create Quiz'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          if (_isSaving)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
-            )
-          else
-            IconButton(
-              onPressed: _createQuiz,
-              icon: const Icon(Icons.check_rounded, color: AppTheme.secondary),
-              tooltip: 'Create Quiz',
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 160,
+            pinned: true,
+            backgroundColor: AppTheme.accent,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Positioned(
+                    top: -10, right: -10,
+                    child: Icon(Icons.bolt_rounded, color: Colors.white.withOpacity(0.1), size: 160),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Create Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text('Configure your academic assessment', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Basic Info Card ──
-              _SectionCard(
-                title: 'Quiz Details',
+            actions: [
+              if (_isSaving)
+                const Padding(padding: EdgeInsets.all(16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+              else
+                IconButton(onPressed: _createQuiz, icon: const Icon(Icons.check_circle_rounded), tooltip: 'Create Quiz'),
+            ],
+          ),
+          SliverToBoxAdapter(
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextFormField(
-                      controller: _titleCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Quiz Title',
-                        prefixIcon: Icon(Icons.quiz_rounded),
+                    PremiumCard(
+                      opacity: 1,
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.settings_outlined, size: 14, color: AppTheme.textHint),
+                              SizedBox(width: 8),
+                              Text('QUIZ CONFIGURATION', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _titleCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Quiz Title',
+                              prefixIcon: Icon(Icons.quiz_rounded, color: AppTheme.accent),
+                            ),
+                            validator: (v) => v?.isEmpty == true ? 'Title required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _subject,
+                                  decoration: const InputDecoration(labelText: 'Subject', prefixIcon: Icon(Icons.subject_rounded, color: AppTheme.accent)),
+                                  items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                  onChanged: (v) => setState(() => _subject = v!),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  value: _durationMins,
+                                  decoration: const InputDecoration(labelText: 'Duration', prefixIcon: Icon(Icons.timer_rounded, color: AppTheme.accent)),
+                                  items: [10, 15, 20, 30, 45, 60, 90, 120].map((d) => DropdownMenuItem(value: d, child: Text('$d mins'))).toList(),
+                                  onChanged: (v) => setState(() => _durationMins = v!),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _TimeSelector(label: 'Start Schedule', value: _startTime, onChanged: (dt) => setState(() => _startTime = dt)),
+                          const SizedBox(height: 12),
+                          _TimeSelector(label: 'Expiry Time', value: _endTime, onChanged: (dt) => setState(() => _endTime = dt)),
+                        ],
                       ),
-                      validator: (v) =>
-                          v?.isEmpty == true ? 'Title required' : null,
+                    ).animate().fadeIn().slideY(begin: 0.1),
+                    const SizedBox(height: 24),
+
+                    Row(
+                      children: [
+                        const Text('Question Bank', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
+                        const Spacer(),
+                        InkWell(
+                          onTap: _isSaving ? null : _aiGenerateQuestions,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.meshGradient,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [BoxShadow(color: AppTheme.accent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+                                SizedBox(width: 6),
+                                Text('AI GEN ✨', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                              ],
+                            ),
+                          ),
+                        ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(duration: 3.seconds),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _subject,
-                      decoration: const InputDecoration(
-                        labelText: 'Subject',
-                        prefixIcon: Icon(Icons.subject_rounded),
-                      ),
-                      items: _subjects
-                          .map((s) =>
-                              DropdownMenuItem(value: s, child: Text(s)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _subject = v!),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+
+                    ..._questions.asMap().entries.map((e) {
+                      return _QuestionEditor(
+                        key: ValueKey(e.key),
+                        index: e.key,
+                        draft: e.value,
+                        onRemove: () => setState(() => _questions.removeAt(e.key)),
+                      ).animate().fadeIn().slideX(begin: 0.1);
+                    }),
+
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
-                          child: DropdownButtonFormField<int>(
-                            value: _durationMins,
-                            decoration: const InputDecoration(
-                              labelText: 'Duration',
-                              prefixIcon: Icon(Icons.timer_rounded),
+                          child: OutlinedButton.icon(
+                            onPressed: _addMCQQuestion,
+                            icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                            label: const Text('Add MCQ'),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppTheme.accent),
+                              foregroundColor: AppTheme.accent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
-                            items: [10, 15, 20, 30, 45, 60, 90, 120]
-                                .map((d) => DropdownMenuItem(
-                                    value: d, child: Text('$d mins')))
-                                .toList(),
-                            onChanged: (v) =>
-                                setState(() => _durationMins = v!),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _addShortQuestion,
+                            icon: const Icon(Icons.short_text_rounded, size: 16),
+                            label: const Text('Add Short'),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppTheme.textHint),
+                              foregroundColor: AppTheme.textSecondary,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    // Time selectors
-                    _TimeSelector(
-                      label: 'Start Time',
-                      value: _startTime,
-                      onChanged: (dt) => setState(() => _startTime = dt),
-                    ),
-                    const SizedBox(height: 8),
-                    _TimeSelector(
-                      label: 'End Time',
-                      value: _endTime,
-                      onChanged: (dt) => setState(() => _endTime = dt),
-                    ),
+                    const SizedBox(height: 120),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // ── Questions ──
-              Row(
-                children: [
-                  const Text(
-                    'Questions',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${_questions.length} added',
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12),
-                  ),
-                  const SizedBox(width: 12),
-                  InkWell(
-                    onTap: _isSaving ? null : _aiGenerateQuestions,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.meshGradient,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
-                          SizedBox(width: 4),
-                          Text('AI MAGIC', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              ..._questions.asMap().entries.map((e) {
-                return _QuestionEditor(
-                  key: ValueKey(e.key),
-                  index: e.key,
-                  draft: e.value,
-                  onRemove: () => setState(() => _questions.removeAt(e.key)),
-                );
-              }),
-
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _addMCQQuestion,
-                      icon: const Icon(Icons.radio_button_checked_rounded,
-                          size: 16),
-                      label: const Text('Add MCQ'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _addShortQuestion,
-                      icon: const Icon(Icons.short_text_rounded, size: 16),
-                      label: const Text('Add Short'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isSaving ? null : _createQuiz,
-                  icon: const Icon(Icons.publish_rounded),
-                  label: Text(_isSaving ? 'Creating...' : 'Create Quiz'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _SectionCard({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-              color: AppTheme.textSecondary,
             ),
           ),
-          const SizedBox(height: 12),
-          child,
         ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: SizedBox(
+          width: double.infinity,
+          height: 60,
+          child: ElevatedButton.icon(
+            onPressed: _isSaving ? null : _createQuiz,
+            icon: const Icon(Icons.rocket_launch_rounded),
+            label: Text(_isSaving ? 'Broadcasting...' : 'Launch Quiz Assessment', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              elevation: 8,
+              shadowColor: AppTheme.accent.withOpacity(0.4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+          ),
+        ).animate().fadeIn(delay: 500.ms).scale(),
       ),
     );
   }
@@ -426,11 +435,7 @@ class _TimeSelector extends StatelessWidget {
   final DateTime value;
   final ValueChanged<DateTime> onChanged;
 
-  const _TimeSelector({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
+  const _TimeSelector({required this.label, required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -443,40 +448,22 @@ class _TimeSelector extends StatelessWidget {
           lastDate: DateTime.now().add(const Duration(days: 365)),
         );
         if (date == null || !context.mounted) return;
-        final time = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.fromDateTime(value),
-        );
+        final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(value));
         if (time == null) return;
-        onChanged(DateTime(
-            date.year, date.month, date.day, time.hour, time.minute));
+        onChanged(DateTime(date.year, date.month, date.day, time.hour, time.minute));
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppTheme.bgLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.borderLight),
-        ),
+        decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderLight)),
         child: Row(
           children: [
-            const Icon(Icons.event_rounded,
-                color: AppTheme.primary, size: 18),
-            const SizedBox(width: 10),
+            const Icon(Icons.calendar_today_rounded, color: AppTheme.accent, size: 16),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppTheme.textSecondary)),
-                Text(
-                  DateFormat('dd MMM, hh:mm a').format(value),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                    fontSize: 13,
-                  ),
-                ),
+                Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textHint, fontWeight: FontWeight.bold)),
+                Text(DateFormat('dd MMM, hh:mm a').format(value), style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary, fontSize: 13)),
               ],
             ),
           ],
@@ -492,7 +479,6 @@ class _QuestionDraft {
   final List<String> options = ['', '', '', ''];
   int correctOption = 0;
   double marks = 1;
-
   _QuestionDraft({required this.type});
 
   QuizQuestion toQuizQuestion() {
@@ -510,13 +496,7 @@ class _QuestionEditor extends StatefulWidget {
   final int index;
   final _QuestionDraft draft;
   final VoidCallback onRemove;
-
-  const _QuestionEditor({
-    super.key,
-    required this.index,
-    required this.draft,
-    required this.onRemove,
-  });
+  const _QuestionEditor({super.key, required this.index, required this.draft, required this.onRemove});
 
   @override
   State<_QuestionEditor> createState() => _QuestionEditorState();
@@ -525,93 +505,61 @@ class _QuestionEditor extends StatefulWidget {
 class _QuestionEditorState extends State<_QuestionEditor> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderLight),
-      ),
+    return PremiumCard(
+      opacity: 1,
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'Q${widget.index + 1} • ${widget.draft.type == QuestionType.mcq ? "MCQ" : "Short"}',
-                  style: const TextStyle(
-                    color: AppTheme.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: AppTheme.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text('MISSION ${widget.index + 1}', style: const TextStyle(color: AppTheme.accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
               ),
               const Spacer(),
-              // Marks
               SizedBox(
-                width: 60,
+                width: 65,
                 child: TextFormField(
                   initialValue: widget.draft.marks.toStringAsFixed(0),
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Marks',
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Score', isDense: true),
                   onChanged: (v) {
                     final parsed = double.tryParse(v);
                     if (parsed != null) widget.draft.marks = parsed;
                   },
                 ),
               ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: widget.onRemove,
-                child: const Icon(Icons.delete_rounded,
-                    color: AppTheme.danger, size: 20),
-              ),
+              const SizedBox(width: 12),
+              IconButton(onPressed: widget.onRemove, icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger, size: 20)),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           TextFormField(
             initialValue: widget.draft.text,
-            decoration: const InputDecoration(
-              hintText: 'Question text...',
-              isDense: true,
-            ),
+            decoration: const InputDecoration(hintText: 'Describe the question challenge...', isDense: true),
             maxLines: 2,
             onChanged: (v) => widget.draft.text = v,
           ),
           if (widget.draft.type == QuestionType.mcq) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
             ...List.generate(4, (i) {
               return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Radio<int>(
                       value: i,
                       groupValue: widget.draft.correctOption,
-                      onChanged: (v) =>
-                          setState(() => widget.draft.correctOption = v!),
-                      activeColor: AppTheme.secondary,
+                      onChanged: (v) => setState(() => widget.draft.correctOption = v!),
+                      activeColor: AppTheme.accent,
                     ),
                     Expanded(
                       child: TextFormField(
                         initialValue: widget.draft.options[i],
-                        decoration: InputDecoration(
-                          hintText: 'Option ${['A', 'B', 'C', 'D'][i]}',
-                          isDense: true,
-                        ),
+                        decoration: InputDecoration(hintText: 'Choice ${['A', 'B', 'C', 'D'][i]}', isDense: true),
                         onChanged: (v) => widget.draft.options[i] = v,
                       ),
                     ),
