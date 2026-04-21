@@ -6,6 +6,8 @@ import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'flashcard_generator_screen.dart';
+import 'ai_mindmap_screen.dart';
 
 class NotesLibraryScreen extends StatefulWidget {
   const NotesLibraryScreen({super.key});
@@ -210,14 +212,42 @@ class _NoteCard extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.download_rounded, color: Color(0xFF059669)),
-              onPressed: () async {
-                final url = data['fileUrl'];
-                if (url != null) {
-                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                }
-              },
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.flash_on_rounded, color: AppTheme.accent),
+                  tooltip: 'Generate Flashcards',
+                  onPressed: () {
+                    final url = data['fileUrl'];
+                    if (url != null) {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => FlashcardGeneratorScreen(initialFileUrl: url)
+                      ));
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.account_tree_rounded, color: AppTheme.accent),
+                  tooltip: 'Generate Mind Map',
+                  onPressed: () {
+                    final url = data['fileUrl'];
+                    if (url != null) {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => AIMindMapScreen(initialFileUrl: url)
+                      ));
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.download_rounded, color: Color(0xFF059669)),
+                  onPressed: () async {
+                    final url = data['fileUrl'];
+                    if (url != null) {
+                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+              ],
             ),
           ],
         ),

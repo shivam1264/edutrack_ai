@@ -21,6 +21,10 @@ import '../student/timetable_screen.dart';
 import '../student/achievements_screen.dart';
 import '../student/flashcard_generator_screen.dart';
 import '../student/ai_viva_screen.dart';
+import '../student/ai_mindmap_screen.dart';
+import '../../services/brain_dna_service.dart';
+import '../../models/knowledge_node.dart';
+import '../../widgets/brain_dna_visualizer.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -203,6 +207,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   _buildAIBadge(analytics.aiPrediction).animate().fadeIn().slideX(begin: 0.2),
                 if (analytics.aiPrediction != null) const SizedBox(height: 16),
 
+                // ── Deep Knowledge DNA (Unique Feature) ──────────────────
+                _buildBrainDNA(user?.uid ?? ''),
+                const SizedBox(height: 24),
+
                 // ── Today's Summary Row ─────────────────────────────────
                 Row(
                   children: [
@@ -276,6 +284,75 @@ class _StudentDashboardState extends State<StudentDashboard> {
               ],
             ]),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBrainDNA(String studentId) {
+    return StreamBuilder<List<KnowledgeNode>>(
+      stream: BrainDNAService.instance.getBrainDNA(studentId),
+      builder: (context, snapshot) {
+        final nodes = snapshot.data ?? [];
+        return PremiumCard(
+          opacity: 1,
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('KNOWLEDGE DNA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.primary, fontSize: 12)),
+                      Text('Real-time Mastery Tracking', style: TextStyle(color: AppTheme.textHint, fontSize: 10)),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.psychology_rounded, size: 14, color: AppTheme.primary),
+                        const SizedBox(width: 4),
+                        Text('${nodes.length} Nodes Active', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (nodes.isEmpty)
+                _buildDNAPlaceholder(studentId)
+              else
+                Center(
+                  child: BrainDNAVisualizer(nodes: nodes, size: 280),
+                ),
+              const SizedBox(height: 16),
+              const Text(
+                'Nodes glow brighter as you master concepts. Faded nodes indicate study items that may be forgotten soon.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDNAPlaceholder(String studentId) {
+    return Column(
+      children: [
+        const Icon(Icons.biotech_rounded, size: 50, color: AppTheme.borderLight),
+        const SizedBox(height: 10),
+        const Text('Initializing your Brain DNA...', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: () => BrainDNAService.instance.initializeDNA(studentId, ['Mathematics', 'Science', 'English']),
+          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 24)),
+          child: const Text('Start DNA Mapping'),
         ),
       ],
     );
@@ -627,6 +704,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
         'label': 'Flashcards',
         'color': Colors.deepOrange,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashcardGeneratorScreen())),
+      },
+      {
+        'icon': Icons.account_tree_rounded,
+        'label': 'Mind Maps',
+        'color': Colors.purple,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AIMindMapScreen())),
       },
       {
         'icon': Icons.calendar_month_rounded,

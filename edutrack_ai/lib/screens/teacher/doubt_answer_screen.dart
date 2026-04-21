@@ -164,17 +164,46 @@ class _DoubtCardState extends State<_DoubtCard> {
             ),
             const SizedBox(height: 10),
             Text(d['question'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary, fontSize: 15)),
+            if (d['isAI'] == true && widget.isPending == false)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 14),
+                    const SizedBox(width: 4),
+                    const Text('AI GENERATED PRE-ANSWER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.primary)),
+                  ],
+                ),
+              ),
             if (!widget.isPending && d['answer'] != null) ...[
               const SizedBox(height: 10),
               const Divider(),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                  Icon(d['isAI'] == true ? Icons.auto_awesome_outlined : Icons.check_circle_rounded, 
+                       color: d['isAI'] == true ? AppTheme.primary : Colors.green, size: 16),
                   const SizedBox(width: 8),
                   Expanded(child: Text(d['answer'], style: const TextStyle(color: AppTheme.textSecondary))),
                 ],
               ),
+              if (d['isAI'] == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => widget.doc.reference.update({'isAI': false, 'answeredBy': widget.teacher?.name ?? 'Teacher'}),
+                      icon: const Icon(Icons.verified_user_rounded, size: 14),
+                      label: const Text('Verify & Keep as Best Answer'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green,
+                        side: const BorderSide(color: Colors.green),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ),
             ],
             if (widget.isPending) ...[
               const SizedBox(height: 12),

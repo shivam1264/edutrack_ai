@@ -55,34 +55,62 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   Future<void> _aiGenerateQuestions() async {
     final topicCtrl = TextEditingController();
     final countCtrl = TextEditingController(text: '5');
+    String difficulty = 'Medium';
+    String type = 'MCQ';
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
-            SizedBox(width: 8),
-            Text('AI Question Generator'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
+              SizedBox(width: 8),
+              Text('AI Question Generator'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: topicCtrl, decoration: const InputDecoration(labelText: 'Topic (e.g. Solar System, Algebra)')),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: difficulty,
+                        decoration: const InputDecoration(labelText: 'Difficulty'),
+                        items: ['Easy', 'Medium', 'Hard'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                        onChanged: (v) => setLocalState(() => difficulty = v!),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(controller: countCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Count')),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: type,
+                  decoration: const InputDecoration(labelText: 'Question Type'),
+                  items: ['MCQ', 'True/False', 'Short Answer'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) => setLocalState(() => type = v!),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Generate ✨')),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: topicCtrl, decoration: const InputDecoration(labelText: 'Topic (e.g. Solar System, Algebra)')),
-            const SizedBox(height: 12),
-            TextField(controller: countCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Number of Questions')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Generate')),
-        ],
       ),
     );
 
-    if (result != true) return;
+    if (result != true || topicCtrl.text.isEmpty) return;
 
     setState(() => _isSaving = true);
     try {
@@ -93,6 +121,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           'topic': topicCtrl.text.trim(),
           'subject': _subject,
           'count': int.tryParse(countCtrl.text) ?? 5,
+          'difficulty': difficulty,
+          'type': type,
         }),
       );
 
@@ -100,12 +130,15 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         final List<dynamic> generated = jsonDecode(response.body);
         setState(() {
           for (var q in generated) {
-            final draft = _QuestionDraft(type: QuestionType.mcq);
+            final qType = (q['type'] == 'short') ? QuestionType.shortAnswer : QuestionType.mcq;
+            final draft = _QuestionDraft(type: qType);
             draft.text = q['text'];
-            for (int i = 0; i < 4; i++) {
-              draft.options[i] = q['options'][i];
+            if (qType == QuestionType.mcq) {
+              for (int i = 0; i < (q['options'] as List).length; i++) {
+                if (i < 4) draft.options[i] = q['options'][i];
+              }
+              draft.correctOption = q['correctOption'];
             }
-            draft.correctOption = q['correctOption'];
             draft.marks = (q['marks'] as num).toDouble();
             _questions.add(draft);
           }

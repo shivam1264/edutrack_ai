@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
+import '../../utils/config.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class DoubtBoxScreen extends StatefulWidget {
@@ -45,18 +48,24 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen>
     final user = context.read<AuthProvider>().user;
     setState(() => _isSubmitting = true);
     try {
-      await FirebaseFirestore.instance.collection('doubts').add({
+      final docRef = await FirebaseFirestore.instance.collection('doubts').add({
         'studentId': user?.uid,
         'studentName': user?.name ?? 'Student',
         'classId': user?.classId ?? '',
         'subject': _selectedSubject,
         'question': _questionCtrl.text.trim(),
         'status': 'pending',
-        'answer': null,
-        'answeredBy': null,
+        'answer': '✨ Generating Best Answer for you...', // Temporary state
+        'answeredBy': 'EduTrack AI',
         'createdAt': FieldValue.serverTimestamp(),
       });
+      
+      final questionText = _questionCtrl.text.trim();
       _questionCtrl.clear();
+
+      // Trigger AI Best Answer asynchronously
+      _generateAIBestAnswer(docRef.id, questionText, _selectedSubject, user?.classId ?? 'Grade 10');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -76,6 +85,39 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen>
       }
     }
     if (mounted) setState(() => _isSubmitting = false);
+  }
+
+  Future<void> _generateAIBestAnswer(String docId, String question, String subject, String grade) async {
+    try {
+      final res = await http.post(
+        Uri.parse(Config.endpoint('/generate-best-answer')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'question': question,
+          'subject': subject,
+          'grade': grade,
+        }),
+      ).timeout(const Duration(seconds: 40));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
+          'answer': data['answer'],
+          'status': 'answered',
+          'isAI': true,
+        });
+      } else {
+        await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
+          'answer': 'Teacher will provide the best answer soon.',
+          'answeredBy': null,
+        });
+      }
+    } catch (e) {
+      await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
+        'answer': 'Teacher will provide the best answer soon.',
+        'answeredBy': null,
+      });
+    }
   }
 
   @override
@@ -275,16 +317,25 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen>
                       const SizedBox(height: 12),
                       const Divider(),
                       const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.school_rounded, color: AppTheme.primary, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(d['answer'] ?? '', style: const TextStyle(color: AppTheme.textSecondary, height: 1.5)),
-                          ),
-                        ],
-                      ),
+                        if (d['isAI'] == true)
+                          Row(
+                            children: [
+                              const Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 14),
+                              const SizedBox(width: 6),
+                              Text('BEST ANSWER (AI)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: 1)),
+                            ],
+                          ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.school_rounded, color: AppTheme.primary, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(d['answer'] ?? '', style: const TextStyle(color: AppTheme.textSecondary, height: 1.5)),
+                            ),
+                          ],
+                        ),
                       if (d['answeredBy'] != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
