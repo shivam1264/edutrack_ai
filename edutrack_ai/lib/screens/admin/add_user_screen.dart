@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../utils/app_theme.dart';
 import '../../models/user_model.dart';
+import '../../services/class_service.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -136,12 +137,28 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                 ),
                                 const SizedBox(height: 20),
                                 if (_selectedRole == 'student' || _selectedRole == 'teacher')
-                                  _buildTextField(
-                                    controller: TextEditingController(text: _selectedClassId),
-                                    label: 'Assigned Class ID',
-                                    icon: Icons.hub_rounded,
-                                    onChanged: (v) => _selectedClassId = v,
-                                    validator: (v) => v!.isEmpty ? 'Class code required' : null,
+                                  StreamBuilder<List<ClassModel>>(
+                                    stream: ClassService().getClasses(),
+                                    builder: (context, snapshot) {
+                                      final classes = snapshot.data ?? [];
+                                      return DropdownButtonFormField<String>(
+                                        value: _selectedClassId,
+                                        decoration: InputDecoration(
+                                          labelText: 'Assign Academic Hub',
+                                          prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
+                                          filled: true,
+                                          fillColor: AppTheme.bgLight,
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                                        ),
+                                        items: classes.map((c) => DropdownMenuItem(
+                                          value: c.displayName, 
+                                          child: Text(c.displayName)
+                                        )).toList(),
+                                        hint: const Text('Select a standardized hub'),
+                                        onChanged: (v) => setState(() => _selectedClassId = v),
+                                        validator: (v) => v == null ? 'Hub assignment required' : null,
+                                      );
+                                    },
                                   ),
                                   if (_selectedRole == 'parent')
                                     Column(

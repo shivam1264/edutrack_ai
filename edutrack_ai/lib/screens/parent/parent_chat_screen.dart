@@ -58,8 +58,16 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        _addSystemMessage(data['answer']);
+        try {
+          final data = jsonDecode(response.body);
+          if (data['answer'] != null) {
+            _addSystemMessage(data['answer']);
+          } else {
+             _addSystemMessage('Optimization complete, but no response payload detected.');
+          }
+        } catch (e) {
+          _addSystemMessage('Intelligence signal was malformed. Retrying connection...');
+        }
       } else {
         _addSystemMessage('Sorry, I encountered an error connecting to my neural core.');
       }

@@ -302,7 +302,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Sector: ${user!.classId}',
+                                  'Academic Hub: ${user!.classId}',
                                   style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
                                 ),
                               ],

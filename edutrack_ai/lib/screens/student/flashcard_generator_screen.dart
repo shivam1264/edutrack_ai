@@ -98,18 +98,29 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
 
   void _handleResponse(int statusCode, String body) {
     if (statusCode == 200) {
-      setState(() {
-        _flashcards = jsonDecode(body)['flashcards'] ?? [];
-        _isLoading = false;
-      });
+      try {
+        final decoded = jsonDecode(body);
+        setState(() {
+          _flashcards = decoded['flashcards'] ?? [];
+          _isLoading = false;
+        });
+        if (_flashcards.isEmpty) _showError(msg: 'No flashcards could be extracted from this context.');
+      } catch (e) {
+        _showError(msg: 'Neural decoding failed. Malformed response from server.');
+      }
     } else {
       _showError();
     }
   }
 
-  void _showError() {
+  void _showError({String msg = 'Error generating flashcards from document'}) {
     setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error generating flashcards from document')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: AppTheme.danger,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
   }
 
   @override

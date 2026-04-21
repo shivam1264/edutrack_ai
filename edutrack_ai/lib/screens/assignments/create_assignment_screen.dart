@@ -131,7 +131,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                             const SizedBox(width: 8),
                             Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                             const SizedBox(width: 8),
-                            Text('Target: Sector ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                            Text('Target Hub: ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                           ],
                         ),
                       ],
