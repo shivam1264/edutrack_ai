@@ -249,8 +249,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Deployment Successful! User account live. ⚡'),
+          SnackBar(
+            content: const Text('Deployment Successful! User account live. ⚡'),
             backgroundColor: AppTheme.secondary,
             behavior: SnackBarBehavior.floating,
           ),

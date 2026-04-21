@@ -204,8 +204,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Quiz Broadcasted! Students notified. ⚡'),
+          SnackBar(
+            content: const Text('Quiz Broadcasted! Students notified. ⚡'),
             backgroundColor: AppTheme.secondary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -77,8 +77,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mission Configured! Assignment live. 🚀'),
+          SnackBar(
+            content: const Text('Mission Configured! Assignment live. 🚀'),
             backgroundColor: AppTheme.secondary,
             behavior: SnackBarBehavior.floating,
           ),
