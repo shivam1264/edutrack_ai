@@ -12,7 +12,7 @@ class UserModel {
   final String? fcmToken;
   final String? avatarUrl;
   final String? classId;       // for students/teachers
-  final String? parentOf;      // for parents: child's student_id
+  final List<String>? parentOf; // for parents: list of child student_ids
   final int xp;                // For gamification
   final int level;             // For gamification
   final List<String> badges;   // For gamification
@@ -44,7 +44,7 @@ class UserModel {
       fcmToken: map['fcm_token'],
       avatarUrl: map['avatar_url'],
       classId: map['class_id'],
-      parentOf: map['parent_of'],
+      parentOf: _parseParentOf(map['parent_of']),
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
       badges: List<String>.from(map['badges'] ?? []),
@@ -62,7 +62,7 @@ class UserModel {
       if (fcmToken != null) 'fcm_token': fcmToken,
       if (avatarUrl != null) 'avatar_url': avatarUrl,
       if (classId != null) 'class_id': classId,
-      if (parentOf != null) 'parent_of': parentOf,
+      if (parentOf != null && parentOf!.isNotEmpty) 'parent_of': parentOf,
       'xp': xp,
       'level': level,
       'badges': badges,
@@ -79,9 +79,14 @@ class UserModel {
         return UserRole.student;
       case 'parent':
         return UserRole.parent;
-      default:
-        return UserRole.student;
-    }
+      }
+  }
+
+  static List<String>? _parseParentOf(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return [value]; // Handle legacy single ID
+    if (value is List) return List<String>.from(value);
+    return null;
   }
 
   UserModel copyWith({

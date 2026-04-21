@@ -22,7 +22,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final _schoolIdController = TextEditingController(text: 'SCH001'); // Default
   String _selectedRole = 'student';
   String? _selectedClassId;
-  String? _parentOf;
+  final _parentOfController = TextEditingController();
 
   bool _isLoading = false;
 
@@ -143,14 +143,23 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                     onChanged: (v) => _selectedClassId = v,
                                     validator: (v) => v!.isEmpty ? 'Class code required' : null,
                                   ),
-                                if (_selectedRole == 'parent')
-                                  _buildTextField(
-                                    controller: TextEditingController(text: _parentOf),
-                                    label: "Child's Educational UID",
-                                    icon: Icons.child_care_rounded,
-                                    onChanged: (v) => _parentOf = v,
-                                    validator: (v) => v!.isEmpty ? 'Child link ID required' : null,
-                                  ),
+                                  if (_selectedRole == 'parent')
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildTextField(
+                                          controller: _parentOfController,
+                                          label: "Children's Educational UIDs",
+                                          icon: Icons.child_care_rounded,
+                                          validator: (v) => v!.isEmpty ? 'At least one child link ID required' : null,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Separate multiple UIDs with commas (e.g., UID1, UID2)',
+                                          style: TextStyle(color: AppTheme.textHint, fontSize: 10, fontStyle: FontStyle.italic),
+                                        ),
+                                      ],
+                                    ),
                               ],
                             ),
                           ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
@@ -244,7 +253,9 @@ class _AddUserScreenState extends State<AddUserScreen> {
         role: _selectedRole,
         schoolId: _schoolIdController.text.trim(),
         classId: _selectedClassId,
-        parentOf: _parentOf,
+        parentOf: _selectedRole == 'parent' 
+            ? _parentOfController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+            : null,
       );
 
       if (mounted) {

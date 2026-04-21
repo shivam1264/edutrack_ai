@@ -10,7 +10,8 @@ import '../../utils/config.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ParentChatScreen extends StatefulWidget {
-  const ParentChatScreen({super.key});
+  final String? studentId;
+  const ParentChatScreen({super.key, this.studentId});
 
   @override
   State<ParentChatScreen> createState() => _ParentChatScreenState();

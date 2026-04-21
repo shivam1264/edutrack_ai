@@ -11,7 +11,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 class MonthlyReportScreen extends StatefulWidget {
-  const MonthlyReportScreen({super.key});
+  final String? studentId;
+  const MonthlyReportScreen({super.key, this.studentId});
 
   @override
   State<MonthlyReportScreen> createState() => _MonthlyReportScreenState();
@@ -31,7 +32,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
 
   Future<void> _fetchStudentData() async {
     final user = context.read<AuthProvider>().user;
-    final studentId = user?.parentOf;
+    final studentId = widget.studentId ?? user?.parentOf?.first;
     if (studentId == null || studentId.isEmpty) {
       final snap = await FirebaseFirestore.instance.collection('users')
           .where('role', isEqualTo: 'student')

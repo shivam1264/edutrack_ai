@@ -12,7 +12,8 @@ import '../../utils/config.dart';
 import 'package:intl/intl.dart';
 
 class RequestLeaveScreen extends StatefulWidget {
-  const RequestLeaveScreen({super.key});
+  final String? studentId;
+  const RequestLeaveScreen({super.key, this.studentId});
 
   @override
   State<RequestLeaveScreen> createState() => _RequestLeaveScreenState();
@@ -89,7 +90,7 @@ class _RequestLeaveScreenState extends State<RequestLeaveScreen> {
     setState(() => _isSubmitting = true);
     try {
       final user = context.read<AuthProvider>().user;
-      final studentId = user?.parentOf ?? '';
+      final studentId = widget.studentId ?? user?.parentOf?.first ?? '';
       
       // We need to get the child's classId. For now, assume it's stored in parentOf or use a placeholder.
       // In a real app, you'd fetch the student's profile first.

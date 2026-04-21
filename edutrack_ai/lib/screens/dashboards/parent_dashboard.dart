@@ -23,15 +23,23 @@ class ParentDashboard extends StatefulWidget {
 }
 
 class _ParentDashboardState extends State<ParentDashboard> {
+  String? _selectedChildId;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthProvider>().user;
-      if (user?.parentOf != null) {
-        context.read<AnalyticsProvider>().loadStudentAnalytics(user!.parentOf!);
+      final kids = user?.parentOf ?? [];
+      if (kids.isNotEmpty) {
+        setState(() => _selectedChildId = kids.first);
+        _loadChildData(kids.first);
       }
     });
+  }
+
+  void _loadChildData(String childId) {
+    context.read<AnalyticsProvider>().loadStudentAnalytics(childId);
   }
 
   @override
@@ -114,6 +122,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                     style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, height: 1.2),
                                   ),
                                   const SizedBox(height: 4),
+                                  if ((user?.parentOf?.length ?? 0) > 1)
+                                    _buildChildSwitcher(user!.parentOf!)
+                                  else
                                     Row(
                                       children: [
                                         Container(
@@ -172,35 +183,39 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Quick Stats Row ──────────────────────────────────
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ParentStatCard(
-                          icon: Icons.stars_rounded,
-                          label: 'Avg Score',
-                          value: '${(childData?['avg_score'] as num? ?? 0).toStringAsFixed(1)}%',
-                          color: AppTheme.parentColor,
+                  if (_selectedChildId == null)
+                    _buildNoChildLinked()
+                  else ...[
+                    // ── Quick Stats Row ──────────────────────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ParentStatCard(
+                            icon: Icons.stars_rounded,
+                            label: 'Avg Score',
+                            value: '${(childData?['avg_score'] as num? ?? 0).toStringAsFixed(1)}%',
+                            color: AppTheme.parentColor,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ChildAttendanceCard(studentId: user!.parentOf!),
-                      ),
-                    ],
-                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ChildAttendanceCard(studentId: _selectedChildId!),
+                        ),
+                      ],
+                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  const Text('Recent Updates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 12),
-                  _buildRecentNotifications(user.parentOf!),
-                  const SizedBox(height: 24),
+                    const Text('Recent Updates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 12),
+                    _buildRecentNotifications(_selectedChildId!),
+                    const SizedBox(height: 24),
 
-                  const Text('Child Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 12),
-                  _buildChildProfile(user.parentOf!),
-                  const SizedBox(height: 24),
+                    const Text('Child Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 12),
+                    _buildChildProfile(_selectedChildId!),
+                    const SizedBox(height: 24),
+                  ],
 
                   // ── Action Buttons ────────────────────────────────────
                   const Text('Parent Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
@@ -212,7 +227,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           icon: Icons.forum_rounded,
                           label: 'AI Assistant',
                           color: AppTheme.primary,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentChatScreen())),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentChatScreen(studentId: _selectedChildId))),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -221,7 +236,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           icon: Icons.calendar_today_rounded,
                           label: 'Leave Apply',
                           color: AppTheme.parentColor,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RequestLeaveScreen())),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RequestLeaveScreen(studentId: _selectedChildId))),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -230,7 +245,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           icon: Icons.assessment_rounded,
                           label: 'AI Report',
                           color: const Color(0xFF0EA5E9),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MonthlyReportScreen(studentId: _selectedChildId))),
                         ),
                       ),
                     ],
@@ -334,7 +349,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
   }
 
   void _showStudyPlanDialog(BuildContext context) {
-    final user = context.read<AuthProvider>().user;
+    if (_selectedChildId == null) return;
     
     showModalBottomSheet(
       context: context,
@@ -361,7 +376,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
             Expanded(
               child: FutureBuilder<Map<String, dynamic>?>(
                 future: context.read<AnalyticsService>().getStudyPlan(
-                  studentId: user?.parentOf ?? '',
+                  studentId: _selectedChildId!,
                   weakSubjects: ['Mathematics', 'Science'],
                   upcomingDeadlines: [],
                   studyHoursPerDay: 4,
@@ -438,6 +453,52 @@ class _ParentDashboardState extends State<ParentDashboard> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildChildSwitcher(List<String> children) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: children.map((id) {
+          final isSelected = _selectedChildId == id;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedChildId = id);
+              _loadChildData(id);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white : Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: isSelected ? null : Border.all(color: Colors.white.withOpacity(0.3)),
+                boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.person_outline_rounded,
+                    size: 14,
+                    color: isSelected ? const Color(0xFFD97706) : Colors.white,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    id.substring(0, 8).toUpperCase(),
+                    style: TextStyle(
+                      color: isSelected ? const Color(0xFFD97706) : Colors.white,
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 

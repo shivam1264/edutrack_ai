@@ -35,14 +35,9 @@ class AuthService {
   }
 
   // ─── Register (Admin use) ────────────────────────────────────────────────────
-  Future<UserModel?> register({
-    required String name,
-    required String email,
-    required String password,
-    required String role,
     required String schoolId,
     String? classId,
-    String? parentOf,
+    List<String>? parentOf,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
