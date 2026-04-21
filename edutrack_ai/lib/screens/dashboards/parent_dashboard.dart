@@ -24,16 +24,36 @@ class ParentDashboard extends StatefulWidget {
 
 class _ParentDashboardState extends State<ParentDashboard> {
   String? _selectedChildId;
+  final Map<String, String> _childNames = {};
+  bool _isLoadingNames = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final user = context.read<AuthProvider>().user;
       final kids = user?.parentOf ?? [];
+      
       if (kids.isNotEmpty) {
-        setState(() => _selectedChildId = kids.first);
-        _loadChildData(kids.first);
+        // Fetch names for all kids
+        for (var id in kids) {
+          final doc = await FirebaseFirestore.instance.collection('users').doc(id).get();
+          if (doc.exists) {
+            _childNames[id] = doc.data()?['name'] ?? id;
+          } else {
+            _childNames[id] = id;
+          }
+        }
+        
+        if (mounted) {
+          setState(() {
+            _selectedChildId = kids.first;
+            _isLoadingNames = false;
+          });
+          _loadChildData(kids.first);
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingNames = false);
       }
     });
   }
@@ -164,7 +184,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
           ),
 
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 if (analytics.isLoading)
@@ -486,7 +506,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    id.substring(0, 8).toUpperCase(),
+                    _childNames[id] ?? id.substring(0, 8).toUpperCase(),
                     style: TextStyle(
                       color: isSelected ? const Color(0xFFD97706) : Colors.white,
                       fontSize: 11,

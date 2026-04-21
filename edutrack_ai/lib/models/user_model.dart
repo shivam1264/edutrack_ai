@@ -79,6 +79,8 @@ class UserModel {
         return UserRole.student;
       case 'parent':
         return UserRole.parent;
+      default:
+        return UserRole.student;
       }
   }
 
@@ -99,7 +101,7 @@ class UserModel {
     String? fcmToken,
     String? avatarUrl,
     String? classId,
-    String? parentOf,
+    List<String>? parentOf,
     int? xp,
     int? level,
     List<String>? badges,

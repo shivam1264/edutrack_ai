@@ -35,6 +35,11 @@ class AuthService {
   }
 
   // ─── Register (Admin use) ────────────────────────────────────────────────────
+  Future<UserModel?> register({
+    required String name,
+    required String email,
+    required String password,
+    required String role,
     required String schoolId,
     String? classId,
     List<String>? parentOf,

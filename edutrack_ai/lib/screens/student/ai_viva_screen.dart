@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import '../../utils/config.dart';
 import '../../utils/app_theme.dart';
 
@@ -42,7 +43,7 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
           'use_tts': false,
           'audio_base64': ''
         }),
-      );
+      ).timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
         final reply = jsonDecode(response.body)['reply'] ?? 'I cannot evaluate that.';
@@ -55,7 +56,11 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
     } catch (e) {
       setState(() {
         _isLoadingReply = false;
-        _messages.add({"role": "assistant", "text": "Network issue. Please try again."});
+        String errorMsg = "Network issue. Please try again.";
+        if (e is TimeoutException) {
+          errorMsg = "AI Examiner is taking too long to evaluate. Check connection.";
+        }
+        _messages.add({"role": "assistant", "text": errorMsg});
       });
       _scrollToBottom();
     }

@@ -95,16 +95,43 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       slivers: [
         _buildSliverAppBar('Academic Insights', 'Track class progress'),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               if (analytics.isLoading)
                 const Center(child: Padding(padding: EdgeInsets.all(60), child: CircularProgressIndicator()))
               else ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondary.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.secondary.withOpacity(0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), shape: BoxShape.circle),
+                        child: const Icon(Icons.hub_rounded, color: AppTheme.secondary, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('SECTOR ANALYSIS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: AppTheme.secondary)),
+                          Text('Currently Viewing: ${user?.classId ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn().slideX(begin: 0.1),
+                const SizedBox(height: 24),
+
                 Row(
                   children: [
                     Expanded(
-                      child: _buildStatCard('Class Avg', '${(classData?['class_avg'] as num? ?? 0).toStringAsFixed(1)}%', Icons.bolt_rounded, AppTheme.borderLight),
+                      child: _buildStatCard('Class Avg', '${(classData?['class_avg'] as num? ?? 0).toStringAsFixed(1)}%', Icons.bolt_rounded, AppTheme.secondary),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -138,7 +165,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       slivers: [
         _buildSliverAppBar('Classroom', 'Manage daily activities'),
         SliverPadding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
                _buildGridActions([
@@ -175,12 +202,15 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Widget _buildAILabsTab() {
+    final user = context.read<AuthProvider>().user;
+    final classId = user?.classId ?? '';
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         _buildSliverAppBar('AI Assistant', 'Smart educational tools'),
         SliverPadding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
                _buildGridActions([
@@ -200,7 +230,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                     'icon': Icons.insights_rounded,
                     'label': 'Smart Analysis',
                     'color': const Color(0xFF8B5CF6),
-                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen())),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReportsScreen(classId: classId))),
                   },
                ]),
             ]),
@@ -219,7 +249,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       slivers: [
         _buildSliverAppBar('Connect', 'Student support & requests'),
         SliverPadding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
                _buildGridActions([

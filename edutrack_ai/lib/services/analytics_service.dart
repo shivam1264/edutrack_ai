@@ -127,7 +127,7 @@ class AnalyticsService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$Config.baseUrl/generate-study-plan'),
+        Uri.parse(Config.endpoint('/generate-study-plan')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'student_id': studentId,
@@ -135,11 +135,14 @@ class AnalyticsService {
           'upcoming_deadlines': upcomingDeadlines,
           'study_hours_per_day': studyHoursPerDay,
         }),
-      );
+      ).timeout(const Duration(seconds: 40));
+      
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+    } catch (e) {
+      print('AI Study Plan Hub Error: $e');
+    }
     return null;
   }
 }

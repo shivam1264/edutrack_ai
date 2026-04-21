@@ -118,8 +118,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                     top: -10, right: -10,
                     child: Icon(Icons.add_task_rounded, color: Colors.white.withOpacity(0.1), size: 160),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +127,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                         const Text('Create Assignment', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                         Row(
                           children: [
-                            Text('Deploy new academic missions', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            const Text('Deploy new academic missions', style: TextStyle(color: Colors.white70, fontSize: 12)),
                             const SizedBox(width: 8),
                             Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                             const SizedBox(width: 8),

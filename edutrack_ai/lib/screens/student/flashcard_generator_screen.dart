@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import '../../utils/config.dart';
 import '../../utils/app_theme.dart';
@@ -39,10 +40,10 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
         Uri.parse(Config.endpoint('/generate-flashcards')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'file_url': url}),
-      );
+      ).timeout(const Duration(seconds: 40));
       _handleResponse(response.statusCode, response.body);
     } catch (e) {
-      _showError();
+      _showError(msg: e is TimeoutException ? 'Server took too long. Try smaller content.' : 'Error generating flashcards.');
     }
   }
 
@@ -55,10 +56,10 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
         Uri.parse(Config.endpoint('/generate-flashcards')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'content': content}),
-      );
+      ).timeout(const Duration(seconds: 40));
       _handleResponse(response.statusCode, response.body);
     } catch (e) {
-      _showError();
+      _showError(msg: e is TimeoutException ? 'AI is busy. Please try again in 30s.' : 'Error connecting to AI Hub.');
     }
   }
 
@@ -80,11 +81,11 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
         filename: result.files.single.name,
       ));
       
-      var response = await request.send();
+      var response = await request.send().timeout(const Duration(seconds: 40));
       var responseBody = await response.stream.bytesToString();
       _handleResponse(response.statusCode, responseBody);
     } catch (e) {
-      _showError();
+      _showError(msg: e is TimeoutException ? 'Document too large for fast processing.' : 'Upload failed.');
     }
   }
 
@@ -254,7 +255,7 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
           padding: EdgeInsets.all(24.0),
           child: Text('Swipe LEFT to Revise Again  •  Swipe RIGHT if you know it', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 60),
       ],
     );
   }

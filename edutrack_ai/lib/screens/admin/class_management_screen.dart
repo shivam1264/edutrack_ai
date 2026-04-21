@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
 import '../../widgets/premium_card.dart';
+import '../../utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ClassManagementScreen extends StatefulWidget {
@@ -25,7 +27,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Establish New Hub', style: TextStyle(fontWeight: FontWeight.w900)),
+          title: Text('Establish New Hub', style: TextStyle(fontWeight: FontWeight.w900)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -33,7 +35,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                 value: _selectedStandard,
                 decoration: InputDecoration(
                   labelText: 'Academic Standard',
-                  prefixIcon: const Icon(Icons.school_rounded, color: AppTheme.secondary),
+                  prefixIcon: Icon(Icons.school_rounded, color: AppTheme.secondary),
                   filled: true,
                   fillColor: AppTheme.bgLight,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
@@ -47,7 +49,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                 decoration: InputDecoration(
                   labelText: 'Section (Optional)',
                   hintText: 'e.g. A, B, or Alpha',
-                  prefixIcon: const Icon(Icons.grid_view_rounded, color: AppTheme.secondary),
+                  prefixIcon: Icon(Icons.grid_view_rounded, color: AppTheme.secondary),
                   filled: true,
                   fillColor: AppTheme.bgLight,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
@@ -58,7 +60,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: AppTheme.textHint)),
+              child: Text('Cancel', style: TextStyle(color: AppTheme.textHint)),
             ),
             Padding(
               padding: const EdgeInsets.only(right: 8, bottom: 8),
@@ -106,8 +108,8 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                 children: [
                   Icon(Icons.hub_outlined, size: 64, color: AppTheme.textHint.withOpacity(0.5)),
                   const SizedBox(height: 16),
-                  const Text('No Academic Hubs active.', style: TextStyle(color: AppTheme.textHint, fontWeight: FontWeight.bold)),
-                  const Text('Establish your first class to begin.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
+                  Text('No Academic Hubs active.', style: TextStyle(color: AppTheme.textHint, fontWeight: FontWeight.bold)),
+                  Text('Establish your first class to begin.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
                 ],
               ),
             );
@@ -129,16 +131,16 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                       color: AppTheme.secondary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.holiday_village_rounded, color: AppTheme.secondary, size: 24),
+                    child: Icon(Icons.holiday_village_rounded, color: AppTheme.secondary, size: 24),
                   ),
                   title: Text(
                     cls.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+                    style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
                   ),
                   subtitle: Text('ID: ${cls.id.length > 6 ? cls.id.substring(0, 6).toUpperCase() : cls.id}', 
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textHint)),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textHint)),
                   trailing: IconButton(
-                    icon: const Icon(Icons.delete_sweep_rounded, color: AppTheme.danger, size: 22),
+                    icon: Icon(Icons.delete_sweep_rounded, color: AppTheme.danger, size: 22),
                     onPressed: () async {
                       final confirm = await showDialog<bool>(
                         context: context,
@@ -149,7 +151,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                           actions: [
                             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
                             TextButton(onPressed: () => Navigator.pop(context, true), 
-                                child: const Text('Delete', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold))),
+                                child: Text('Delete', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold))),
                           ],
                         ),
                       );

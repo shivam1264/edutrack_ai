@@ -6,7 +6,8 @@ import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ReportsScreen extends StatelessWidget {
-  const ReportsScreen({super.key});
+  final String? classId;
+  const ReportsScreen({super.key, this.classId});
 
   @override
   Widget build(BuildContext context) {
@@ -30,14 +31,25 @@ class ReportsScreen extends StatelessWidget {
                     top: -10, right: -10,
                     child: Icon(Icons.analytics_rounded, color: Colors.white.withOpacity(0.1), size: 180),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Hub Intelligence', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                        Text('Real-time data synchronization & risk analysis', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                        const Text('Hub Intelligence', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                        Row(
+                          children: [
+                            Text(classId != null ? 'Analyzing Hub: $classId' : 'Global Intelligence Protocol', 
+                                 style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                            if (classId != null) ...[
+                              const SizedBox(width: 8),
+                              Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.white54, shape: BoxShape.circle)),
+                              const SizedBox(width: 8),
+                              const Text('Live Sync', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),

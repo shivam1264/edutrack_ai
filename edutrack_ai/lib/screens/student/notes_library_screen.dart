@@ -49,16 +49,16 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                       top: -20, right: -20,
                       child: Icon(Icons.menu_book_rounded, color: Colors.white.withOpacity(0.1), size: 180),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(24, 60, 24, 16),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Notes Library', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+                          const Text('Notes Library', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
                           Row(
                             children: [
-                              Text('Study materials from your teachers', style: TextStyle(color: Colors.white70)),
+                              const Text('Study materials from your teachers', style: TextStyle(color: Colors.white70)),
                               const SizedBox(width: 8),
                               Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                               const SizedBox(width: 8),

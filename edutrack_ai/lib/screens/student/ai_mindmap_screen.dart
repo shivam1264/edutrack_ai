@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import '../../utils/config.dart';
 import '../../utils/app_theme.dart';
@@ -36,10 +37,10 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
         Uri.parse(Config.endpoint('/generate-mindmap')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'file_url': url}),
-      );
+      ).timeout(const Duration(seconds: 40));
       _handleResponse(response.statusCode, response.body);
     } catch (e) {
-      _showError();
+      _showError(msg: e is TimeoutException ? 'Visualizer Hub timeout. Try a shorter text.' : null);
     }
   }
 
@@ -52,10 +53,10 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
         Uri.parse(Config.endpoint('/generate-mindmap')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'content': content}),
-      );
+      ).timeout(const Duration(seconds: 40));
       _handleResponse(response.statusCode, response.body);
     } catch (e) {
-      _showError();
+      _showError(msg: e is TimeoutException ? 'AI is analyzing deep patterns. Please wait 1 min.' : null);
     }
   }
 
@@ -77,11 +78,11 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
         filename: result.files.single.name,
       ));
       
-      var response = await request.send();
+      var response = await request.send().timeout(const Duration(seconds: 40));
       var responseBody = await response.stream.bytesToString();
       _handleResponse(response.statusCode, responseBody);
     } catch (e) {
-      _showError();
+      _showError(msg: e is TimeoutException ? 'Structural analysis took too long.' : null);
     }
   }
 
