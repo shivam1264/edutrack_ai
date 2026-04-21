@@ -30,14 +30,19 @@ class TeacherDashboard extends StatefulWidget {
 
 class _TeacherDashboardState extends State<TeacherDashboard> {
   int _currentIndex = 0;
+  String? _selectedClassId;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthProvider>().user;
-      if (user?.classId != null) {
-        context.read<AnalyticsProvider>().loadClassAnalytics(user!.classId!);
+      if (user != null) {
+        final classes = user.assignedClasses ?? (user.classId != null ? [user.classId!] : []);
+        if (classes.isNotEmpty) {
+          setState(() => _selectedClassId = classes.first);
+          context.read<AnalyticsProvider>().loadClassAnalytics(_selectedClassId!);
+        }
       }
     });
   }
@@ -116,13 +121,17 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         child: const Icon(Icons.hub_rounded, color: AppTheme.secondary, size: 18),
                       ),
                       const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('SECTOR ANALYSIS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: AppTheme.secondary)),
-                          Text('Currently Viewing: ${user?.classId ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('SECTOR ANALYSIS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: AppTheme.secondary)),
+                            Text('Currently Viewing: ${_selectedClassId ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
+                          ],
+                        ),
                       ),
+                      if (user?.assignedClasses != null && user!.assignedClasses!.length > 1)
+                        _buildClassSelectionTrigger(user.assignedClasses!),
                     ],
                   ),
                 ).animate().fadeIn().slideX(begin: 0.1),
@@ -142,7 +151,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 const SizedBox(height: 24),
 
                 // ── Class Knowledge DNA Heatmap ─────────────────────────
-                _buildClassDNAHeatmap(user?.classId ?? ''),
+                _buildClassDNAHeatmap(_selectedClassId ?? ''),
                 const SizedBox(height: 24),
 
                 _buildLeaderboardSection('Academic Stars 🏆', top5, isTop: true),
@@ -157,8 +166,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Widget _buildClassroomTab() {
-    final user = context.read<AuthProvider>().user;
-    final classId = user?.classId ?? '';
+    final classId = _selectedClassId ?? '';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -173,7 +181,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                     'icon': Icons.how_to_reg_rounded,
                     'label': 'Attendance',
                     'color': AppTheme.secondary,
-                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAttendanceScreen(classId: classId, className: 'Class Attendance'))),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAttendanceScreen(classId: classId, className: '$_selectedClassId Attendance'))),
                   },
                   {
                     'icon': Icons.auto_awesome_rounded,
@@ -202,8 +210,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Widget _buildAILabsTab() {
-    final user = context.read<AuthProvider>().user;
-    final classId = user?.classId ?? '';
+    final classId = _selectedClassId ?? '';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -218,13 +225,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                     'icon': Icons.auto_awesome_rounded,
                     'label': 'AI Lesson Plan',
                     'color': const Color(0xFF1D4ED8),
-                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LessonPlannerScreen())),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => LessonPlannerScreen(classId: classId))),
                   },
                   {
                     'icon': Icons.upload_file_rounded,
                     'label': 'Upload Notes',
                     'color': const Color(0xFF059669),
-                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadNotesScreen())),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => UploadNotesScreen(classId: classId))),
                   },
                   {
                     'icon': Icons.insights_rounded,
@@ -241,8 +248,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Widget _buildConnectTab() {
-    final user = context.read<AuthProvider>().user;
-    final classId = user?.classId ?? '';
+    final classId = _selectedClassId ?? '';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -324,7 +330,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                           Row(
                             children: [
                               Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
-                              if (user?.classId != null) ...[
+                              if (_selectedClassId != null) ...[
                                 Container(
                                   margin: const EdgeInsets.only(left: 8),
                                   width: 4, height: 4,
@@ -332,7 +338,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Academic Hub: ${user!.classId}',
+                                  'Academic Hub: $_selectedClassId',
                                   style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
                                 ),
                               ],
@@ -524,6 +530,80 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             },
             child: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClassSelectionTrigger(List<String> classes) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          builder: (context) => _buildClassPickerSheet(classes),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('SWITCH', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 11)),
+            SizedBox(width: 4),
+            Icon(Icons.unfold_more_rounded, color: AppTheme.primary, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClassPickerSheet(List<String> classes) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Switch Academic Hub', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+          const Text('Select the class hub you want to manage', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          const SizedBox(height: 24),
+          ...classes.map((c) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              onTap: () {
+                setState(() => _selectedClassId = c);
+                context.read<AnalyticsProvider>().loadClassAnalytics(c);
+                Navigator.pop(context);
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _selectedClassId == c ? AppTheme.primary.withOpacity(0.1) : AppTheme.bgLight,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.hub_rounded, color: _selectedClassId == c ? AppTheme.primary : AppTheme.textHint, size: 20),
+              ),
+              title: Text(c, style: TextStyle(fontWeight: _selectedClassId == c ? FontWeight.w900 : FontWeight.w600, color: _selectedClassId == c ? AppTheme.primary : AppTheme.textPrimary)),
+              trailing: _selectedClassId == c ? const Icon(Icons.check_circle_rounded, color: AppTheme.primary) : null,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: _selectedClassId == c ? AppTheme.primary : AppTheme.borderLight),
+              ),
+              tileColor: _selectedClassId == c ? AppTheme.primary.withOpacity(0.05) : Colors.transparent,
+            ),
+          )).toList(),
+          const SizedBox(height: 24),
         ],
       ),
     );

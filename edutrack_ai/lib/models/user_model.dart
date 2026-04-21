@@ -11,7 +11,8 @@ class UserModel {
   final DateTime createdAt;
   final String? fcmToken;
   final String? avatarUrl;
-  final String? classId;       // for students/teachers
+  final String? classId;       // for students
+  final List<String>? assignedClasses; // for teachers: multiple hubs
   final List<String>? parentOf; // for parents: list of child student_ids
   final int xp;                // For gamification
   final int level;             // For gamification
@@ -27,6 +28,7 @@ class UserModel {
     this.fcmToken,
     this.avatarUrl,
     this.classId,
+    this.assignedClasses,
     this.parentOf,
     this.xp = 0,
     this.level = 1,
@@ -44,6 +46,7 @@ class UserModel {
       fcmToken: map['fcm_token'],
       avatarUrl: map['avatar_url'],
       classId: map['class_id'],
+      assignedClasses: _parseAssignedClasses(map),
       parentOf: _parseParentOf(map['parent_of']),
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
@@ -62,6 +65,7 @@ class UserModel {
       if (fcmToken != null) 'fcm_token': fcmToken,
       if (avatarUrl != null) 'avatar_url': avatarUrl,
       if (classId != null) 'class_id': classId,
+      if (assignedClasses != null && assignedClasses!.isNotEmpty) 'assigned_classes': assignedClasses,
       if (parentOf != null && parentOf!.isNotEmpty) 'parent_of': parentOf,
       'xp': xp,
       'level': level,
@@ -86,8 +90,21 @@ class UserModel {
 
   static List<String>? _parseParentOf(dynamic value) {
     if (value == null) return null;
-    if (value is String) return [value]; // Handle legacy single ID
+    if (value is String) return [value];
     if (value is List) return List<String>.from(value);
+    return null;
+  }
+
+  static List<String>? _parseAssignedClasses(Map<String, dynamic> map) {
+    final assigned = map['assigned_classes'];
+    if (assigned is List) return List<String>.from(assigned);
+    
+    // Legacy support for teachers who only had a single classId
+    final legacyClass = map['class_id'];
+    final role = map['role'];
+    if (role == 'teacher' && legacyClass is String && legacyClass.isNotEmpty) {
+      return [legacyClass];
+    }
     return null;
   }
 
@@ -101,6 +118,7 @@ class UserModel {
     String? fcmToken,
     String? avatarUrl,
     String? classId,
+    List<String>? assignedClasses,
     List<String>? parentOf,
     int? xp,
     int? level,
@@ -116,6 +134,7 @@ class UserModel {
       fcmToken: fcmToken ?? this.fcmToken,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       classId: classId ?? this.classId,
+      assignedClasses: assignedClasses ?? this.assignedClasses,
       parentOf: parentOf ?? this.parentOf,
       xp: xp ?? this.xp,
       level: level ?? this.level,

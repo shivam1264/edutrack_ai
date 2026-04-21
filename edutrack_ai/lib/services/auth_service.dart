@@ -42,6 +42,7 @@ class AuthService {
     required String role,
     required String schoolId,
     String? classId,
+    List<String>? assignedClasses,
     List<String>? parentOf,
   }) async {
     try {
@@ -67,6 +68,7 @@ class AuthService {
         schoolId: schoolId,
         createdAt: DateTime.now(),
         classId: classId,
+        assignedClasses: assignedClasses,
         parentOf: parentOf,
       );
 

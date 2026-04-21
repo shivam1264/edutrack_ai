@@ -10,7 +10,8 @@ import '../../services/cloudinary_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class UploadNotesScreen extends StatefulWidget {
-  const UploadNotesScreen({super.key});
+  final String classId;
+  const UploadNotesScreen({super.key, required this.classId});
 
   @override
   State<UploadNotesScreen> createState() => _UploadNotesScreenState();
@@ -73,7 +74,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
         'fileName': _fileName,
         'teacherId': user?.uid,
         'teacherName': user?.name ?? 'Teacher',
-        'classId': user?.classId ?? '',
+        'classId': widget.classId,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -104,7 +105,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final classId = user?.classId ?? '';
+    final classId = widget.classId;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,

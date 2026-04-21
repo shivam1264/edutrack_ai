@@ -10,7 +10,8 @@ import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class LessonPlannerScreen extends StatefulWidget {
-  const LessonPlannerScreen({super.key});
+  final String? classId;
+  const LessonPlannerScreen({super.key, this.classId});
 
   @override
   State<LessonPlannerScreen> createState() => _LessonPlannerScreenState();
@@ -28,11 +29,17 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
   final List<String> _subjects = ['Mathematics', 'Science', 'Physics', 'Chemistry',
     'Biology', 'English', 'Hindi', 'History', 'Geography', 'Computer Science'];
   final List<String> _durations = ['30 minutes', '45 minutes', '60 minutes', '90 minutes'];
-  final List<String> _grades = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+  final List<String> _grades = ['1st standard', '2nd standard', '3rd standard', '4th standard', '5th standard', '6th standard', '7th standard', '8th standard', '9th standard', '10th standard', '11th standard', '12th standard'];
 
   @override
   void initState() {
     super.initState();
+    // Default the grade if classId is provided
+    if (widget.classId != null) {
+      // Logic to extract grade from class name if needed, 
+      // or just set a default that matches our new standard naming
+      _selectedGrade = widget.classId!; 
+    }
     _loadSavedPlans();
   }
 

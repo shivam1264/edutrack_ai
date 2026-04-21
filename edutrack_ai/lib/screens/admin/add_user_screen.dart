@@ -22,7 +22,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final _passwordController = TextEditingController();
   final _schoolIdController = TextEditingController(text: 'SCH001'); // Default
   String _selectedRole = 'student';
-  String? _selectedClassId;
+  String? _selectedClassId; // for students
+  List<String> _selectedAssignedClasses = []; // for teachers
   final _parentOfController = TextEditingController();
 
   bool _isLoading = false;
@@ -137,6 +138,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                 ),
                                 const SizedBox(height: 20),
                                 if (_selectedRole == 'student' || _selectedRole == 'teacher')
+                                if (_selectedRole == 'student')
                                   StreamBuilder<List<ClassModel>>(
                                     stream: ClassService().getClasses(),
                                     builder: (context, snapshot) {
@@ -144,7 +146,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                       return DropdownButtonFormField<String>(
                                         value: _selectedClassId,
                                         decoration: InputDecoration(
-                                          labelText: 'Assign Academic Hub',
+                                          labelText: 'Assign Primary Hub',
                                           prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
                                           filled: true,
                                           fillColor: AppTheme.bgLight,
@@ -157,6 +159,49 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                         hint: const Text('Select a standardized hub'),
                                         onChanged: (v) => setState(() => _selectedClassId = v),
                                         validator: (v) => v == null ? 'Hub assignment required' : null,
+                                      );
+                                    },
+                                  ),
+                                if (_selectedRole == 'teacher')
+                                  StreamBuilder<List<ClassModel>>(
+                                    stream: ClassService().getClasses(),
+                                    builder: (context, snapshot) {
+                                      final classes = snapshot.data ?? [];
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('ASSIGN MULTIPLE HUBS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                          const SizedBox(height: 12),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: classes.map((c) {
+                                              final isSelected = _selectedAssignedClasses.contains(c.displayName);
+                                              return FilterChip(
+                                                label: Text(c.displayName, style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontSize: 12, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500)),
+                                                selected: isSelected,
+                                                onSelected: (selected) {
+                                                  setState(() {
+                                                    if (selected) {
+                                                      _selectedAssignedClasses.add(c.displayName);
+                                                    } else {
+                                                      _selectedAssignedClasses.remove(c.displayName);
+                                                    }
+                                                  });
+                                                },
+                                                selectedColor: AppTheme.primary,
+                                                checkmarkColor: Colors.white,
+                                                backgroundColor: AppTheme.bgLight,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isSelected ? AppTheme.primary : AppTheme.borderLight)),
+                                              );
+                                            }).toList(),
+                                          ),
+                                          if (_selectedAssignedClasses.isEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                              child: Text('At least one hub must be assigned to faculty.', style: TextStyle(color: AppTheme.danger, fontSize: 11)),
+                                            ),
+                                        ],
                                       );
                                     },
                                   ),
@@ -269,7 +314,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
         password: _passwordController.text.trim(),
         role: _selectedRole,
         schoolId: _schoolIdController.text.trim(),
-        classId: _selectedClassId,
+        classId: _selectedRole == 'student' ? _selectedClassId : null,
+        assignedClasses: _selectedRole == 'teacher' ? _selectedAssignedClasses : null,
         parentOf: _selectedRole == 'parent' 
             ? _parentOfController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
             : null,
