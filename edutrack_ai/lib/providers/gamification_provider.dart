@@ -14,18 +14,25 @@ class GamificationProvider with ChangeNotifier {
   }
 
   // Calculate XP required for the NEXT level
+  // Formula: Level * 250 (e.g., Level 1 takes 250 XP to reach Level 2)
   int get xpToNextLevel {
-    if (_user == null) return 100;
+    if (_user == null) return 250;
     return _user!.level * 250; 
   }
 
   double get progressToNextLevel {
-    if (_user == null || _user!.xp == 0) return 0.0;
-    // Simple linear progress for current level
+    if (_user == null) return 0.0;
+    
+    // Base XP for the current level
     final currentLevelBase = (_user!.level - 1) * 250;
+    
+    // XP earned within the current level's bucket
     final relativeXp = _user!.xp - currentLevelBase;
-    final requiredXp = 250;
-    return (relativeXp / requiredXp).clamp(0.0, 1.0);
+    
+    // Total XP bucket size for this level
+    const int bucketSize = 250;
+    
+    return (relativeXp / bucketSize).clamp(0.0, 1.0);
   }
 
   String get rankName {
@@ -37,12 +44,20 @@ class GamificationProvider with ChangeNotifier {
   }
 
   Future<void> addXp(String uid, int amount) async {
-    if (_user == null) return;
+    // Note: We don't return early if _user is null because this might be called 
+    // from a background trigger. We fetch current data from DB.
+    
+    final doc = await _db.collection('users').doc(uid).get();
+    if (!doc.exists) return;
+    
+    final data = doc.data()!;
+    int currentXp = (data['xp'] ?? 0) as int;
+    int currentLevel = (data['level'] ?? 1) as int;
 
-    final newXp = _user!.xp + amount;
-    int newLevel = _user!.level;
+    final newXp = currentXp + amount;
+    int newLevel = currentLevel;
 
-    // Level up logic
+    // Cumulative Level up logic: next level threshold is currentLevel * 250
     while (newXp >= newLevel * 250) {
       newLevel++;
     }
@@ -52,19 +67,32 @@ class GamificationProvider with ChangeNotifier {
       'level': newLevel,
     };
 
-    // If level increased, maybe add a badge?
-    if (newLevel > _user!.level) {
-      // Future: Trigger level up animation flag
-    }
-
     await _db.collection('users').doc(uid).update(updateData);
+    
+    // Update local state if this is the active user
+    if (_user?.uid == uid) {
+      _user = _user!.copyWith(xp: newXp, level: newLevel);
+      notifyListeners();
+    }
   }
 
   Future<void> awardBadge(String uid, String badgeId) async {
-    if (_user == null || _user!.badges.contains(badgeId)) return;
+    final doc = await _db.collection('users').doc(uid).get();
+    if (!doc.exists) return;
+    
+    List badges = (doc.data()?['badges'] as List?) ?? [];
+    if (badges.contains(badgeId)) return;
 
     await _db.collection('users').doc(uid).update({
       'badges': FieldValue.arrayUnion([badgeId]),
     });
+    
+    if (_user?.uid == uid) {
+      if (!_user!.badges.contains(badgeId)) {
+        final newList = List<String>.from(_user!.badges)..add(badgeId);
+        _user = _user!.copyWith(badges: newList);
+        notifyListeners();
+      }
+    }
   }
 }

@@ -3,8 +3,6 @@ import 'package:http/http.dart' as http;
 import '../../utils/config.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../utils/config.dart';
-
 class AnalyticsService {
   static final AnalyticsService instance = AnalyticsService._internal();
   factory AnalyticsService() => instance;
@@ -78,8 +76,10 @@ class AnalyticsService {
 
   // ─── Get class analytics for teacher ─────────────────────────────────────────
   Future<Map<String, dynamic>> getClassAnalytics(String classId) async {
+    // FIX: Using 'users' collection instead of legacy 'students'
     final studentsSnap = await _db
-        .collection('students')
+        .collection('users')
+        .where('role', isEqualTo: 'student')
         .where('class_id', isEqualTo: classId)
         .get();
 
@@ -89,7 +89,7 @@ class AnalyticsService {
       final analytics = await getStudentAnalytics(uid);
       studentData.add({
         'uid': uid,
-        'name': sDoc.data()['name'] ?? 'Unknown',
+        'name': sDoc.data()['name'] ?? 'Incomplete Profile',
         ...analytics,
       });
     }
@@ -127,7 +127,7 @@ class AnalyticsService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/generate-study-plan'),
+        Uri.parse('$Config.baseUrl/generate-study-plan'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'student_id': studentId,
