@@ -224,7 +224,7 @@ class _BulkGradeScreenState extends State<BulkGradeScreen> {
                       final data = doc.data() as Map<String, dynamic>;
                       return DropdownMenuItem(
                         value: doc.id,
-                        child: Text(data['title'] ?? 'Sector Assignment', style: const TextStyle(fontWeight: FontWeight.w700)),
+                        child: Text(data['title'] ?? 'Class Assignment', style: const TextStyle(fontWeight: FontWeight.w700)),
                       );
                     }).toList(),
                     onChanged: (val) {

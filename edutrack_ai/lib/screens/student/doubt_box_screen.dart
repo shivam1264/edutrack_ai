@@ -51,6 +51,7 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen>
       final docRef = await FirebaseFirestore.instance.collection('doubts').add({
         'studentId': user?.uid,
         'studentName': user?.name ?? 'Student',
+        'schoolId': user?.schoolId ?? '',
         'classId': user?.classId ?? '',
         'subject': _selectedSubject,
         'question': _questionCtrl.text.trim(),
@@ -103,7 +104,7 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen>
         final data = jsonDecode(res.body);
         await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
           'answer': data['answer'],
-          'status': 'answered',
+          'status': 'ai_answered',
           'isAI': true,
         });
       } else {

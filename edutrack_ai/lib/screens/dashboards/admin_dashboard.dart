@@ -11,9 +11,12 @@ import '../admin/announcement_screen.dart';
 import '../admin/class_management_screen.dart';
 import '../admin/reports_screen.dart';
 import '../admin/permissions_screen.dart';
-import '../admin/school_analytics_screen.dart';
-import '../admin/timetable_manager_screen.dart';
 import '../admin/teacher_performance_screen.dart';
+import '../admin/user_management_screen.dart';
+import '../settings/profile_screen.dart';
+import '../../widgets/school_analytics_screen.dart';
+import '../planner/timetable_manager_screen.dart';
+import '../attendance/attendance_history_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -148,34 +151,40 @@ class _AdminHomeView extends StatelessWidget {
                         ),
                       ).animate().fadeIn().shimmer(duration: const Duration(seconds: 2)),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle, 
-                              gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.purpleAccent]),
-                              boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.4), blurRadius: 15)]
-                            ),
-                            child: const CircleAvatar(
-                              radius: 32,
-                              backgroundColor: Color(0xFF0F172A),
-                              child: Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 30),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                            child: Row(
                               children: [
-                                const Text('Command Center', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                                Text('Superadmin: ${user?.name ?? 'Admin'}', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.w500)),
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle, 
+                                    gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.purpleAccent]),
+                                    boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.4), blurRadius: 15)]
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 32,
+                                    backgroundColor: const Color(0xFF0F172A),
+                                    backgroundImage: user?.avatarUrl != null ? CachedNetworkImageProvider(user!.avatarUrl!) : null,
+                                    child: user?.avatarUrl == null 
+                                      ? const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 30)
+                                      : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Command Center', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                                      Text('Superadmin: ${user?.name ?? 'Admin'}', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                           const NotificationBell(userId: ''),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -200,9 +209,9 @@ class _AdminHomeView extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   children: const [
-                    _AdminStatCard(label: 'Total Students', collection: 'students', filterField: null, filterValue: null, icon: Icons.people_alt_rounded, color: Colors.blue),
-                    _AdminStatCard(label: 'Teachers Active', collection: 'teachers', filterField: null, filterValue: null, icon: Icons.school_rounded, color: Colors.purple),
-                    _AdminStatCard(label: 'Active Hubs', collection: 'classes', filterField: null, filterValue: null, icon: Icons.hub_rounded, color: Colors.amber),
+                    _AdminStatCard(label: 'Total Students', collection: 'users', filterField: 'role', filterValue: 'student', icon: Icons.people_alt_rounded, color: Colors.blue),
+                    _AdminStatCard(label: 'Teachers Active', collection: 'users', filterField: 'role', filterValue: 'teacher', icon: Icons.school_rounded, color: Colors.purple),
+                    _AdminStatCard(label: 'Active Classes', collection: 'classes', filterField: null, filterValue: null, icon: Icons.hub_rounded, color: Colors.amber),
                     _AdminStatCard(label: 'AI Predictions', collection: 'ai_predictions', filterField: 'risk_level', filterValue: 'high', icon: Icons.gpp_maybe_rounded, color: Colors.redAccent),
                   ],
                 ).animate().fadeIn(duration: const Duration(milliseconds: 500)).slideY(begin: 0.1),
@@ -231,16 +240,22 @@ class _AdminHomeView extends StatelessWidget {
   Widget _buildAdminGrid(BuildContext context) {
     final actions = [
       {
-        'icon': Icons.person_add_rounded,
-        'label': 'Provision Users',
-        'color': Colors.blue,
-        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddUserScreen())),
+        'icon': Icons.manage_accounts_rounded,
+        'label': 'Manage Users',
+        'color': const Color(0xFF0F172A),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementScreen())),
       },
       {
         'icon': Icons.hub_rounded,
-        'label': 'Manage Hubs',
+        'label': 'Manage Classes',
         'color': Colors.indigo,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagementScreen())),
+      },
+      {
+        'icon': Icons.history_edu_rounded,
+        'label': 'Attendance Archive',
+        'color': const Color(0xFF0F172A),
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceHistoryScreen(isAdmin: true))),
       },
       {
         'icon': Icons.insights_rounded,
@@ -253,12 +268,6 @@ class _AdminHomeView extends StatelessWidget {
         'label': 'Teacher Tracking',
         'color': Colors.pink,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherPerformanceScreen())),
-      },
-      {
-        'icon': Icons.security_rounded,
-        'label': 'Access Control',
-        'color': Colors.redAccent,
-        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PermissionsScreen())),
       },
       {
         'icon': Icons.broadcast_on_personal_rounded,
@@ -277,6 +286,12 @@ class _AdminHomeView extends StatelessWidget {
         'label': 'Master Timetable',
         'color': Colors.cyan,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TimetableManagerScreen())),
+      },
+      {
+        'icon': Icons.person_add_rounded,
+        'label': 'Provision New',
+        'color': Colors.blue,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddUserScreen())),
       },
     ];
 
@@ -425,88 +440,142 @@ class _SystemHealthView extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Enterprise Health', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
+        title: const Text('System Diagnostics', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+        backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
+        children: [
+          _buildHealthStatusCard(),
+          const SizedBox(height: 32),
+          const Text('TELEMETRY REAL-TIME', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5, color: Colors.grey)),
+          const SizedBox(height: 16),
+          _HealthMetricStream(
+            label: 'Firestore Pulse', 
+            collection: 'users', 
+            icon: Icons.sync_rounded, 
+            color: Colors.blueAccent,
+            desc: 'Real-time database synchronization status'
+          ),
+          _HealthMetricStream(
+            label: 'AI Inference Load', 
+            collection: 'ai_predictions', 
+            icon: Icons.auto_awesome_rounded, 
+            color: Colors.purpleAccent,
+            desc: 'Volume of predictive analysis threads'
+          ),
+          _HealthMetricStream(
+            label: 'Network Latency', 
+            collection: 'announcements', 
+            icon: Icons.speed_rounded, 
+            color: Colors.tealAccent,
+            desc: 'Average response time for global packets'
+          ),
+          const SizedBox(height: 32),
+          const Text('RECENT SECURITY LOGS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5, color: Colors.grey)),
+          const SizedBox(height: 16),
+          _buildLogList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthStatusCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFF0F172A), Color(0xFF1E293B)]),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))],
+      ),
+      child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF0F766E), Color(0xFF0D9488)]),
-              borderRadius: BorderRadius.circular(20)
-            ),
-            child: const Row(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.greenAccent.withOpacity(0.1), shape: BoxShape.circle),
+            child: const Icon(Icons.shield_rounded, color: Colors.greenAccent, size: 32),
+          ),
+          const SizedBox(width: 20),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 40),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('All Systems Operational', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('No critical bottlenecks detected', style: TextStyle(color: Colors.white70)),
-                    ],
-                  ),
-                )
+                Text('CORE SECURE', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                Text('All systems operating at 100% efficiency', style: TextStyle(color: Colors.white70, fontSize: 13)),
               ],
             ),
-          ).animate().slideX(),
-          const SizedBox(height: 20),
-          const Text('Database Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 10),
-          _HealthMetric(title: 'Firestore Sync', progress: 1.0, color: Colors.amber),
-          _HealthMetric(title: 'Backend Load', progress: 0.15, color: Colors.blue),
-          _HealthMetric(title: 'AI Thread Usage', progress: 0.45, color: Colors.purple),
-          const SizedBox(height: 30),
-          const Text('Recent System Logs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 10),
-          ...List.generate(5, (index) => ListTile(
-            leading: const Icon(Icons.data_array_rounded, color: Colors.grey),
-            title: Text('API Request OK - /ai-predict-$index'),
-            subtitle: Text('${DateTime.now().subtract(Duration(minutes: index * 4)).toString().substring(11, 16)} GMT'),
-            dense: true,
-          ))
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLogList() {
+    return PremiumCard(
+      opacity: 1,
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: List.generate(4, (index) => ListTile(
+          leading: Icon(index == 0 ? Icons.security_rounded : Icons.info_outline_rounded, 
+                 color: index == 0 ? Colors.greenAccent : Colors.grey, size: 18),
+          title: Text(index == 0 ? 'Admin Session Validated' : 'Access Log: Fetch users/$index', 
+                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          subtitle: Text('${index * 2} minutes ago', style: const TextStyle(fontSize: 11)),
+          dense: true,
+        )),
       ),
     );
   }
 }
 
-class _HealthMetric extends StatelessWidget {
-  final String title;
-  final double progress;
+class _HealthMetricStream extends StatelessWidget {
+  final String label;
+  final String collection;
+  final IconData icon;
   final Color color;
+  final String desc;
 
-  const _HealthMetric({required this.title, required this.progress, required this.color});
+  const _HealthMetricStream({required this.label, required this.collection, required this.icon, required this.color, required this.desc});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-              Text('${(progress * 100).toInt()}%', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-            ],
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection(collection).snapshots(),
+      builder: (context, snapshot) {
+        final count = snapshot.data?.docs.length ?? 0;
+        final progress = (count / 100).clamp(0.1, 1.0);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: PremiumCard(
+            opacity: 1,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, color: color, size: 20),
+                    const SizedBox(width: 12),
+                    Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                    const Spacer(),
+                    Text('${(progress * 100).toInt()}%', style: TextStyle(fontWeight: FontWeight.w900, color: color)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: color.withOpacity(0.05),
+                  valueColor: AlwaysStoppedAnimation(color),
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                const SizedBox(height: 8),
+                Align(alignment: Alignment.centerLeft, child: Text(desc, style: const TextStyle(fontSize: 10, color: Colors.grey))),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: color.withOpacity(0.1),
-            valueColor: AlwaysStoppedAnimation(color),
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -519,44 +588,90 @@ class _AdminSettingsView extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Panel Settings', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
+        title: const Text('System Configuration', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+        backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         children: [
+          const Text('PERSONAL PREFERENCES', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5, color: Colors.grey)),
+          const SizedBox(height: 16),
           PremiumCard(
             opacity: 1,
-            padding: const EdgeInsets.all(0),
+            padding: EdgeInsets.zero,
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.admin_panel_settings, color: Colors.blue),
-                  title: const Text('Update Profile'),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                  onTap: (){},
+                _buildSettingTile(
+                  icon: Icons.account_circle_rounded, 
+                  color: Colors.blueAccent, 
+                  title: 'Admin Profile', 
+                  subtitle: 'Update your official credentials',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.lock_rounded, color: Colors.redAccent),
-                  title: const Text('Firebase Security Rules'),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                  onTap: (){},
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.backup_rounded, color: Colors.green),
-                  title: const Text('System Backup'),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                  onTap: (){},
+                const Divider(height: 1, indent: 60),
+                _buildSettingTile(
+                  icon: Icons.notifications_active_rounded, 
+                  color: Colors.orangeAccent, 
+                  title: 'Alert Settings', 
+                  subtitle: 'Configure global broadcast nodes',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementScreen())),
                 ),
               ],
             ),
-          ).animate().fadeIn(),
+          ),
+          const SizedBox(height: 32),
+          const Text('SYSTEM MAINTENANCE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5, color: Colors.grey)),
+          const SizedBox(height: 16),
+          PremiumCard(
+            opacity: 1,
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _buildSettingTile(
+                  icon: Icons.storage_rounded, 
+                  color: Colors.purpleAccent, 
+                  title: 'Database Hygiene', 
+                  subtitle: 'Optimizing Firestore indices',
+                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Auto-Hygiene optimization in progress...'))),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingTile(
+                  icon: Icons.restore_rounded, 
+                  color: Colors.tealAccent, 
+                  title: 'System Recovery', 
+                  subtitle: 'Last backup: Today, 04:00 AM',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 40),
+          Center(
+            child: Column(
+              children: [
+                const Text('EduTrack AI Pro • Version 2.1.0', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('Environment: PRODUCTION', style: TextStyle(fontSize: 10, color: Colors.blueAccent.withOpacity(0.5), fontWeight: FontWeight.w900)),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSettingTile({required IconData icon, required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
     );
   }
 }

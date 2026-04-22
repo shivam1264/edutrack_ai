@@ -62,7 +62,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                               const SizedBox(width: 8),
                               Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                               const SizedBox(width: 8),
-                              Text('Sector: ${context.read<AuthProvider>().user?.classId ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                              Text('Class: ${context.read<AuthProvider>().user?.classId ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                             ],
                           ),
                         ],
@@ -113,7 +113,12 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                   padding: EdgeInsets.all(40), child: CircularProgressIndicator(),
                 )));
               }
-              final docs = snap.data!.docs;
+              // Client-side filtering to bypass index requirements
+              var docs = snap.data!.docs;
+              if (_selectedSubject != 'All') {
+                docs = docs.where((d) => (d.data() as Map<String, dynamic>)['subject'] == _selectedSubject).toList();
+              }
+
               if (docs.isEmpty) {
                 return const SliverToBoxAdapter(
                   child: Padding(
@@ -148,13 +153,10 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
   }
 
   Stream<QuerySnapshot> _getNotesStream(String classId) {
-    var query = FirebaseFirestore.instance
+    return FirebaseFirestore.instance
         .collection('notes')
-        .where('classId', isEqualTo: classId);
-    if (_selectedSubject != 'All') {
-      query = query.where('subject', isEqualTo: _selectedSubject);
-    }
-    return query.snapshots();
+        .where('class_id', isEqualTo: classId)
+        .snapshots();
   }
 }
 

@@ -8,6 +8,7 @@ import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'attendance_history_screen.dart';
 
 class TeacherAttendanceScreen extends StatefulWidget {
   final String classId;
@@ -24,15 +25,26 @@ class TeacherAttendanceScreen extends StatefulWidget {
 }
 
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
-  DateTime _selectedDate = DateTime.now();
-  final Map<String, AttendanceStatus> _statusMap = {};
+  String? _selectedSubject;
   bool _isSaving = false;
   bool _isLoading = true;
   List<Map<String, dynamic>> _students = [];
+  List<String> _teacherSubjects = [];
 
   @override
   void initState() {
     super.initState();
+    _initTeacher();
+  }
+
+  void _initTeacher() {
+    final user = context.read<AuthProvider>().user;
+    if (user != null && user.role == UserRole.teacher) {
+      _teacherSubjects = user.subjects ?? [];
+      if (_teacherSubjects.isNotEmpty) {
+        _selectedSubject = _teacherSubjects.first;
+      }
+    }
     _loadStudents();
   }
 
@@ -42,17 +54,18 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
       // FIX: Query 'users' collection instead of 'students' and filter by role
       final snap = await FirebaseFirestore.instance
           .collection('users')
-          .where('role', isEqualTo: 'student')
           .where('class_id', isEqualTo: widget.classId)
           .get();
 
       _students = snap.docs
+          .where((d) => d.data()['role'] == 'student')
           .map((d) => {'uid': d.id, 'name': d.data()['name'] ?? 'Incomplete Profile'})
           .toList();
 
       final existing = await AttendanceService().getAttendanceByDate(
         classId: widget.classId,
         date: _selectedDate,
+        subject: _selectedSubject,
       );
 
       // Create a fresh map for the new date/data
@@ -98,6 +111,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           date: _selectedDate,
           status: _statusMap[uid] ?? AttendanceStatus.present,
           markedBy: teacherId,
+          subject: _selectedSubject,
         );
       }
       _showSnack('Attendance protocols finalized! ✅');
@@ -158,9 +172,25 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                             const SizedBox(width: 8),
                             Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                             const SizedBox(width: 8),
-                            Text('Sector: ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                            Text('Class: ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        if (_teacherSubjects.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedSubject,
+                                items: _teacherSubjects.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)))).toList(),
+                                onChanged: (v) {
+                                  setState(() => _selectedSubject = v);
+                                  _loadStudents();
+                                },
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -178,6 +208,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               ),
             ),
             actions: [
+              IconButton(icon: const Icon(Icons.history_rounded), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AttendanceHistoryScreen(initialClassId: widget.classId)))),
               IconButton(icon: const Icon(Icons.event_note_rounded), onPressed: _pickDate),
             ],
           ),
@@ -186,7 +217,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
             sliver: _isLoading
                 ? const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
                 : _students.isEmpty
-                    ? const SliverFillRemaining(child: Center(child: Text('No student data synchronized for this sector.')))
+                    ? const SliverFillRemaining(child: Center(child: Text('No student data synchronized for this class.')))
                     : SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {

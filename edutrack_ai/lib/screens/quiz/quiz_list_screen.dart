@@ -39,7 +39,7 @@ class _QuizListScreenState extends State<QuizListScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text('Academic Battles', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18)),
-                  Text('Sector: ${widget.classId}', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+                  Text('Class: ${widget.classId}', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
                 ],
               ),
               background: Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),

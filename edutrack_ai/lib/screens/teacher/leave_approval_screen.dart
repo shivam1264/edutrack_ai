@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/leave_service.dart';
+import '../../services/auth_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:intl/intl.dart';
@@ -93,7 +94,13 @@ class _LeaveRequestCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(leave.studentId, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)), // Ideally student name
+          FutureBuilder(
+            future: AuthService().getUserModel(leave.studentId),
+            builder: (context, snapshot) {
+              final name = snapshot.data?.name ?? 'Loading...';
+              return Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16));
+            },
+          ),
           const SizedBox(height: 4),
           Row(
             children: [

@@ -30,11 +30,23 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   final List<_QuestionDraft> _questions = [];
   bool _isSaving = false;
 
-  final List<String> _subjects = [
-    'Mathematics', 'Science', 'English', 'Hindi',
-    'Social Studies', 'Computer Science', 'Physics',
-    'Chemistry', 'Biology',
-  ];
+  final List<String> _subjects = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initSubjects();
+  }
+
+  void _initSubjects() {
+    final user = context.read<AuthProvider>().user;
+    if (user != null) {
+      _subjects.addAll(user.subjects ?? []);
+      if (_subjects.isNotEmpty) {
+        _subject = _subjects.first;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -262,7 +274,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             const SizedBox(width: 8),
                             Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                             const SizedBox(width: 8),
-                            Text('Target: Sector ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                            Text('Target: Class ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                           ],
                         ),
                       ],

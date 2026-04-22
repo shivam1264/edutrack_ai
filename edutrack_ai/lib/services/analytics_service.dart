@@ -44,17 +44,28 @@ class AnalyticsService {
 
     // Subject breakdown from submissions
     final Map<String, List<double>> subjectScores = {};
+    final Map<String, Map<String, dynamic>> assignmentCache = {}; // Local cache to avoid N+1 reads
+
     for (final doc in subSnap.docs) {
       final data = doc.data();
       if (data['status'] == 'graded' && data['marks'] != null) {
         final assignId = data['assignment_id'] as String?;
         if (assignId != null) {
-          final aDoc = await _db.collection('assignments').doc(assignId).get();
-          if (aDoc.exists) {
-            final subject = aDoc.data()!['subject'] as String? ?? 'Other';
+          // Check cache first
+          Map<String, dynamic>? aData = assignmentCache[assignId];
+          
+          if (aData == null) {
+            final aDoc = await _db.collection('assignments').doc(assignId).get();
+            if (aDoc.exists) {
+              aData = aDoc.data();
+              assignmentCache[assignId] = aData!;
+            }
+          }
+
+          if (aData != null) {
+            final subject = aData['subject'] as String? ?? 'Other';
             final marks = (data['marks'] as num).toDouble();
-            final maxMarks =
-                (aDoc.data()!['max_marks'] as num?)?.toDouble() ?? 100;
+            final maxMarks = (aData['max_marks'] as num?)?.toDouble() ?? 100;
             subjectScores.putIfAbsent(subject, () => []);
             subjectScores[subject]!.add((marks / maxMarks) * 100);
           }

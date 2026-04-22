@@ -120,7 +120,7 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
             Icon(Icons.inventory_2_outlined, size: 80, color: AppTheme.textHint.withOpacity(0.2)),
             const SizedBox(height: 16),
             const Text('No submissions detected.', style: TextStyle(color: AppTheme.textHint, fontWeight: FontWeight.w900)),
-            const Text('The sector is currently inactive.', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
+            const Text('The class is currently inactive.', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
           ],
         ),
       ),

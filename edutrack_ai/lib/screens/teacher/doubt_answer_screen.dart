@@ -12,7 +12,8 @@ class DoubtAnswerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final classId = user?.classId ?? '';
+    final List<String> assignedClasses = user?.assignedClasses ?? 
+        (user?.classId != null ? [user!.classId!] : []);
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -48,13 +49,18 @@ class DoubtAnswerScreen extends StatelessWidget {
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('doubts')
-                .where('classId', isEqualTo: classId)
+                .where('schoolId', isEqualTo: user?.schoolId ?? '')
+                .where('classId', whereIn: assignedClasses.isNotEmpty ? assignedClasses : ['__none__'])
+                .where('subject', whereIn: user?.subjects != null && user!.subjects!.isNotEmpty ? user.subjects : ['__none__'])
                 .orderBy('createdAt', descending: false)
                 .snapshots(),
             builder: (context, snap) {
               if (!snap.hasData) return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())));
               final docs = snap.data!.docs;
-              final pending = docs.where((d) => (d.data() as Map)['status'] == 'pending').toList();
+              final pending = docs.where((d) {
+                final status = (d.data() as Map)['status'];
+                return status == 'pending' || status == 'ai_answered';
+              }).toList();
               final answered = docs.where((d) => (d.data() as Map)['status'] == 'answered').toList();
 
               if (docs.isEmpty) {
@@ -78,14 +84,18 @@ class DoubtAnswerScreen extends StatelessWidget {
                   delegate: SliverChildListDelegate([
                     if (pending.isNotEmpty) ...[
                       _buildSectionHeader('⏳ Pending (${pending.length})', Colors.orange),
-                      ...pending.asMap().entries.map((e) =>
-                          _DoubtCard(doc: e.value, teacher: user, isPending: true)
-                              .animate().fadeIn(delay: (e.key * 80).ms)),
+                      ...pending.asMap().entries.map((e) {
+                          final status = (e.value.data() as Map)['status'];
+                          final label = status == 'ai_answered' ? '🤖 AI Answered' : '⏳ Pending';
+                          final color = status == 'ai_answered' ? AppTheme.primary : Colors.orange;
+                          return _DoubtCard(doc: e.value, teacher: user, isPending: true, label: label, labelColor: color)
+                                .animate().fadeIn(delay: (e.key * 80).ms);
+                      }),
                     ],
                     if (answered.isNotEmpty) ...[
                       _buildSectionHeader('✅ Answered (${answered.length})', Colors.green),
                       ...answered.asMap().entries.map((e) =>
-                          _DoubtCard(doc: e.value, teacher: user, isPending: false)
+                          _DoubtCard(doc: e.value, teacher: user, isPending: false, label: '✅ Answered', labelColor: Colors.green)
                               .animate().fadeIn(delay: (e.key * 60).ms)),
                     ],
                   ]),
@@ -110,8 +120,16 @@ class _DoubtCard extends StatefulWidget {
   final QueryDocumentSnapshot doc;
   final dynamic teacher;
   final bool isPending;
+  final String label;
+  final Color labelColor;
 
-  const _DoubtCard({required this.doc, required this.teacher, required this.isPending});
+  const _DoubtCard({
+    required this.doc, 
+    required this.teacher, 
+    required this.isPending,
+    required this.label,
+    required this.labelColor,
+  });
 
   @override
   State<_DoubtCard> createState() => _DoubtCardState();
@@ -155,11 +173,9 @@ class _DoubtCardState extends State<_DoubtCard> {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFF7C3AED).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                  child: Text(d['subject'] ?? '', style: const TextStyle(fontSize: 11, color: Color(0xFF7C3AED), fontWeight: FontWeight.w700)),
+                  decoration: BoxDecoration(color: widget.labelColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                  child: Text(widget.label, style: TextStyle(fontSize: 11, color: widget.labelColor, fontWeight: FontWeight.w700)),
                 ),
-                const SizedBox(width: 8),
-                Text(d['studentName'] ?? '', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 10),

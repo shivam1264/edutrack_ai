@@ -43,19 +43,28 @@ class QuizService {
     return _db
         .collection('quizzes')
         .where('class_id', isEqualTo: classId)
-        .orderBy('start_time', descending: true)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => QuizModel.fromMap(d.id, d.data())).toList());
+        .map((snap) {
+          final list = snap.docs.map((d) => QuizModel.fromMap(d.id, d.data())).toList();
+          list.sort((a, b) => b.startTime.compareTo(a.startTime)); // Descending by start time
+          return list;
+        });
   }
 
   Future<List<QuizModel>> getQuizzesByClass(String classId) async {
-    final snap = await _db
-        .collection('quizzes')
-        .where('class_id', isEqualTo: classId)
-        .orderBy('start_time', descending: true)
-        .get();
-    return snap.docs.map((d) => QuizModel.fromMap(d.id, d.data())).toList();
+    try {
+      final snap = await _db
+          .collection('quizzes')
+          .where('class_id', isEqualTo: classId)
+          .get();
+      
+      final list = snap.docs.map((d) => QuizModel.fromMap(d.id, d.data())).toList();
+      list.sort((a, b) => b.startTime.compareTo(a.startTime)); // Descending by start time
+      return list;
+    } catch (e) {
+      print('QuizService Error: $e');
+      rethrow;
+    }
   }
 
   // ─── Get Single Quiz ──────────────────────────────────────────────────────────
@@ -135,5 +144,26 @@ class QuizService {
     return snap.docs
         .map((d) => QuizResultModel.fromMap(d.id, d.data()))
         .toList();
+  }
+
+  // ─── Update Quiz ──────────────────────────────────────────────────────────────
+  Future<void> updateQuiz(String id, Map<String, dynamic> updates) async {
+    await _db.collection('quizzes').doc(id).update(updates);
+  }
+
+  // ─── Delete Quiz ──────────────────────────────────────────────────────────────
+  Future<void> deleteQuiz(String id) async {
+    final batch = _db.batch();
+    
+    // 1. Delete quiz doc
+    batch.delete(_db.collection('quizzes').doc(id));
+    
+    // 2. Delete all related results
+    final results = await _db.collection('quiz_results').where('quiz_id', isEqualTo: id).get();
+    for (var doc in results.docs) {
+      batch.delete(doc.reference);
+    }
+    
+    await batch.commit();
   }
 }

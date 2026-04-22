@@ -25,6 +25,7 @@ import '../student/ai_mindmap_screen.dart';
 import '../../services/brain_dna_service.dart';
 import '../../models/knowledge_node.dart';
 import '../../widgets/brain_dna_visualizer.dart';
+import '../settings/profile_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -139,18 +140,24 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       Row(
                         children: [
                           // Avatar
-                          Container(
-                            padding: const EdgeInsets.all(2.5),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
-                            ),
-                            child: CircleAvatar(
-                              radius: 26,
-                              backgroundColor: Colors.white.withOpacity(0.25),
-                              child: Text(
-                                (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'S',
-                                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                          GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                            child: Container(
+                              padding: const EdgeInsets.all(2.5),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+                              ),
+                              child: CircleAvatar(
+                                radius: 26,
+                                backgroundColor: Colors.white.withOpacity(0.25),
+                                backgroundImage: user?.avatarUrl != null ? CachedNetworkImageProvider(user!.avatarUrl!) : null,
+                                child: user?.avatarUrl == null 
+                                  ? Text(
+                                      (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'S',
+                                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                                    )
+                                  : null,
                               ),
                             ),
                           ),
@@ -187,7 +194,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                           border: Border.all(color: Colors.white.withOpacity(0.3)),
                                         ),
                                         child: Text(
-                                          'Sector: ${user!.classId}',
+                                          'Class: ${user!.classId}',
                                           style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
                                         ),
                                       ),
@@ -434,9 +441,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: AppTheme.primary.withOpacity(0.1),
-                      child: Text(user?.name[0].toUpperCase() ?? 'S', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: AppTheme.primary)),
+                      backgroundImage: user?.avatarUrl != null ? CachedNetworkImageProvider(user!.avatarUrl!) : null,
+                      child: user?.avatarUrl == null 
+                        ? Text(user?.name[0].toUpperCase() ?? 'S', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: AppTheme.primary))
+                        : null,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                      icon: const Icon(Icons.edit_note_rounded, size: 18),
+                      label: const Text('Edit Agent Profile', style: TextStyle(fontWeight: FontWeight.w800)),
+                      style: TextButton.styleFrom(foregroundColor: AppTheme.primary),
+                    ),
+                    const SizedBox(height: 12),
                     Text(user?.name ?? 'Student Name', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
                     Text(user?.email ?? 'email@edutrack.com', style: const TextStyle(color: AppTheme.textSecondary)),
                   ],
@@ -449,7 +466,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
               ElevatedButton(
                 onPressed: () => _showLogoutDialog(context),
                 style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger, foregroundColor: Colors.white),
-                child: const Text('Logout from Hub'),
+                child: const Text('Logout'),
               ),
             ]),
           ),
@@ -780,7 +797,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       children: [
         Row(
           children: [
-            const Text('Mission Hub', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.textPrimary)),
+            const Text('Class Missions', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.textPrimary)),
             const Spacer(),
             Text('${actions.length} features', style: TextStyle(fontSize: 12, color: AppTheme.textHint, fontWeight: FontWeight.w500)),
           ],
@@ -877,7 +894,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Exit Hub?'),
+        title: const Text('Exit Class?'),
         content: const Text('Are you sure you want to exit your academic mission?'),
         actions: [
           TextButton(

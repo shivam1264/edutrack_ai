@@ -62,6 +62,20 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateProfile(Map<String, dynamic> data) async {
+    if (_user == null) return;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _authService.updateUserData(_user!.uid, data);
+      _user = await _authService.getUserModel(_user!.uid);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

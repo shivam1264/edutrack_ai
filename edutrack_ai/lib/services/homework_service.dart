@@ -17,10 +17,13 @@ class HomeworkService {
     required String studentId,
     required String question,
     required String subject,
-    required int studentClass,
+    required String studentClass, // Changed from int to String
     String? imageData, // Base64 string
     bool showHintFirst = false,
   }) async {
+    // 1. Map String class (e.g. '10th A') to numeric year (e.g. 10)
+    final int numericClass = _mapClassToYear(studentClass);
+
     // Check daily rate limit
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
@@ -43,7 +46,7 @@ class HomeworkService {
       body: jsonEncode({
         'question': question,
         'subject': subject,
-        'student_class': studentClass,
+        'student_class': numericClass, // Pass numeric mapped class
         'show_hint_first': showHintFirst,
         'image_data': imageData,
       }),
@@ -120,5 +123,19 @@ class HomeworkService {
         .doc('${studentId}_${todayStart.toIso8601String().split('T').first}');
     final doc = await rateRef.get();
     return doc.exists ? (doc.data()!['count'] ?? 0) : 0;
+  // ─── Helper: Map Standard Class String to Numeric ──────────────────────────────
+  int _mapClassToYear(String cls) {
+    final lower = cls.toLowerCase();
+    
+    // Check for KG/Primary
+    if (lower.contains('kg') || lower.contains('primary')) return 0;
+    
+    // Extract digits (e.g. '10th A' -> 10)
+    final match = RegExp(r'(\d+)').firstMatch(cls);
+    if (match != null) {
+      return int.tryParse(match.group(0)!) ?? 1;
+    }
+    
+    return 1; // Default fallback
   }
 }

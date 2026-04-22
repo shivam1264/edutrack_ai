@@ -14,6 +14,7 @@ import '../parent/monthly_report_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../utils/config.dart';
+import '../settings/profile_screen.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -25,6 +26,7 @@ class ParentDashboard extends StatefulWidget {
 class _ParentDashboardState extends State<ParentDashboard> {
   String? _selectedChildId;
   final Map<String, String> _childNames = {};
+  final Map<String, String> _childClassIds = {};
   bool _isLoadingNames = true;
 
   @override
@@ -39,9 +41,12 @@ class _ParentDashboardState extends State<ParentDashboard> {
         for (var id in kids) {
           final doc = await FirebaseFirestore.instance.collection('users').doc(id).get();
           if (doc.exists) {
-            _childNames[id] = doc.data()?['name'] ?? id;
+            final data = doc.data();
+            _childNames[id] = data?['name'] ?? id;
+            _childClassIds[id] = data?['class_id'] ?? '';
           } else {
             _childNames[id] = id;
+            _childClassIds[id] = '';
           }
         }
         
@@ -132,21 +137,27 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(2.5),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withOpacity(0.7), width: 2),
-                              ),
-                              child: CircleAvatar(
-                                radius: 26,
-                                backgroundColor: Colors.white.withOpacity(0.25),
-                                child: Text(
-                                  (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'P',
-                                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                              GestureDetector(
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2.5),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white.withOpacity(0.7), width: 2),
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 26,
+                                    backgroundColor: Colors.white.withOpacity(0.25),
+                                    backgroundImage: user?.avatarUrl != null ? CachedNetworkImageProvider(user!.avatarUrl!) : null,
+                                    child: user?.avatarUrl == null 
+                                      ? Text(
+                                          (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'P',
+                                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                                        )
+                                      : null,
+                                  ),
                                 ),
                               ),
-                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -266,7 +277,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           icon: Icons.calendar_today_rounded,
                           label: 'Leave Apply',
                           color: AppTheme.parentColor,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RequestLeaveScreen(studentId: _selectedChildId))),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RequestLeaveScreen(
+                            studentId: _selectedChildId,
+                            classId: _childClassIds[_selectedChildId ?? ''],
+                          ))),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -544,7 +558,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Exit Parent Hub?'),
+        title: const Text('Exit Parent Portal?'),
         content: const Text('Are you sure you want to exit your monitoring session?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),

@@ -113,12 +113,17 @@ class LeaveService {
     return _db
         .collection('leave_requests')
         .where('class_id', isEqualTo: classId)
-        .where('status', isEqualTo: 'pending')
-        .orderBy('created_at', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => LeaveRequestModel.fromMap(d.id, d.data()))
-            .toList());
+        .map((snap) {
+          final list = snap.docs
+              .map((d) => LeaveRequestModel.fromMap(d.id, d.data()))
+              .where((l) => l.status == 'pending')
+              .toList();
+          
+          // Client-side sort to bypass index blockers
+          list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return list;
+        });
   }
 
   // ─── Get Leaves for Parent ──────────────────────────────────────────────────
@@ -126,11 +131,14 @@ class LeaveService {
     return _db
         .collection('leave_requests')
         .where('parent_id', isEqualTo: parentId)
-        .orderBy('created_at', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => LeaveRequestModel.fromMap(d.id, d.data()))
-            .toList());
+        .map((snap) {
+          final list = snap.docs
+              .map((d) => LeaveRequestModel.fromMap(d.id, d.data()))
+              .toList();
+          list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return list;
+        });
   }
 
   // ─── Update Leave Status ────────────────────────────────────────────────────

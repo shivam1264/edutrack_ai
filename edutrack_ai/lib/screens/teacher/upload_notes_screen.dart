@@ -20,14 +20,29 @@ class UploadNotesScreen extends StatefulWidget {
 class _UploadNotesScreenState extends State<UploadNotesScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
-  String _selectedSubject = 'Mathematics';
+  String? _selectedSubject;
   bool _isUploading = false;
   String? _filePath;
   String? _fileName;
   String? _fileType;
 
-  final List<String> _subjects = ['Mathematics', 'Science', 'Physics', 'Chemistry',
-    'Biology', 'English', 'Hindi', 'History', 'Geography', 'Computer Science'];
+  final List<String> _subjects = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initSubjects();
+  }
+
+  void _initSubjects() {
+    final user = context.read<AuthProvider>().user;
+    if (user != null) {
+      _subjects.addAll(user.subjects ?? []);
+      if (_subjects.isNotEmpty) {
+        _selectedSubject = _subjects.first;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -60,7 +75,6 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
     final user = context.read<AuthProvider>().user;
     setState(() => _isUploading = true);
     try {
-      // Upload to Cloudinary
       final result = await CloudinaryService.instance.uploadFile(File(_filePath!));
       if (result == null) throw Exception('Upload failed');
       final url = result.secureUrl;
@@ -74,7 +88,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
         'fileName': _fileName,
         'teacherId': user?.uid,
         'teacherName': user?.name ?? 'Teacher',
-        'classId': widget.classId,
+        'class_id': widget.classId,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -100,6 +114,61 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
       }
     }
     if (mounted) setState(() => _isUploading = false);
+  }
+
+  Future<void> _deleteNote(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: const Text('Are you sure you want to remove this academic resource? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppTheme.danger))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirebaseFirestore.instance.collection('notes').doc(id).delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note deleted permanently.')));
+      }
+    }
+  }
+
+  Future<void> _editNote(String id, Map<String, dynamic> data) async {
+    final titleCtrl = TextEditingController(text: data['title']);
+    final descCtrl = TextEditingController(text: data['description']);
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Note Resources'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: 12),
+            TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance.collection('notes').doc(id).update({
+                'title': titleCtrl.text.trim(),
+                'description': descCtrl.text.trim(),
+              });
+              if (mounted) Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -137,7 +206,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                           const SizedBox(width: 8),
                           Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                           const SizedBox(width: 8),
-                          Text('Target: Sector $classId', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                          Text('Target: Class $classId', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                         ],
                       ),
                     ],
@@ -244,36 +313,49 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                 StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
                       .collection('notes')
-                      .where('classId', isEqualTo: classId)
                       .where('teacherId', isEqualTo: user?.uid)
-                      .orderBy('createdAt', descending: true)
                       .snapshots(),
                   builder: (context, snap) {
                     if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                    final docs = snap.data!.docs;
-                    if (docs.isEmpty) return const Center(child: Text('No notes uploaded yet', style: TextStyle(color: Colors.grey)));
+                    
+                    var docs = snap.data!.docs;
+                    var filteredDocs = docs.where((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      return data['class_id'] == classId;
+                    }).toList();
+                    
+                    filteredDocs.sort((a, b) {
+                      final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                      final bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                      return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+                    });
+                    
+                    if (filteredDocs.isEmpty) return const Center(child: Text('No notes uploaded for this class yet', style: TextStyle(color: Colors.grey)));
                     return Column(
-                      children: docs.asMap().entries.map((e) {
+                      children: filteredDocs.asMap().entries.map((e) {
                         final d = e.value.data() as Map<String, dynamic>;
-                        return Dismissible(
-                          key: Key(e.value.id),
-                          background: Container(
-                            color: Colors.red, alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            child: const Icon(Icons.delete_rounded, color: Colors.white),
-                          ),
-                          direction: DismissDirection.endToStart,
-                          onDismissed: (_) => e.value.reference.delete(),
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: PremiumCard(
-                              opacity: 1,
-                              padding: const EdgeInsets.all(14),
-                              child: ListTile(
-                                leading: const Icon(Icons.description_rounded, color: Color(0xFF059669)),
-                                title: Text(d['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
-                                subtitle: Text(d['subject'] ?? ''),
-                                trailing: const Icon(Icons.chevron_right_rounded),
+                        final docId = e.value.id;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: PremiumCard(
+                            opacity: 1,
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                            child: ListTile(
+                              leading: const Icon(Icons.description_rounded, color: Color(0xFF059669)),
+                              title: Text(d['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
+                              subtitle: Text(d['subject'] ?? ''),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_note_rounded, color: AppTheme.primary),
+                                    onPressed: () => _editNote(docId, d),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
+                                    onPressed: () => _deleteNote(docId),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

@@ -37,10 +37,10 @@ class ReportsScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Hub Intelligence', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                        const Text('Class Intelligence', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
                         Row(
                           children: [
-                            Text(classId != null ? 'Analyzing Hub: $classId' : 'Global Intelligence Protocol', 
+                            Text(classId != null ? 'Analyzing Class: $classId' : 'Global Intelligence Protocol', 
                                  style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
                             if (classId != null) ...[
                               const SizedBox(width: 8),

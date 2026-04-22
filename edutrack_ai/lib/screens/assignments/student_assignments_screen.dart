@@ -97,7 +97,7 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> wit
                             const SizedBox(width: 8),
                             Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
                             const SizedBox(width: 8),
-                            Text('Sector: ${context.read<AuthProvider>().user?.classId ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
+                            Text('Class: ${context.read<AuthProvider>().user?.classId ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                           ],
                         ),
                       ],

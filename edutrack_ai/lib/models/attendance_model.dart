@@ -9,6 +9,7 @@ class AttendanceModel {
   final DateTime date;
   final AttendanceStatus status;
   final String markedBy;
+  final String? subject; // Added subject field
   final DateTime timestamp;
 
   AttendanceModel({
@@ -18,6 +19,7 @@ class AttendanceModel {
     required this.date,
     required this.status,
     required this.markedBy,
+    this.subject,
     required this.timestamp,
   });
 
@@ -29,6 +31,7 @@ class AttendanceModel {
       date: (map['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: _parseStatus(map['status']),
       markedBy: map['marked_by'] ?? '',
+      subject: map['subject'],
       timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -40,6 +43,7 @@ class AttendanceModel {
       'date': Timestamp.fromDate(date),
       'status': status.name,
       'marked_by': markedBy,
+      if (subject != null) 'subject': subject,
       'timestamp': Timestamp.fromDate(timestamp),
     };
   }
@@ -67,12 +71,14 @@ class AttendanceStats {
   final int totalAbsent;
   final int totalLate;
   final double percentage;
+  final Map<String, AttendanceStats>? subjectStats; // Stats per subject
 
   const AttendanceStats({
     required this.totalPresent,
     required this.totalAbsent,
     required this.totalLate,
     required this.percentage,
+    this.subjectStats,
   });
 
   int get total => totalPresent + totalAbsent + totalLate;

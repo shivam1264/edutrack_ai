@@ -13,7 +13,8 @@ import 'package:intl/intl.dart';
 
 class RequestLeaveScreen extends StatefulWidget {
   final String? studentId;
-  const RequestLeaveScreen({super.key, this.studentId});
+  final String? classId;
+  const RequestLeaveScreen({super.key, this.studentId, this.classId});
 
   @override
   State<RequestLeaveScreen> createState() => _RequestLeaveScreenState();
@@ -98,7 +99,7 @@ class _RequestLeaveScreenState extends State<RequestLeaveScreen> {
       await LeaveService().submitLeaveRequest(
         studentId: studentId,
         parentId: user?.uid ?? '',
-        classId: 'class_10_a', // Placeholder, should be dynamic
+        classId: widget.classId ?? 'Class 1', // Use passed classId or default fallback
         startDate: _startDate,
         endDate: _endDate,
         reason: _reasonCtrl.text.trim(),

@@ -44,6 +44,7 @@ class AuthService {
     String? classId,
     List<String>? assignedClasses,
     List<String>? parentOf,
+    List<String>? subjects,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -70,6 +71,7 @@ class AuthService {
         classId: classId,
         assignedClasses: assignedClasses,
         parentOf: parentOf,
+        subjects: subjects,
       );
 
       await _firestore
@@ -126,6 +128,16 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _mapFirebaseAuthError(e);
     }
+  }
+
+  // ─── Delete User Record (Admin) ───────────────────────────────────────────
+  Future<void> deleteUserRecord(String uid) async {
+    await _firestore.collection('users').doc(uid).delete();
+  }
+
+  // ─── Update User Profile Data ─────────────────────────────────────────────
+  Future<void> updateUserData(String uid, Map<String, dynamic> data) async {
+    await _firestore.collection('users').doc(uid).update(data);
   }
 
   // ─── Error mapping ────────────────────────────────────────────────────────────

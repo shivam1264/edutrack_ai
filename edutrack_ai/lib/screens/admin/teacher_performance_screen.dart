@@ -81,7 +81,8 @@ class _TeacherPerformanceCard extends StatelessWidget {
     final futures = await Future.wait([
       FirebaseFirestore.instance.collection('doubts').where('answeredBy', isEqualTo: data['name'] ?? '').count().get(),
       FirebaseFirestore.instance.collection('notes').where('teacherId', isEqualTo: teacherId).count().get(),
-      FirebaseFirestore.instance.collection('assignments').where('teacherId', isEqualTo: teacherId).count().get(),
+      FirebaseFirestore.instance.collection('assignments').where('teacher_id', isEqualTo: teacherId).count().get(),
+      FirebaseFirestore.instance.collection('quizzes').where('teacher_id', isEqualTo: teacherId).count().get(),
       FirebaseFirestore.instance.collection('lesson_plans').where('teacherId', isEqualTo: teacherId).count().get(),
     ]);
 
@@ -89,7 +90,8 @@ class _TeacherPerformanceCard extends StatelessWidget {
       'doubts': futures[0].count ?? 0,
       'notes': futures[1].count ?? 0,
       'assignments': futures[2].count ?? 0,
-      'plans': futures[3].count ?? 0,
+      'quizzes': futures[3].count ?? 0,
+      'plans': futures[4].count ?? 0,
     };
   }
 
@@ -130,10 +132,11 @@ class _TeacherPerformanceCard extends StatelessWidget {
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _StatCol(stats['assignments'].toString(), 'Assignments', Icons.auto_awesome_mosaic_rounded, AppTheme.primary),
+                    _StatCol(stats['assignments'].toString(), 'Assigns', Icons.auto_awesome_mosaic_rounded, AppTheme.primary),
+                    _StatCol(stats['quizzes'].toString(), 'Quiz', Icons.bolt_rounded, Colors.amber),
                     _StatCol(stats['doubts'].toString(), 'Doubts', Icons.help_center_rounded, const Color(0xFF7C3AED)),
                     _StatCol(stats['notes'].toString(), 'Notes', Icons.menu_book_rounded, const Color(0xFF059669)),
-                    _StatCol(stats['plans'].toString(), 'AI Plans', Icons.psychology_rounded, const Color(0xFF1D4ED8)),
+                    _StatCol(stats['plans'].toString(), 'Plans', Icons.psychology_rounded, const Color(0xFF1D4ED8)),
                   ],
                 );
               },

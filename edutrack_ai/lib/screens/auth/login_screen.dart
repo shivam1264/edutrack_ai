@@ -171,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Enter your credentials to access your academic hub',
+                              'Enter your credentials to access your class portal',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: AppTheme.textSecondary,

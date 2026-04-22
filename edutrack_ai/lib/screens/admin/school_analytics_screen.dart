@@ -231,8 +231,10 @@ class SchoolAnalyticsScreen extends StatelessWidget {
 
   Future<Map<String, int>> _getDoubtStats() async {
     final total = await FirebaseFirestore.instance.collection('doubts').count().get();
-    final answered = await FirebaseFirestore.instance.collection('doubts').where('status', isEqualTo: 'answered').count().get();
-    final pending = await FirebaseFirestore.instance.collection('doubts').where('status', isEqualTo: 'pending').count().get();
+    final answered = await FirebaseFirestore.instance.collection('doubts')
+        .where('status', whereIn: ['answered', 'ai_answered']).count().get();
+    final pending = await FirebaseFirestore.instance.collection('doubts')
+        .where('status', isEqualTo: 'pending').count().get();
     return {
       'total': total.count ?? 0,
       'answered': answered.count ?? 0,

@@ -24,6 +24,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   String _selectedRole = 'student';
   String? _selectedClassId; // for students
   List<String> _selectedAssignedClasses = []; // for teachers
+  List<String> _selectedSubjects = []; // for teachers
   final _parentOfController = TextEditingController();
 
   bool _isLoading = false;
@@ -56,7 +57,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Register Hub Member', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                        Text('Register Class Member', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
                         Text('Onboard new students, teachers, or parents', style: TextStyle(color: Colors.white70, fontSize: 13)),
                       ],
                     ),
@@ -146,7 +147,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                       return DropdownButtonFormField<String>(
                                         value: _selectedClassId,
                                         decoration: InputDecoration(
-                                          labelText: 'Assign Primary Hub',
+                                          labelText: 'Assign Primary Class',
                                           prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
                                           filled: true,
                                           fillColor: AppTheme.bgLight,
@@ -156,9 +157,9 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                           value: c.displayName, 
                                           child: Text(c.displayName)
                                         )).toList(),
-                                        hint: const Text('Select a standardized hub'),
+                                        hint: const Text('Select a standardized class'),
                                         onChanged: (v) => setState(() => _selectedClassId = v),
-                                        validator: (v) => v == null ? 'Hub assignment required' : null,
+                                        validator: (v) => v == null ? 'Class assignment required' : null,
                                       );
                                     },
                                   ),
@@ -170,7 +171,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                       return Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Text('ASSIGN MULTIPLE HUBS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                          const Text('ASSIGN MULTIPLE CLASSES', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
                                           const SizedBox(height: 12),
                                           Wrap(
                                             spacing: 8,
@@ -199,7 +200,43 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                           if (_selectedAssignedClasses.isEmpty)
                                             Padding(
                                               padding: const EdgeInsets.only(top: 8.0),
-                                              child: Text('At least one hub must be assigned to faculty.', style: TextStyle(color: AppTheme.danger, fontSize: 11)),
+                                              child: Text('At least one class must be assigned to faculty.', style: TextStyle(color: AppTheme.danger, fontSize: 11)),
+                                            ),
+                                          const SizedBox(height: 24),
+                                          const Text('ASSIGN SUBJECTS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                          const SizedBox(height: 12),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: [
+                                              'Mathematics', 'Science', 'English', 'Hindi', 
+                                              'Social Studies', 'Computer Science', 'Physics', 
+                                              'Chemistry', 'Biology', 'History', 'Geography', 'Economics'
+                                            ].map((s) {
+                                              final isSelected = _selectedSubjects.contains(s);
+                                              return FilterChip(
+                                                label: Text(s, style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontSize: 12, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500)),
+                                                selected: isSelected,
+                                                onSelected: (selected) {
+                                                  setState(() {
+                                                    if (selected) {
+                                                      _selectedSubjects.add(s);
+                                                    } else {
+                                                      _selectedSubjects.remove(s);
+                                                    }
+                                                  });
+                                                },
+                                                selectedColor: AppTheme.secondary,
+                                                checkmarkColor: Colors.white,
+                                                backgroundColor: AppTheme.bgLight,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isSelected ? AppTheme.secondary : AppTheme.borderLight)),
+                                              );
+                                            }).toList(),
+                                          ),
+                                          if (_selectedSubjects.isEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                              child: Text('Please assign at least one subject.', style: TextStyle(color: AppTheme.danger, fontSize: 11)),
                                             ),
                                         ],
                                       );
@@ -316,6 +353,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
         schoolId: _schoolIdController.text.trim(),
         classId: _selectedRole == 'student' ? _selectedClassId : null,
         assignedClasses: _selectedRole == 'teacher' ? _selectedAssignedClasses : null,
+        subjects: _selectedRole == 'teacher' ? _selectedSubjects : null,
         parentOf: _selectedRole == 'parent' 
             ? _parentOfController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
             : null,

@@ -17,6 +17,81 @@ class AssignmentAuditScreen extends StatefulWidget {
 class _AssignmentAuditScreenState extends State<AssignmentAuditScreen> {
   final AssignmentService _service = AssignmentService();
 
+  Future<void> _confirmDelete(AssignmentModel a) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Purge Mission Data?'),
+        content: Text('Deleting "${a.title}" will permanently remove all student submissions associated with it. Continue?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete Permanently', style: TextStyle(color: AppTheme.danger))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _service.deleteAssignment(a.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mission purged from database.')));
+      }
+    }
+  }
+
+  Future<void> _showEditDialog(AssignmentModel a) async {
+    final titleCtrl = TextEditingController(text: a.title);
+    DateTime newDate = a.dueDate;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          title: const Text('Modify Assignment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Due Date:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextButton.icon(
+                    icon: const Icon(Icons.calendar_month_rounded),
+                    label: Text('${newDate.day}/${newDate.month}/${newDate.year}'),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: newDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) setLocalState(() => newDate = picked);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                await _service.updateAssignment(a.id, {
+                  'title': titleCtrl.text.trim(),
+                  'due_date': Timestamp.fromDate(newDate),
+                });
+                if (mounted) Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,15 +137,32 @@ class _AssignmentAuditScreenState extends State<AssignmentAuditScreen> {
                         ],
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SubmissionListScreen(assignment: a))),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.secondary.withOpacity(0.1),
-                        foregroundColor: AppTheme.secondary,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      child: const Text('Audit', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_calendar_rounded, color: AppTheme.primary, size: 20),
+                          onPressed: () => _showEditDialog(a),
+                          tooltip: 'Extend Time',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger, size: 20),
+                          onPressed: () => _confirmDelete(a),
+                          tooltip: 'Delete',
+                        ),
+                        const SizedBox(width: 4),
+                        ElevatedButton(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SubmissionListScreen(assignment: a))),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.secondary.withOpacity(0.1),
+                            foregroundColor: AppTheme.secondary,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            minimumSize: const Size(60, 36),
+                          ),
+                          child: const Text('Audit', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                        ),
+                      ],
                     ),
                   ],
                 ),

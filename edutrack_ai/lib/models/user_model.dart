@@ -14,6 +14,7 @@ class UserModel {
   final String? classId;       // for students
   final List<String>? assignedClasses; // for teachers: multiple hubs
   final List<String>? parentOf; // for parents: list of child student_ids
+  final List<String>? subjects; // for teachers: list of assigned subjects
   final int xp;                // For gamification
   final int level;             // For gamification
   final List<String> badges;   // For gamification
@@ -30,6 +31,7 @@ class UserModel {
     this.classId,
     this.assignedClasses,
     this.parentOf,
+    this.subjects,
     this.xp = 0,
     this.level = 1,
     this.badges = const [],
@@ -48,6 +50,7 @@ class UserModel {
       classId: map['class_id'],
       assignedClasses: _parseAssignedClasses(map),
       parentOf: _parseParentOf(map['parent_of']),
+      subjects: map['subjects'] != null ? List<String>.from(map['subjects']) : null,
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
       badges: List<String>.from(map['badges'] ?? []),
@@ -67,6 +70,7 @@ class UserModel {
       if (classId != null) 'class_id': classId,
       if (assignedClasses != null && assignedClasses!.isNotEmpty) 'assigned_classes': assignedClasses,
       if (parentOf != null && parentOf!.isNotEmpty) 'parent_of': parentOf,
+      if (subjects != null && subjects!.isNotEmpty) 'subjects': subjects,
       'xp': xp,
       'level': level,
       'badges': badges,
@@ -136,6 +140,7 @@ class UserModel {
       classId: classId ?? this.classId,
       assignedClasses: assignedClasses ?? this.assignedClasses,
       parentOf: parentOf ?? this.parentOf,
+      subjects: subjects ?? this.subjects,
       xp: xp ?? this.xp,
       level: level ?? this.level,
       badges: badges ?? this.badges,

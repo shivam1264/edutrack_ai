@@ -64,6 +64,8 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   _buildStatsCard().animate().fadeIn().scale(),
+                  const SizedBox(height: 24),
+                  _buildSubjectBreakdown().animate().fadeIn(delay: 200.ms),
                   const SizedBox(height: 32),
                   const Text('Mission History', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.textPrimary)),
                   const SizedBox(height: 16),
@@ -126,15 +128,76 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
               decoration: BoxDecoration(color: AppTheme.danger.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.danger.withOpacity(0.2))),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 20),
-                  const SizedBox(width: 12),
-                  const Expanded(child: Text('Warning: Presence is below 75%. This may impact your mission evaluation.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.danger, height: 1.4))),
+                   const Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 20),
+                   const SizedBox(width: 12),
+                   const Expanded(child: Text('Warning: Presence is below 75%. This may impact your mission evaluation.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.danger, height: 1.4))),
                 ],
               ),
             ),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildSubjectBreakdown() {
+    if (_stats == null || _stats!.subjectStats == null || _stats!.subjectStats!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Subject Performance Breakdown', 
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.textPrimary)),
+        const SizedBox(height: 16),
+        ..._stats!.subjectStats!.entries.map((entry) {
+          final sub = entry.key;
+          final sStats = entry.value;
+          final color = sStats.percentage >= 75 ? AppTheme.secondary : (sStats.percentage >= 60 ? AppTheme.accent : AppTheme.danger);
+          
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: PremiumCard(
+              opacity: 1,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(sub, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                      Text('${sStats.percentage.toStringAsFixed(1)}%', 
+                        style: TextStyle(fontWeight: FontWeight.w900, color: color, fontSize: 14)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearPercentIndicator(
+                    lineHeight: 8,
+                    percent: (sStats.percentage / 100).clamp(0.0, 1.0),
+                    progressColor: color,
+                    backgroundColor: color.withOpacity(0.1),
+                    barRadius: const Radius.circular(4),
+                    padding: EdgeInsets.zero,
+                    animation: true,
+                    animationDuration: 1000,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _MiniStat(label: 'Present: ${sStats.totalPresent}', color: AppTheme.secondary),
+                      const SizedBox(width: 16),
+                      _MiniStat(label: 'Absent: ${sStats.totalAbsent}', color: AppTheme.danger),
+                      const SizedBox(width: 16),
+                      _MiniStat(label: 'Late: ${sStats.totalLate}', color: AppTheme.accent),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ],
     );
   }
 }
@@ -186,7 +249,7 @@ class _RecordTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('${record.date.day} ${DateFormat('MMMM').format(record.date)}, ${record.date.year}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.textPrimary)),
-                Text('Academic Log Entry', style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w500)),
+                Text(record.subject ?? 'General Academic Session', style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -197,6 +260,24 @@ class _RecordTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _MiniStat({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }

@@ -13,13 +13,17 @@ import '../assignments/assignment_audit_screen.dart';
 import '../teacher/leave_approval_screen.dart';
 import '../quiz/create_quiz_screen.dart';
 import '../teacher/doubt_answer_screen.dart';
+import '../quiz/quiz_management_screen.dart';
 import '../teacher/upload_notes_screen.dart';
 import '../teacher/lesson_planner_screen.dart';
 import '../teacher/bulk_grade_screen.dart';
+import '../teacher/individual_student_analytics_screen.dart';
+import '../settings/profile_screen.dart';
 import '../../services/brain_dna_service.dart';
 import '../../models/knowledge_node.dart';
 import '../../widgets/brain_dna_visualizer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../attendance/attendance_history_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -125,7 +129,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('SECTOR ANALYSIS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: AppTheme.secondary)),
+                            const Text('CLASS ANALYSIS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: AppTheme.secondary)),
                             Text('Currently Viewing: ${_selectedClassId ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
                           ],
                         ),
@@ -157,6 +161,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 _buildLeaderboardSection('Academic Stars 🏆', top5, isTop: true),
                 const SizedBox(height: 20),
                 _buildLeaderboardSection('Attention Needed ⚠️', bottom5, isTop: false),
+                const SizedBox(height: 24),
+                _buildStudentDirectory(classData?['students'] as List<dynamic>? ?? []),
               ],
             ]),
           ),
@@ -176,18 +182,30 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-               _buildGridActions([
+                _buildGridActions([
                   {
                     'icon': Icons.how_to_reg_rounded,
-                    'label': 'Attendance',
+                    'label': 'Mark Attendance',
                     'color': AppTheme.secondary,
                     'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAttendanceScreen(classId: classId, className: '$_selectedClassId Attendance'))),
                   },
                   {
+                    'icon': Icons.history_edu_rounded,
+                    'label': 'Attendance Archive',
+                    'color': const Color(0xFF0F172A),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => AttendanceHistoryScreen(initialClassId: classId))),
+                  },
+                  {
                     'icon': Icons.auto_awesome_rounded,
-                    'label': 'Assignments',
+                    'label': 'New Assignment',
                     'color': AppTheme.primary,
                     'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => CreateAssignmentScreen(classId: classId))),
+                  },
+                  {
+                    'icon': Icons.assignment_turned_in_rounded,
+                    'label': 'Manage Assignments',
+                    'color': const Color(0xFF6366F1),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => AssignmentAuditScreen(classId: classId))),
                   },
                   {
                     'icon': Icons.bolt_rounded,
@@ -196,12 +214,18 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                     'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => CreateQuizScreen(classId: classId))),
                   },
                   {
+                    'icon': Icons.settings_suggest_rounded,
+                    'label': 'Manage Quizzes',
+                    'color': const Color(0xFFF59E0B),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => QuizManagementScreen(classId: classId))),
+                  },
+                  {
                     'icon': Icons.grading_rounded,
                     'label': 'Bulk Grading',
                     'color': const Color(0xFFD946EF),
                     'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BulkGradeScreen())),
                   },
-               ]),
+                ]),
             ]),
           ),
         ),
@@ -311,42 +335,48 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(0.5))),
-                        child: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          child: Text(user?.name[0].toUpperCase() ?? 'T', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-                          Row(
-                            children: [
-                              Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
-                              if (_selectedClassId != null) ...[
-                                Container(
-                                  margin: const EdgeInsets.only(left: 8),
-                                  width: 4, height: 4,
-                                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Academic Hub: $_selectedClassId',
-                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
-                                ),
-                              ],
-                            ],
+                  GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(0.5))),
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            backgroundImage: user?.avatarUrl != null ? CachedNetworkImageProvider(user!.avatarUrl!) : null,
+                            child: user?.avatarUrl == null 
+                              ? Text(user?.name[0].toUpperCase() ?? 'T', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                              : null,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+                            Row(
+                              children: [
+                                Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                                if (_selectedClassId != null) ...[
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    width: 4, height: 4,
+                                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Academic Class: $_selectedClassId',
+                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -424,25 +454,36 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
               final i = entry.key;
               final s = entry.value;
               final score = (s['avg_score'] as num? ?? 0).toStringAsFixed(1);
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgLight,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.borderLight),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: (isTop ? AppTheme.secondary : AppTheme.danger).withOpacity(0.1),
-                      child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: isTop ? AppTheme.secondary : AppTheme.danger)),
+              return GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => IndividualStudentAnalyticsScreen(
+                      studentId: s['uid'] ?? '',
+                      studentName: s['name'] ?? 'Student',
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(s['name'] ?? 'Unknown Student', style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary))),
-                    Text('$score%', style: TextStyle(fontWeight: FontWeight.w800, color: double.parse(score) >= 60 ? AppTheme.primary : AppTheme.danger)),
-                  ],
+                  ),
+                ),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.borderLight),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: (isTop ? AppTheme.secondary : AppTheme.danger).withOpacity(0.1),
+                        child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: isTop ? AppTheme.secondary : AppTheme.danger)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(s['name'] ?? 'Unknown Student', style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary))),
+                      Text('$score%', style: TextStyle(fontWeight: FontWeight.w800, color: double.parse(score) >= 60 ? AppTheme.primary : AppTheme.danger)),
+                    ],
+                  ),
                 ),
               );
             }).toList().animate(interval: 100.ms).fadeIn(),
@@ -520,7 +561,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Exit Session?'),
-        content: const Text('Are you sure you want to exit the teacher hub?'),
+        content: const Text('Are you sure you want to exit the teacher portal?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
@@ -575,8 +616,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Switch Academic Hub', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
-          const Text('Select the class hub you want to manage', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          const Text('Switch Academic Class', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+          const Text('Select the class you want to manage', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
           const SizedBox(height: 24),
           ...classes.map((c) => Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -604,6 +645,57 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             ),
           )).toList(),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+  Widget _buildStudentDirectory(List<dynamic> students) {
+    return PremiumCard(
+      opacity: 1,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.people_outline_rounded, color: AppTheme.primary, size: 20),
+              SizedBox(width: 10),
+              Text('STUDENT DIRECTORY', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.primary, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (students.isEmpty)
+            const Center(child: Text('No students found in this class.', style: TextStyle(color: AppTheme.textHint, fontSize: 12)))
+          else
+            ...students.map((s) {
+              final score = (s['avg_score'] as num? ?? 0).toStringAsFixed(1);
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => IndividualStudentAnalyticsScreen(
+                      studentId: s['uid'] ?? '',
+                      studentName: s['name'] ?? 'Student',
+                    ),
+                  ),
+                ),
+                leading: CircleAvatar(
+                  backgroundColor: AppTheme.primary.withOpacity(0.1),
+                  child: Text(s['name']?[0].toUpperCase() ?? 'S', style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                ),
+                title: Text(s['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                subtitle: Text('ID: ${s['uid']?.toString().substring(0, 8) ?? 'N/A'}', style: const TextStyle(fontSize: 10)),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('$score%', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, fontSize: 14)),
+                    const Text('MASTERED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppTheme.textHint)),
+                  ],
+                ),
+              );
+            }).toList(),
         ],
       ),
     );

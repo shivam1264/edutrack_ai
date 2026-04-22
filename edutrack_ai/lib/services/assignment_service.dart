@@ -57,24 +57,35 @@ class AssignmentService {
 
   // ─── Get Assignments for Class ────────────────────────────────────────────────
   Future<List<AssignmentModel>> getAssignmentsByClass(String classId) async {
-    final snap = await _db
-        .collection('assignments')
-        .where('class_id', isEqualTo: classId)
-        .orderBy('due_date', descending: false)
-        .get();
-    return snap.docs
-        .map((d) => AssignmentModel.fromMap(d.id, d.data()))
-        .toList();
+    try {
+      final snap = await _db
+          .collection('assignments')
+          .where('class_id', isEqualTo: classId)
+          .get();
+      
+      final list = snap.docs
+          .map((d) => AssignmentModel.fromMap(d.id, d.data()))
+          .toList();
+      
+      // Client-side sort to bypass missing index blockers
+      list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+      return list;
+    } catch (e) {
+      print('AssignmentService Error: $e');
+      rethrow;
+    }
   }
 
   Stream<List<AssignmentModel>> streamAssignmentsByClass(String classId) {
     return _db
         .collection('assignments')
         .where('class_id', isEqualTo: classId)
-        .orderBy('due_date')
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => AssignmentModel.fromMap(d.id, d.data())).toList());
+        .map((snap) {
+          final list = snap.docs.map((d) => AssignmentModel.fromMap(d.id, d.data())).toList();
+          list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+          return list;
+        });
   }
 
   // ─── Submit Assignment (with optional Cloudinary file upload) ─────────────────
@@ -158,5 +169,26 @@ class AssignmentService {
     return snap.docs
         .map((d) => SubmissionModel.fromMap(d.id, d.data()))
         .toList();
+  }
+
+  // ─── Update Assignment ────────────────────────────────────────────────────────
+  Future<void> updateAssignment(String id, Map<String, dynamic> updates) async {
+    await _db.collection('assignments').doc(id).update(updates);
+  }
+
+  // ─── Delete Assignment ────────────────────────────────────────────────────────
+  Future<void> deleteAssignment(String id) async {
+    final batch = _db.batch();
+    
+    // 1. Delete assignment doc
+    batch.delete(_db.collection('assignments').doc(id));
+    
+    // 2. Delete all related submissions
+    final submissions = await _db.collection('submissions').where('assignment_id', isEqualTo: id).get();
+    for (var doc in submissions.docs) {
+      batch.delete(doc.reference);
+    }
+    
+    await batch.commit();
   }
 }

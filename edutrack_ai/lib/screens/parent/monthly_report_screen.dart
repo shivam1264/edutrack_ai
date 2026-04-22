@@ -172,7 +172,7 @@ Maintain the current study rhythm. Encourage deeper exploration of AI modules.''
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(_studentData!['name'] ?? 'Student', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
-                                    Text('Sector Link: ${_studentData!['classId'] ?? 'NA'}', style: const TextStyle(color: AppTheme.textHint, fontSize: 13, fontWeight: FontWeight.w600)),
+                                    Text('Class Link: ${_studentData!['classId'] ?? 'NA'}', style: const TextStyle(color: AppTheme.textHint, fontSize: 13, fontWeight: FontWeight.w600)),
                                   ],
                                 ),
                               ),

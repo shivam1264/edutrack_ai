@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import '../../models/timetable_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
 
 class TimetableScreen extends StatelessWidget {
   const TimetableScreen({super.key});
@@ -65,6 +65,7 @@ class TimetableScreen extends StatelessWidget {
 
   String _getDayName(int weekday) {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    if (weekday > 7) return 'Monday';
     return days[weekday - 1];
   }
 }
@@ -95,7 +96,7 @@ class _TimetableBodyState extends State<_TimetableBody> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       sliver: SliverList(
         delegate: SliverChildListDelegate([
-          // High-end Day selector
+          // Day selector
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SizedBox(
@@ -157,14 +158,14 @@ class _TimetableBodyState extends State<_TimetableBody> {
                       Icon(Icons.event_busy_rounded, size: 64, color: AppTheme.textHint.withOpacity(0.2)),
                       const SizedBox(height: 16),
                       const Text('Schedule Unavailable', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint)),
-                      const SizedBox(height: 8),
-                      const Text('No data synced for this sector yet.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
+                      const Text('Ask your Admin to post the timetable.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
                     ],
                   ),
                 );
               }
-              final data = snap.data!.data() as Map<String, dynamic>;
-              final periods = (data[_selectedDay] as List<dynamic>?) ?? [];
+              
+              final timetable = TimetableModel.fromMap(widget.classId, snap.data!.data() as Map<String, dynamic>);
+              final periods = timetable.weeklySchedule[_selectedDay] ?? [];
               
               if (periods.isEmpty) {
                 return Padding(
@@ -173,8 +174,8 @@ class _TimetableBodyState extends State<_TimetableBody> {
                     children: [
                       const Icon(Icons.celebration_rounded, size: 64, color: AppTheme.secondary),
                       const SizedBox(height: 16),
-                      Text('Free Day Sector!', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.secondary, fontSize: 18)),
-                      const Text('No missions assigned for today.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
+                      const Text('Rest Day!', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.secondary, fontSize: 18)),
+                      const Text('No classes scheduled for today.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
                     ],
                   ),
                 ).animate().scale();
@@ -186,7 +187,7 @@ class _TimetableBodyState extends State<_TimetableBody> {
                 padding: const EdgeInsets.all(20),
                 itemCount: periods.length,
                 itemBuilder: (context, i) {
-                  final p = periods[i] as Map<String, dynamic>;
+                  final p = periods[i];
                   return _TimelineNode(period: p, index: i, isLast: i == periods.length - 1)
                       .animate().fadeIn(delay: (i * 100).ms).slideY(begin: 0.2);
                 },
@@ -200,7 +201,7 @@ class _TimetableBodyState extends State<_TimetableBody> {
 }
 
 class _TimelineNode extends StatelessWidget {
-  final Map<String, dynamic> period;
+  final PeriodModel period;
   final int index;
   final bool isLast;
 
@@ -221,12 +222,12 @@ class _TimelineNode extends StatelessWidget {
         children: [
           // Time Panel
           SizedBox(
-            width: 65,
+            width: 70,
             child: Column(
               children: [
-                Text(period['startTime'] ?? '00:00', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppTheme.textPrimary)),
+                Text(period.startTimeStr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppTheme.textPrimary)),
                 const SizedBox(height: 4),
-                Text(period['endTime'] ?? '00:00', style: const TextStyle(color: AppTheme.textHint, fontSize: 11, fontWeight: FontWeight.bold)),
+                Text(period.endTimeStr, style: const TextStyle(color: AppTheme.textHint, fontSize: 10, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -256,29 +257,29 @@ class _TimelineNode extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-                      child: Icon(Icons.hub_rounded, color: color, size: 20),
+                      child: Icon(Icons.school_rounded, color: color, size: 20),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(period['subject'] ?? 'System Sync', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontSize: 15)),
+                          Text(period.subject, style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontSize: 15)),
                           const SizedBox(height: 4),
                           Row(
                             children: [
                               const Icon(Icons.person_outline_rounded, size: 12, color: AppTheme.textHint),
                               const SizedBox(width: 4),
-                              Text(period['teacher'] ?? 'AI Faculty', style: const TextStyle(fontSize: 11, color: AppTheme.textHint, fontWeight: FontWeight.w600)),
+                              Text(period.teacherName, style: const TextStyle(fontSize: 11, color: AppTheme.textHint, fontWeight: FontWeight.w600)),
                             ],
                           ),
-                          if (period['room'] != null) ...[
+                          if (period.room != null) ...[
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textHint),
                                 const SizedBox(width: 4),
-                                Text('Sector ${period['room']}', style: const TextStyle(fontSize: 11, color: AppTheme.textHint)),
+                                Text('Room: ${period.room}', style: const TextStyle(fontSize: 11, color: AppTheme.textHint)),
                               ],
                             ),
                           ],

@@ -27,7 +27,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('Establish New Hub', style: TextStyle(fontWeight: FontWeight.w900)),
+          title: Text('Establish New Class', style: TextStyle(fontWeight: FontWeight.w900)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -74,7 +74,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Initialize Hub'),
+                child: const Text('Establish Class'),
               ),
             ),
           ],
@@ -108,7 +108,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                 children: [
                   Icon(Icons.hub_outlined, size: 64, color: AppTheme.textHint.withOpacity(0.5)),
                   const SizedBox(height: 16),
-                  Text('No Academic Hubs active.', style: TextStyle(color: AppTheme.textHint, fontWeight: FontWeight.bold)),
+                  Text('No Academic Classes active.', style: TextStyle(color: AppTheme.textHint, fontWeight: FontWeight.bold)),
                   Text('Establish your first class to begin.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
                 ],
               ),
@@ -146,7 +146,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                         context: context,
                         builder: (context) => AlertDialog(
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          title: const Text('Decommission Hub?'),
+                          title: const Text('Remove Class?'),
                           content: const Text('This will remove the class from active rosters.'),
                           actions: [
                             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
