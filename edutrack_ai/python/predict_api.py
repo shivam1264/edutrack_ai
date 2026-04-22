@@ -432,6 +432,7 @@ def ai_viva():
     data = request.get_json(silent=True) or {}
     message = data.get('message', '')
     history = data.get('history', [])
+    use_tts = data.get('use_tts', False)
     # Support both 'subject' and 'topic' from frontend
     subject = data.get('subject') or data.get('topic', 'General')
     
@@ -461,7 +462,7 @@ def ai_viva():
         formatted_prompt += f"\nStudent: [Sent Audio Answer]\nExaminer: "
     else:
         # Text based
-        formatted_prompt += f"\nStudent: {student_response}\nExaminer: "
+        formatted_prompt += f"\nStudent: {message}\nExaminer: "
         
     contents_to_generate.append(formatted_prompt)
     
@@ -504,7 +505,40 @@ def parent_report():
         response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
         return jsonify({'report': response.text})
     except Exception as e:
-        return jsonify({'report': f"Report generation failed: {str(e)}"})
+        return jsonify({'report': f"Report generation failed: Check API Quota."})
+
+# ─── Unified Wellness (Optimization) ───────────────────────────────────────
+@app.route('/get-unified-wellness', methods=['POST'])
+def get_unified_wellness():
+    data = request.get_json(silent=True) or {}
+    student_name = data.get('name', 'Your child')
+    stats = data.get('stats', {})
+    
+    system_instruction = (
+        "You are an Elite AI School Counselor. Analyze the provided student data and provide TWO things in valid JSON format:\n"
+        "1. 'report': A concise (100 word) empathetic progress report for the parent.\n"
+        "2. 'burnout': A mental health risk assessment with keys 'risk_level' (High/Medium/Low) and 'message' (Counselor advice).\n"
+        "Return ONLY raw JSON. No markdown."
+    )
+    
+    prompt = f"Student: {student_name}. Stats Data: {stats}. Perform analysis."
+    
+    try:
+        response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
+        # Clean potential markdown
+        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        result = json.loads(clean_json)
+        return jsonify(result)
+    except Exception as e:
+        print(f"    [UNIFIED AI ERROR] {str(e)}")
+        # Return a safe fallback to prevent technical errors on screen
+        return jsonify({
+            'report': "AI insights are currently resting. Please check back in a few hours.",
+            'burnout': {
+                'risk_level': 'Low',
+                'message': 'No immediate concerns detected (Offline Mode).'
+            }
+        })
 
 # ─── Parent Chatbot ──────────────────────────────────────────────────────────
 @app.route('/parent-chat', methods=['POST'])

@@ -62,6 +62,13 @@ class _ParentDashboardState extends State<ParentDashboard> {
     context.read<AnalyticsProvider>().loadStudentAnalytics(childId);
   }
 
+  void _triggerWellnessFetch(String childId, Map<String, dynamic>? stats) {
+    if (stats != null) {
+      final name = _childNames[childId] ?? 'Your Child';
+      context.read<AnalyticsProvider>().loadWellnessData(childId, name, stats);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -69,6 +76,14 @@ class _ParentDashboardState extends State<ParentDashboard> {
     final analytics = context.watch<AnalyticsProvider>();
     final childData = analytics.studentAnalytics;
     final prediction = analytics.aiPrediction;
+    final wellnessData = analytics.wellnessFor(_selectedChildId ?? '');
+
+    // Auto-trigger wellness fetch when student data is ready
+    if (!analytics.isLoading && _selectedChildId != null && wellnessData == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerWellnessFetch(_selectedChildId!, childData);
+      });
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -182,26 +197,21 @@ class _ParentDashboardState extends State<ParentDashboard> {
               ),
             ),
           ),
-
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                if (analytics.isLoading)
-                  const Center(child: Padding(padding: EdgeInsets.all(60), child: CircularProgressIndicator()))
-                else ...[
-                  _buildRiskCard(prediction).animate().fadeIn().slideY(begin: 0.1),
-                  const SizedBox(height: 24),
+                // 1. Prediction Card (Stable)
+                _buildRiskCard(prediction, analytics.isLoading).animate().fadeIn().slideY(begin: 0.1),
+                const SizedBox(height: 24),
 
-                  const SizedBox(height: 12),
-                  _AIBurnoutDetectorCard(studentName: childData?['name'] ?? 'Your Child'),
-                  const SizedBox(height: 24),
-
-                  _AIProgressReportCard(
-                    studentName: childData?['name'] ?? 'Your Child',
-                    stats: childData ?? {},
-                  ),
-                  const SizedBox(height: 24),
+                // 2. Wellness Insights (Unified)
+                _AIWellnessSection(
+                  studentId: _selectedChildId ?? '',
+                  isLoading: analytics.isWellnessLoading || analytics.isLoading,
+                  data: wellnessData,
+                ),
+                const SizedBox(height: 24),
 
                   if (_selectedChildId == null)
                     _buildNoChildLinked()
@@ -297,7 +307,14 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  Widget _buildRiskCard(Map<String, dynamic>? prediction) {
+  Widget _buildRiskCard(Map<String, dynamic>? prediction, bool isLoading) {
+    if (isLoading) {
+      return Container(
+        height: 120,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
     final risk = prediction?['risk_level'] as String? ?? 'low';
     final isWarning = risk != 'low';
 
@@ -645,155 +662,94 @@ class _InfoRow extends StatelessWidget {
     );
   }
 }
-class _AIProgressReportCard extends StatefulWidget {
-  final String studentName;
-  final Map<String, dynamic> stats;
+class _AIWellnessSection extends StatelessWidget {
+  final String studentId;
+  final bool isLoading;
+  final Map<String, dynamic>? data;
 
-  const _AIProgressReportCard({required this.studentName, required this.stats});
-
-  @override
-  State<_AIProgressReportCard> createState() => _AIProgressReportCardState();
-}
-
-class _AIProgressReportCardState extends State<_AIProgressReportCard> {
-  String _report = '';
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchReport();
-  }
-
-  Future<void> _fetchReport() async {
-    try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/parent-report')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': widget.studentName,
-          'stats': widget.stats,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _report = jsonDecode(response.body)['report'];
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _report = 'Neural system connection disrupted. Please try again later.';
-        _loading = false;
-      });
-    }
-  }
+  const _AIWellnessSection({
+    required this.studentId,
+    required this.isLoading,
+    this.data,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return PremiumCard(
-      opacity: 1,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 20),
-              SizedBox(width: 10),
-              Text('AI WELLNESS INSIGHTS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: 1.5, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_loading)
-            const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
-          else
-            Text(_report, style: const TextStyle(fontSize: 14, height: 1.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-}
-
-class _AIBurnoutDetectorCard extends StatefulWidget {
-  final String studentName;
-  const _AIBurnoutDetectorCard({required this.studentName});
-
-  @override
-  State<_AIBurnoutDetectorCard> createState() => _AIBurnoutDetectorCardState();
-}
-
-class _AIBurnoutDetectorCardState extends State<_AIBurnoutDetectorCard> {
-  Map<String, dynamic>? _result;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchBurnoutData();
-  }
-
-  Future<void> _fetchBurnoutData() async {
-    try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/detect-burnout')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'student_name': widget.studentName,
-          'study_hours_per_day': 7, 
-          'late_night_active': true,
-          'grades_dropping': false,
-        }),
+    if (isLoading && data == null) {
+      return PremiumCard(
+        opacity: 0.5,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            const CircularProgressIndicator(strokeWidth: 2),
+            const SizedBox(height: 16),
+            Text('Syncing Wellness Database...', style: TextStyle(color: AppTheme.primary.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.bold)),
+          ],
+        ),
       );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _result = jsonDecode(response.body);
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _loading = false);
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_result == null || _result!['error'] != null) return const SizedBox.shrink();
-
-    final risk = _result!['risk_level'] ?? 'Low';
-    final message = _result!['message'] ?? '';
+    final report = data?['report'] ?? 'Select a student to view insights.';
+    final burnout = data?['burnout'] as Map<String, dynamic>?;
+    final risk = burnout?['risk_level'] ?? 'Low';
+    final message = burnout?['message'] ?? 'Healthy status maintained.';
     final isHigh = risk == 'High' || risk == 'Medium';
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isHigh ? AppTheme.danger.withOpacity(0.08) : AppTheme.secondary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isHigh ? AppTheme.danger.withOpacity(0.3) : AppTheme.secondary.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      children: [
+        // ── Burnout Alert Card ───────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isHigh ? AppTheme.danger.withOpacity(0.08) : AppTheme.secondary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: isHigh ? AppTheme.danger.withOpacity(0.3) : AppTheme.secondary.withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(isHigh ? Icons.favorite_border_rounded : Icons.favorite_rounded, color: isHigh ? AppTheme.danger : AppTheme.secondary, size: 24),
-              const SizedBox(width: 10),
-              Text('STUDENT BURNOUT ALERT', style: TextStyle(fontWeight: FontWeight.w900, color: isHigh ? AppTheme.danger : AppTheme.secondary, letterSpacing: 1.0, fontSize: 13)),
+              Row(
+                children: [
+                  Icon(isHigh ? Icons.favorite_border_rounded : Icons.favorite_rounded, color: isHigh ? AppTheme.danger : AppTheme.secondary, size: 24),
+                  const SizedBox(width: 10),
+                  Text('STUDENT BURNOUT ALERT', style: TextStyle(fontWeight: FontWeight.w900, color: isHigh ? AppTheme.danger : AppTheme.secondary, letterSpacing: 1.0, fontSize: 13)),
+                  const Spacer(),
+                  if (data != null) const Icon(Icons.verified_rounded, color: Colors.green, size: 16),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: isHigh ? AppTheme.danger : AppTheme.secondary, borderRadius: BorderRadius.circular(8)),
+                child: Text('Risk Level: $risk', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+              const SizedBox(height: 12),
+              Text(message, style: TextStyle(fontSize: 14, height: 1.5, color: isHigh ? AppTheme.danger : AppTheme.textPrimary, fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: isHigh ? AppTheme.danger : AppTheme.secondary, borderRadius: BorderRadius.circular(8)),
-            child: Text('Risk Level: $risk', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+        ),
+        const SizedBox(height: 24),
+
+        // ── Wellness Insights Card ────────────────────────────────────
+        PremiumCard(
+          opacity: 1,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 20),
+                  SizedBox(width: 10),
+                  Text('AI WELLNESS INSIGHTS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: 1.5, fontSize: 12)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(report, style: const TextStyle(fontSize: 14, height: 1.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(message, style: TextStyle(fontSize: 14, height: 1.5, color: isHigh ? AppTheme.danger : AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

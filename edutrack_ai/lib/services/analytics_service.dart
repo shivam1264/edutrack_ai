@@ -145,4 +145,25 @@ class AnalyticsService {
     }
     return null;
   }
+  
+  // ─── Get Unified Wellness (Optimization) ──────────────────────────────────
+  Future<Map<String, dynamic>?> getUnifiedWellness({
+    required String name,
+    required Map<String, dynamic> stats,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(Config.endpoint('/get-unified-wellness')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'name': name, 'stats': stats}),
+      ).timeout(const Duration(seconds: 40));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print('Unified Wellness Error: $e');
+    }
+    return null;
+  }
 }
