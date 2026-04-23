@@ -262,7 +262,7 @@ class _IndividualStudentAnalyticsScreenState extends State<IndividualStudentAnal
                       BarChartRodData(
                         toY: (e.value as num).toDouble(),
                         gradient: LinearGradient(
-                          colors: e.value < 60 ? [AppTheme.danger, AppTheme.danger.withOpacity(0.5)] : [AppTheme.primary, AppTheme.primaryLight],
+                        colors: e.value.value < 60 ? [AppTheme.danger, AppTheme.danger.withOpacity(0.5)] : [AppTheme.primary, AppTheme.primaryLight],
                           begin: Alignment.bottomCenter, end: Alignment.topCenter,
                         ),
                         width: 18,

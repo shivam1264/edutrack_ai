@@ -15,6 +15,19 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../utils/config.dart';
 import '../settings/profile_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:percent_indicator/percent_indicator.dart';
+import '../../models/assignment_model.dart';
+import '../../services/assignment_service.dart';
+import '../../services/attendance_service.dart';
+import '../homework/homework_chat_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'package:flutter_markdown/flutter_markdown.dart';
+import '../planner/smart_planner_screen.dart';
+import '../../models/quiz_model.dart';
+import '../../services/quiz_service.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -227,7 +240,14 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   if (_selectedChildId == null)
                     _buildNoChildLinked()
                   else ...[
-                    // ── Quick Stats Row ──────────────────────────────────
+                    // ── Critical Alerts ──────────────────────────────────────────
+                    _buildCriticalAlerts(_selectedChildId!, _childClassIds[_selectedChildId!] ?? '', childData),
+                    const SizedBox(height: 16),
+
+                    // ── Attendance & Today's Status ──────────────────────────────
+                    _buildTodayAttendanceStatus(_selectedChildId!),
+                    const SizedBox(height: 24),
+
                     Row(
                       children: [
                         Expanded(
@@ -239,12 +259,45 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        FutureBuilder<Map<String, dynamic>?>(
+                          future: AnalyticsService().getStudentRank(_selectedChildId!, _childClassIds[_selectedChildId!] ?? ''),
+                          builder: (context, rankSnap) {
+                            final rankData = rankSnap.data;
+                            final rankStr = rankData != null ? '${rankData['rank']}/${rankData['total']}' : '--';
+                            return Expanded(
+                              child: _ParentStatCard(
+                                icon: Icons.emoji_events_rounded,
+                                label: 'Class Rank',
+                                value: rankStr,
+                                color: const Color(0xFFF59E0B),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _ChildAttendanceCard(studentId: _selectedChildId!),
                         ),
                       ],
                     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
 
+                    const SizedBox(height: 24),
+
+                    // ── Performance Analytics (Graphs) ─────────────────────────
+                    _buildPerformanceAnalytics(childData),
+                    const SizedBox(height: 16),
+                    _buildRecentTestPerformance(_selectedChildId!),
+                    const SizedBox(height: 24),
+
+                    // ── AI Study Plan Section ──────────────────────────────────
+                    const Text('AI Strategic Roadmap', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 12),
+                    _buildAIStudyPlanSection(_selectedChildId!),
+                    const SizedBox(height: 24),
+
+                    const Text('Recent Assignments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 12),
+                    _buildAssignmentTracker(_selectedChildId!, _childClassIds[_selectedChildId!] ?? ''),
                     const SizedBox(height: 24),
 
                     const Text('Recent Updates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
@@ -261,42 +314,50 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   // ── Action Buttons ────────────────────────────────────
                   const Text('Parent Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ParentActionButton(
-                          icon: Icons.forum_rounded,
-                          label: 'AI Assistant',
-                          color: AppTheme.primary,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentChatScreen(studentId: _selectedChildId))),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ParentActionButton(
+                            icon: Icons.forum_rounded,
+                            label: 'Chat AI',
+                            color: AppTheme.primary,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentChatScreen(studentId: _selectedChildId))),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ParentActionButton(
-                          icon: Icons.calendar_today_rounded,
-                          label: 'Leave Apply',
-                          color: AppTheme.parentColor,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RequestLeaveScreen(
-                            studentId: _selectedChildId,
-                            classId: _childClassIds[_selectedChildId ?? ''],
-                          ))),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ParentActionButton(
+                            icon: Icons.psychology_rounded,
+                            label: 'HW Assist',
+                            color: AppTheme.secondary,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeworkChatScreen())),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ParentActionButton(
-                          icon: Icons.assessment_rounded,
-                          label: 'AI Report',
-                          color: const Color(0xFF0EA5E9),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MonthlyReportScreen(studentId: _selectedChildId))),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ParentActionButton(
+                            icon: Icons.calendar_today_rounded,
+                            label: 'Leave',
+                            color: AppTheme.parentColor,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RequestLeaveScreen(
+                              studentId: _selectedChildId,
+                              classId: _childClassIds[_selectedChildId ?? ''],
+                            ))),
+                          ),
                         ),
-                      ),
-                    ],
-                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
-                ],
-              ]),
-            ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ParentActionButton(
+                            icon: Icons.assessment_rounded,
+                            label: 'Report',
+                            color: const Color(0xFF0EA5E9),
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MonthlyReportScreen(studentId: _selectedChildId))),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+                ]),
+              ),
           ),
         ],
       ),
@@ -553,6 +614,408 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
+  Widget _buildCriticalAlerts(String studentId, String classId, Map<String, dynamic>? childData) {
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        AssignmentService().getAssignmentsByClass(classId),
+        AssignmentService().getStudentSubmissions(studentId),
+        FirebaseFirestore.instance.collection('attendance').where('student_id', isEqualTo: studentId).get(),
+      ]),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        
+        final assignments = snapshot.data![0] as List<AssignmentModel>;
+        final submissions = snapshot.data![1] as List<SubmissionModel>;
+        final attendanceDocs = (snapshot.data![2] as QuerySnapshot).docs;
+
+        final subMap = { for (var s in submissions) s.assignmentId : s };
+        final pendingOverdue = assignments.where((a) => !subMap.containsKey(a.id) && DateTime.now().isAfter(a.dueDate)).length;
+        
+        final totalAtt = attendanceDocs.length;
+        final presentAtt = attendanceDocs.where((d) => d['status'] == 'present').length;
+        final attPercent = totalAtt == 0 ? 100.0 : (presentAtt / totalAtt) * 100;
+
+        final alerts = <Widget>[];
+
+        if (attPercent < 75 && totalAtt > 0) {
+          alerts.add(_AlertCard(
+            icon: Icons.warning_rounded,
+            color: AppTheme.danger,
+            title: 'Critical Attendance',
+            message: 'Attendance has dropped to ${attPercent.toStringAsFixed(0)}%. Minimum 75% required.',
+          ));
+        }
+
+        if (pendingOverdue > 0) {
+          alerts.add(_AlertCard(
+            icon: Icons.assignment_late_rounded,
+            color: Colors.orange,
+            title: 'Missing Assignments',
+            message: 'Your child has $pendingOverdue overdue assignments that need immediate attention.',
+          ));
+        }
+
+        if (alerts.isEmpty) return const SizedBox.shrink();
+
+        return Column(children: alerts);
+      },
+    );
+  }
+
+  Widget _buildTodayAttendanceStatus(String studentId) {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = start.add(const Duration(days: 1));
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('attendance')
+          .where('student_id', isEqualTo: studentId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('date', isLessThan: Timestamp.fromDate(end))
+          .snapshots(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? [];
+        final status = docs.isEmpty ? 'Not Marked' : (docs.first['status'] as String).toUpperCase();
+        final color = docs.isEmpty ? Colors.grey : (status == 'PRESENT' ? AppTheme.secondary : AppTheme.danger);
+        final icon = docs.isEmpty ? Icons.help_outline_rounded : (status == 'PRESENT' ? Icons.check_circle_rounded : Icons.cancel_rounded);
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: color.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('TODAY\'S ATTENDANCE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: AppTheme.textHint)),
+                    Text(status, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: color)),
+                  ],
+                ),
+              ),
+              Text(DateFormat('EEEE, MMM d').format(now), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.textHint)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPerformanceAnalytics(Map<String, dynamic>? data) {
+    final scores = (data?['last_5_scores'] as List<dynamic>? ?? []).map((s) => (s as num).toDouble()).toList();
+    final subjectAvg = (data?['subject_avg'] as Map<String, dynamic>? ?? {});
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Learning Trajectory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+        const SizedBox(height: 12),
+        PremiumCard(
+          opacity: 1,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 150,
+                child: scores.isEmpty
+                    ? const Center(child: Text('No quiz data for trajectory graph.', style: TextStyle(color: AppTheme.textHint)))
+                    : LineChart(
+                        LineChartData(
+                          gridData: const FlGridData(show: false),
+                          titlesData: const FlTitlesData(show: false),
+                          borderData: FlBorderData(show: false),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: scores.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                              isCurved: true,
+                              color: AppTheme.parentColor,
+                              barWidth: 4,
+                              dotData: const FlDotData(show: true),
+                              belowBarData: BarAreaData(show: true, color: AppTheme.parentColor.withOpacity(0.1)),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Subject-wise Mastery', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppTheme.textHint, letterSpacing: 1.0)),
+              const SizedBox(height: 12),
+              ...subjectAvg.entries.map((e) {
+                final isWeak = (e.value as num) < 60;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(e.key, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary)),
+                              if (isWeak) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: AppTheme.danger.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                  child: const Text('WEAK', style: TextStyle(color: AppTheme.danger, fontSize: 8, fontWeight: FontWeight.w900)),
+                                ),
+                              ],
+                            ],
+                          ),
+                          Text('${(e.value as num).toStringAsFixed(0)}%', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: isWeak ? AppTheme.danger : AppTheme.parentColor)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      LinearPercentIndicator(
+                        lineHeight: 8,
+                        percent: (e.value as num) / 100,
+                        progressColor: isWeak ? AppTheme.danger : AppTheme.parentColor,
+                        backgroundColor: (isWeak ? AppTheme.danger : AppTheme.parentColor).withOpacity(0.1),
+                        barRadius: const Radius.circular(4),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              if (subjectAvg.entries.any((e) => (e.value as num) < 60))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.tips_and_updates_rounded, color: AppTheme.accent, size: 14),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${subjectAvg.entries.where((e) => (e.value as num) < 60).map((e) => e.key).join(', ')} needs extra attention.',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIStudyPlanSection(String studentId) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('study_plans').doc(studentId).snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final data = snapshot.data?.data() as Map<String, dynamic>?;
+        if (data == null) {
+          return PremiumCard(
+            opacity: 1,
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Text('No study plan generated yet. Use the "Study Plan" action to create one.', style: TextStyle(fontSize: 12, color: AppTheme.textHint)),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final schedule = data['schedule'] as String;
+        return PremiumCard(
+          opacity: 1,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.task_rounded, color: AppTheme.secondary, size: 20),
+                  const SizedBox(width: 10),
+                  const Text('LATEST STRATEGY', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.secondary, fontSize: 12)),
+                  const Spacer(),
+                  Text(
+                    data['updated_at'] != null ? timeago.format((data['updated_at'] as Timestamp).toDate()) : '',
+                    style: const TextStyle(fontSize: 10, color: AppTheme.textHint),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              MarkdownBody(
+                data: schedule.length > 300 ? '${schedule.substring(0, 300)}...' : schedule,
+                styleSheet: MarkdownStyleSheet(
+                  p: const TextStyle(fontSize: 13, height: 1.5, color: AppTheme.textPrimary),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SmartPlannerScreen(studentId: studentId))),
+                child: const Text('VIEW FULL ROADMAP', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentTestPerformance(String studentId) {
+    return FutureBuilder<List<QuizResultModel>>(
+      future: QuizService().getStudentResults(studentId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final results = snapshot.data!;
+        if (results.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Recent Test Performance', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppTheme.textHint, letterSpacing: 1.0)),
+            const SizedBox(height: 12),
+            ...results.take(3).map((res) {
+              final isWeak = (res.score / res.total) < 0.6;
+              return PremiumCard(
+                opacity: 1,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isWeak ? AppTheme.danger : AppTheme.secondary).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isWeak ? Icons.trending_down_rounded : Icons.trending_up_rounded,
+                        color: isWeak ? AppTheme.danger : AppTheme.secondary,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Quiz #${res.quizId.substring(0, 4).toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.textPrimary)),
+                          Text('Academic Assessment', style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${res.score.toStringAsFixed(0)}/${res.total.toStringAsFixed(0)}',
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: isWeak ? AppTheme.danger : AppTheme.secondary),
+                        ),
+                        if (isWeak)
+                          const Text('Needs Review', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.danger)),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAssignmentTracker(String studentId, String classId) {
+    return FutureBuilder<List<AssignmentModel>>(
+      future: AssignmentService().getAssignmentsByClass(classId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
+        final assignments = snapshot.data!;
+
+        return FutureBuilder<List<SubmissionModel>>(
+          future: AssignmentService().getStudentSubmissions(studentId),
+          builder: (context, subSnap) {
+            final submissions = subSnap.data ?? [];
+            final Map<String, SubmissionModel> submissionMap = { for (var s in submissions) s.assignmentId : s };
+
+            if (assignments.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No assignments found.', style: TextStyle(color: AppTheme.textHint))));
+
+            return Column(
+              children: assignments.take(3).map((a) {
+                final sub = submissionMap[a.id];
+                final isSubmitted = sub != null;
+                final isGraded = sub?.status == AssignmentStatus.graded;
+                final isLate = !isSubmitted && DateTime.now().isAfter(a.dueDate);
+
+                return PremiumCard(
+                  opacity: 1,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: (isGraded ? Colors.green : (isLate ? Colors.red : Colors.orange)).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                        child: Icon(
+                          isGraded ? Icons.verified_rounded : (isSubmitted ? Icons.pending_actions_rounded : Icons.assignment_rounded),
+                          color: isGraded ? Colors.green : (isLate ? Colors.red : Colors.orange),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(a.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.textPrimary)),
+                            Text(a.subject, style: const TextStyle(fontSize: 12, color: AppTheme.textHint)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: (isGraded ? Colors.green : (isSubmitted ? Colors.blue : (isLate ? Colors.red : Colors.orange))).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              isGraded ? 'GRADED' : (isSubmitted ? 'SUBMITTED' : (isLate ? 'LATE' : 'PENDING')),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                color: (isGraded ? Colors.green : (isSubmitted ? Colors.blue : (isLate ? Colors.red : Colors.orange))),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(DateFormat('MMM d').format(a.dueDate), style: const TextStyle(fontSize: 11, color: AppTheme.textHint)),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -591,21 +1054,42 @@ class _ChildAttendanceCard extends StatelessWidget {
         final total = docs.length;
         final present = docs.where((d) => d['status'] == 'present').length;
         final percentage = total == 0 ? 0.0 : (present / total) * 100;
+        final isLow = percentage < 75 && total > 0;
 
-        return PremiumCard(
-          opacity: 1,
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            children: [
-              const Icon(Icons.event_available_rounded, color: AppTheme.secondary, size: 28),
-              const SizedBox(height: 8),
-              Text(
-                '${percentage.toStringAsFixed(0)}%',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+        return Column(
+          children: [
+            PremiumCard(
+              opacity: 1,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                children: [
+                  Icon(Icons.event_available_rounded, color: isLow ? AppTheme.danger : AppTheme.secondary, size: 28),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${percentage.toStringAsFixed(0)}%',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isLow ? AppTheme.danger : AppTheme.textPrimary),
+                  ),
+                  const Text('Attendance', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                ],
               ),
-              const Text('Attendance', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-            ],
-          ),
+            ),
+            if (isLow)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: AppTheme.danger.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 12),
+                      SizedBox(width: 4),
+                      Text('Low Attendance Alert ⚠️', style: TextStyle(color: AppTheme.danger, fontSize: 10, fontWeight: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+              ).animate().shake(),
+          ],
         );
       },
     );
@@ -837,5 +1321,43 @@ class _ParentActionButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _AlertCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String message;
+
+  const _AlertCard({required this.icon, required this.color, required this.title, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title.toUpperCase(), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2, color: color)),
+                const SizedBox(height: 4),
+                Text(message, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary, height: 1.3)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().slideX(begin: 0.1).fadeIn();
   }
 }

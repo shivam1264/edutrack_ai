@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../utils/app_theme.dart';
 import '../../models/user_model.dart';
+import '../../models/class_model.dart';
 import '../../services/class_service.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -153,8 +154,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                           fillColor: AppTheme.bgLight,
                                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                                         ),
-                                        items: classes.map((c) => DropdownMenuItem(
-                                          value: c.displayName, 
+                                        items: classes.map((c) => DropdownMenuItem<String>(
+                                          value: c.id, 
                                           child: Text(c.displayName)
                                         )).toList(),
                                         hint: const Text('Select a standardized class'),
@@ -177,16 +178,16 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                             spacing: 8,
                                             runSpacing: 8,
                                             children: classes.map((c) {
-                                              final isSelected = _selectedAssignedClasses.contains(c.displayName);
+                                              final isSelected = _selectedAssignedClasses.contains(c.id);
                                               return FilterChip(
                                                 label: Text(c.displayName, style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontSize: 12, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500)),
                                                 selected: isSelected,
                                                 onSelected: (selected) {
                                                   setState(() {
                                                     if (selected) {
-                                                      _selectedAssignedClasses.add(c.displayName);
+                                                      _selectedAssignedClasses.add(c.id);
                                                     } else {
-                                                      _selectedAssignedClasses.remove(c.displayName);
+                                                      _selectedAssignedClasses.remove(c.id);
                                                     }
                                                   });
                                                 },

@@ -19,9 +19,12 @@ import '../teacher/lesson_planner_screen.dart';
 import '../teacher/bulk_grade_screen.dart';
 import '../teacher/individual_student_analytics_screen.dart';
 import '../settings/profile_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/brain_dna_service.dart';
 import '../../models/knowledge_node.dart';
 import '../../widgets/brain_dna_visualizer.dart';
+import '../../models/class_model.dart';
+import '../../services/class_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../attendance/attendance_history_screen.dart';
 
@@ -56,43 +59,51 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
 
-    final List<Widget> tabs = [
-      _buildInsightsTab(),
-      _buildClassroomTab(),
-      _buildAILabsTab(),
-      _buildConnectTab(),
-    ];
+    return StreamBuilder<List<ClassModel>>(
+      stream: ClassService().getClasses(),
+      builder: (context, classSnap) {
+        final Map<String, String> classMap = { for (var c in classSnap.data ?? []) c.id : c.displayName };
+        final currentClassName = classMap[_selectedClassId] ?? _selectedClassId ?? 'N/A';
 
-    return Scaffold(
-      backgroundColor: AppTheme.bgLight,
-      body: tabs[_currentIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-             BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF059669),
-          unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Insights'),
-            BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Classroom'),
-            BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_rounded), label: 'AI Labs'),
-            BottomNavigationBarItem(icon: Icon(Icons.forum_rounded), label: 'Connect'),
-          ],
-        ),
-      ),
+        final List<Widget> tabs = [
+          _buildInsightsTab(currentClassName, classMap),
+          _buildClassroomTab(currentClassName),
+          _buildAILabsTab(currentClassName),
+          _buildConnectTab(currentClassName),
+        ];
+
+        return Scaffold(
+          backgroundColor: AppTheme.bgLight,
+          body: tabs[_currentIndex],
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                 BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
+              ],
+            ),
+            child: BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.white,
+              selectedItemColor: const Color(0xFF059669),
+              unselectedItemColor: Colors.grey,
+              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+              items: const [
+                BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Insights'),
+                BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Classroom'),
+                BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_rounded), label: 'AI Labs'),
+                BottomNavigationBarItem(icon: Icon(Icons.forum_rounded), label: 'Connect'),
+              ],
+            ),
+          ),
+        );
+      }
     );
   }
 
-  Widget _buildInsightsTab() {
+  Widget _buildInsightsTab(String currentClassName, Map<String, String> classMap) {
     final user = context.watch<AuthProvider>().user;
     final analytics = context.watch<AnalyticsProvider>();
     final classData = analytics.classAnalytics;
@@ -102,7 +113,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        _buildSliverAppBar('Academic Insights', 'Track class progress'),
+        _buildSliverAppBar('Academic Insights', 'Track class progress', currentClassName),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
           sliver: SliverList(
@@ -130,12 +141,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('CLASS ANALYSIS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: AppTheme.secondary)),
-                            Text('Currently Viewing: ${_selectedClassId ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
+                            Text('Currently Viewing: $currentClassName', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
                           ],
                         ),
                       ),
                       if (user?.assignedClasses != null && user!.assignedClasses!.length > 1)
-                        _buildClassSelectionTrigger(user.assignedClasses!),
+                        _buildClassSelectionTrigger(user.assignedClasses!, classMap),
                     ],
                   ),
                 ).animate().fadeIn().slideX(begin: 0.1),
@@ -171,13 +182,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildClassroomTab() {
+  Widget _buildClassroomTab(String currentClassName) {
     final classId = _selectedClassId ?? '';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        _buildSliverAppBar('Classroom', 'Manage daily activities'),
+        _buildSliverAppBar('Classroom', 'Manage daily activities', currentClassName),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           sliver: SliverList(
@@ -187,7 +198,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                     'icon': Icons.how_to_reg_rounded,
                     'label': 'Mark Attendance',
                     'color': AppTheme.secondary,
-                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAttendanceScreen(classId: classId, className: '$_selectedClassId Attendance'))),
+                    'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAttendanceScreen(classId: classId, className: '$currentClassName Attendance'))),
                   },
                   {
                     'icon': Icons.history_edu_rounded,
@@ -233,13 +244,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildAILabsTab() {
+  Widget _buildAILabsTab(String currentClassName) {
     final classId = _selectedClassId ?? '';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        _buildSliverAppBar('AI Assistant', 'Smart educational tools'),
+        _buildSliverAppBar('AI Assistant', 'Smart educational tools', currentClassName),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           sliver: SliverList(
@@ -271,13 +282,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildConnectTab() {
+  Widget _buildConnectTab(String currentClassName) {
     final classId = _selectedClassId ?? '';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        _buildSliverAppBar('Connect', 'Student support & requests'),
+        _buildSliverAppBar('Connect', 'Student support & requests', currentClassName),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           sliver: SliverList(
@@ -303,7 +314,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildSliverAppBar(String title, String subtitle) {
+  Widget _buildSliverAppBar(String title, String subtitle, String? currentClassName) {
     final user = context.watch<AuthProvider>().user;
     return SliverAppBar(
       expandedHeight: 180,
@@ -367,7 +378,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Academic Class: $_selectedClassId',
+                                    'Academic Class: ${currentClassName ?? 'N/A'}',
                                     style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
                                   ),
                                 ],
@@ -576,14 +587,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildClassSelectionTrigger(List<String> classes) {
+  Widget _buildClassSelectionTrigger(List<String> classes, Map<String, String> classMap) {
     return GestureDetector(
       onTap: () {
         showModalBottomSheet(
           context: context,
           backgroundColor: Colors.transparent,
           isScrollControlled: true,
-          builder: (context) => _buildClassPickerSheet(classes),
+          builder: (context) => _buildClassPickerSheet(classes, classMap),
         );
       },
       child: Container(
@@ -605,7 +616,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildClassPickerSheet(List<String> classes) {
+  Widget _buildClassPickerSheet(List<String> classes, Map<String, String> classMap) {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -635,7 +646,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 ),
                 child: Icon(Icons.hub_rounded, color: _selectedClassId == c ? AppTheme.primary : AppTheme.textHint, size: 20),
               ),
-              title: Text(c, style: TextStyle(fontWeight: _selectedClassId == c ? FontWeight.w900 : FontWeight.w600, color: _selectedClassId == c ? AppTheme.primary : AppTheme.textPrimary)),
+              title: Text(classMap[c] ?? c, style: TextStyle(fontWeight: _selectedClassId == c ? FontWeight.w900 : FontWeight.w600, color: _selectedClassId == c ? AppTheme.primary : AppTheme.textPrimary)),
               trailing: _selectedClassId == c ? const Icon(Icons.check_circle_rounded, color: AppTheme.primary) : null,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),

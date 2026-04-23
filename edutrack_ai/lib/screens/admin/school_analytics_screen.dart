@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
+import '../../models/class_model.dart';
+import '../../services/class_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class SchoolAnalyticsScreen extends StatelessWidget {
@@ -13,51 +15,58 @@ class SchoolAnalyticsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 160,
-            pinned: true,
-            backgroundColor: AppTheme.primary,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(gradient: AppTheme.meshGradient),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('School Analytics', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                      Text('Institution-wide performance overview', style: TextStyle(color: Colors.white70)),
-                    ],
+      body: StreamBuilder<List<ClassModel>>(
+        stream: ClassService().getClasses(),
+        builder: (context, classSnap) {
+          final Map<String, String> classMap = { for (var c in classSnap.data ?? []) c.id : c.displayName };
+          
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 160,
+                pinned: true,
+                backgroundColor: AppTheme.primary,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: const BoxDecoration(gradient: AppTheme.meshGradient),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('School Analytics', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                          Text('Institution-wide performance overview', style: TextStyle(color: Colors.white70)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildOverallStats(),
-                const SizedBox(height: 20),
-                const Text('📊 Class Performance', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
-                const SizedBox(height: 12),
-                _buildClassBreakdown(),
-                const SizedBox(height: 20),
-                const Text('👨‍🏫 Teacher Activity', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
-                const SizedBox(height: 12),
-                _buildTeacherStats(),
-                const SizedBox(height: 20),
-                const Text('🎯 Doubt Resolution', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
-                const SizedBox(height: 12),
-                _buildDoubtStats(),
-              ]),
-            ),
-          ),
-        ],
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    _buildOverallStats(),
+                    const SizedBox(height: 20),
+                    const Text('📊 Class Performance', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 12),
+                    _buildClassBreakdown(classSnap.data ?? []),
+                    const SizedBox(height: 20),
+                    const Text('👨‍🏫 Teacher Activity', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 12),
+                    _buildTeacherStats(classMap),
+                    const SizedBox(height: 20),
+                    const Text('🎯 Doubt Resolution', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 12),
+                    _buildDoubtStats(),
+                  ]),
+                ),
+              ),
+            ],
+          );
+        }
       ),
     );
   }
@@ -85,56 +94,49 @@ class SchoolAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildClassBreakdown() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('classes').snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-        final classes = snap.data!.docs;
-        if (classes.isEmpty) {
-          return const Center(child: Text('No classes configured yet', style: TextStyle(color: Colors.grey)));
-        }
-        return Column(
-          children: classes.asMap().entries.map((e) {
-            final d = e.value.data() as Map<String, dynamic>;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: PremiumCard(
-                opacity: 1,
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.class_rounded, color: AppTheme.primary),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(d['name'] ?? d['id'] ?? 'Class', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                          Text('${d['studentCount'] ?? 0} students enrolled', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                      child: Text('${d['avgScore'] ?? 'N/A'}%', style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primary)),
-                    ),
-                  ],
+  Widget _buildClassBreakdown(List<ClassModel> classes) {
+    if (classes.isEmpty) {
+      return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No classes configured yet', style: TextStyle(color: Colors.grey))));
+    }
+    return Column(
+      children: classes.asMap().entries.map((e) {
+        final cls = e.value;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: PremiumCard(
+            opacity: 1,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(Icons.class_rounded, color: AppTheme.primary),
                 ),
-              ).animate().fadeIn(delay: (e.key * 80).ms),
-            );
-          }).toList(),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(cls.displayName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      const Text('Active Academic Stream', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                  child: const Text('Live', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primary, fontSize: 12)),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: (e.key * 80).ms),
         );
-      },
+      }).toList(),
     );
   }
 
-  Widget _buildTeacherStats() {
+  Widget _buildTeacherStats(Map<String, String> classMap) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('users')
           .where('role', isEqualTo: 'teacher').snapshots(),
@@ -144,6 +146,9 @@ class SchoolAnalyticsScreen extends StatelessWidget {
         return Column(
           children: teachers.asMap().entries.map((e) {
             final d = e.value.data() as Map<String, dynamic>;
+            final assigned = d['assigned_classes'] as List<dynamic>? ?? (d['class_id'] != null ? [d['class_id']] : []);
+            final classNames = assigned.map((id) => classMap[id] ?? id).join(', ');
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: PremiumCard(
@@ -156,7 +161,8 @@ class SchoolAnalyticsScreen extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF059669))),
                   ),
                   title: Text(d['name'] ?? 'Teacher', style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text(d['classId'] ?? '' , style: const TextStyle(color: AppTheme.textSecondary)),
+                  subtitle: Text(classNames.isEmpty ? 'No Classes' : classNames, 
+                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: const Color(0xFF059669).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
@@ -170,6 +176,7 @@ class SchoolAnalyticsScreen extends StatelessWidget {
       },
     );
   }
+
 
   Widget _buildDoubtStats() {
     return FutureBuilder<Map<String, int>>(

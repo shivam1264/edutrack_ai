@@ -123,6 +123,8 @@ class HomeworkService {
         .doc('${studentId}_${todayStart.toIso8601String().split('T').first}');
     final doc = await rateRef.get();
     return doc.exists ? (doc.data()!['count'] ?? 0) : 0;
+  }
+
   // ─── Helper: Map Standard Class String to Numeric ──────────────────────────────
   int _mapClassToYear(String cls) {
     final lower = cls.toLowerCase();

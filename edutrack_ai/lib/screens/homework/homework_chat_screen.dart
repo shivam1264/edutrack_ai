@@ -138,7 +138,7 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
         studentId: uid,
         question: question.isEmpty ? "Explain this image." : question,
         subject: _selectedSubject,
-        studentClass: 9,
+        studentClass: '9',
         imageData: base64Image,
         showHintFirst: _showHintFirst,
       );

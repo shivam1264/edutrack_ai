@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import '../../utils/config.dart';
 import '../../providers/auth_provider.dart';
@@ -11,7 +12,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class SmartPlannerScreen extends StatefulWidget {
-  const SmartPlannerScreen({super.key});
+  final String? studentId;
+  const SmartPlannerScreen({super.key, this.studentId});
 
   @override
   State<SmartPlannerScreen> createState() => _SmartPlannerScreenState();
@@ -29,6 +31,9 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
   }
 
   Future<void> _generatePlan() async {
+    final studentId = widget.studentId ?? context.read<AuthProvider>().user?.uid;
+    if (studentId == null) return;
+
     final analytics = context.read<AnalyticsProvider>();
     final data = analytics.studentAnalytics;
 
@@ -45,10 +50,22 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
+        final schedule = result['schedule'];
+        
         setState(() {
-          _schedule = result['schedule'];
+          _schedule = schedule;
           _isLoading = false;
         });
+
+        // Persist to Firestore
+        final studentId = widget.studentId ?? context.read<AuthProvider>().user?.uid;
+        if (studentId != null) {
+          await FirebaseFirestore.instance.collection('study_plans').doc(studentId).set({
+            'student_id': studentId,
+            'schedule': schedule,
+            'updated_at': FieldValue.serverTimestamp(),
+          });
+        }
       } else {
         setState(() {
           _error = 'Failed to generate mission strategy.';

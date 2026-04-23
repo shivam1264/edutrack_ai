@@ -14,8 +14,11 @@ import '../admin/permissions_screen.dart';
 import '../admin/teacher_performance_screen.dart';
 import '../admin/user_management_screen.dart';
 import '../settings/profile_screen.dart';
-import '../../widgets/school_analytics_screen.dart';
-import '../planner/timetable_manager_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../admin/school_analytics_screen.dart';
+import '../admin/timetable_manager_screen.dart';
+import '../admin/ai_risk_report_screen.dart';
+import '../admin/system_settings_screen.dart';
 import '../attendance/attendance_history_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -37,7 +40,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: const [
           _AdminHomeView(),
           _SystemHealthView(),
-          _AdminSettingsView(),
+          SystemSettingsScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -214,7 +217,7 @@ class _AdminHomeView extends StatelessWidget {
                     _AdminStatCard(label: 'Active Classes', collection: 'classes', filterField: null, filterValue: null, icon: Icons.hub_rounded, color: Colors.amber),
                     _AdminStatCard(label: 'AI Predictions', collection: 'ai_predictions', filterField: 'risk_level', filterValue: 'high', icon: Icons.gpp_maybe_rounded, color: Colors.redAccent),
                   ],
-                ).animate().fadeIn(duration: const Duration(milliseconds: 500)).slideY(begin: 0.1),
+                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
               ],
             ),
           ),
@@ -292,6 +295,12 @@ class _AdminHomeView extends StatelessWidget {
         'label': 'Provision New',
         'color': Colors.blue,
         'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddUserScreen())),
+      },
+      {
+        'icon': Icons.gpp_maybe_rounded,
+        'label': 'Risk Monitor',
+        'color': Colors.redAccent,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AIRiskReportScreen())),
       },
     ];
 
@@ -430,7 +439,6 @@ class _AdminStatCard extends StatelessWidget {
     );
   }
 }
-
 
 class _SystemHealthView extends StatelessWidget {
   const _SystemHealthView();
@@ -576,102 +584,6 @@ class _HealthMetricStream extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _AdminSettingsView extends StatelessWidget {
-  const _AdminSettingsView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('System Configuration', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-        backgroundColor: const Color(0xFF0F172A),
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Text('PERSONAL PREFERENCES', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5, color: Colors.grey)),
-          const SizedBox(height: 16),
-          PremiumCard(
-            opacity: 1,
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                _buildSettingTile(
-                  icon: Icons.account_circle_rounded, 
-                  color: Colors.blueAccent, 
-                  title: 'Admin Profile', 
-                  subtitle: 'Update your official credentials',
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-                ),
-                const Divider(height: 1, indent: 60),
-                _buildSettingTile(
-                  icon: Icons.notifications_active_rounded, 
-                  color: Colors.orangeAccent, 
-                  title: 'Alert Settings', 
-                  subtitle: 'Configure global broadcast nodes',
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementScreen())),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          const Text('SYSTEM MAINTENANCE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5, color: Colors.grey)),
-          const SizedBox(height: 16),
-          PremiumCard(
-            opacity: 1,
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                _buildSettingTile(
-                  icon: Icons.storage_rounded, 
-                  color: Colors.purpleAccent, 
-                  title: 'Database Hygiene', 
-                  subtitle: 'Optimizing Firestore indices',
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Auto-Hygiene optimization in progress...'))),
-                ),
-                const Divider(height: 1, indent: 60),
-                _buildSettingTile(
-                  icon: Icons.restore_rounded, 
-                  color: Colors.tealAccent, 
-                  title: 'System Recovery', 
-                  subtitle: 'Last backup: Today, 04:00 AM',
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 40),
-          Center(
-            child: Column(
-              children: [
-                const Text('EduTrack AI Pro • Version 2.1.0', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('Environment: PRODUCTION', style: TextStyle(fontSize: 10, color: Colors.blueAccent.withOpacity(0.5), fontWeight: FontWeight.w900)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingTile({required IconData icon, required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
-    return ListTile(
-      onTap: onTap,
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
     );
   }
 }

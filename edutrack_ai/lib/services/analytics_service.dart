@@ -85,6 +85,27 @@ class AnalyticsService {
     };
   }
 
+  // ─── Get student rank in class ──────────────────────────────────────────────
+  Future<Map<String, dynamic>?> getStudentRank(String studentId, String classId) async {
+    final analytics = await getClassAnalytics(classId);
+    final students = analytics['students'] as List<Map<String, dynamic>>;
+    
+    int rank = 0;
+    for (int i = 0; i < students.length; i++) {
+      if (students[i]['uid'] == studentId) {
+        rank = i + 1;
+        break;
+      }
+    }
+
+    if (rank == 0) return null;
+
+    return {
+      'rank': rank,
+      'total': students.length,
+    };
+  }
+
   // ─── Get class analytics for teacher ─────────────────────────────────────────
   Future<Map<String, dynamic>> getClassAnalytics(String classId) async {
     // FIX: Using 'users' collection instead of legacy 'students'

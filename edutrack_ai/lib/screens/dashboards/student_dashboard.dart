@@ -26,6 +26,7 @@ import '../../services/brain_dna_service.dart';
 import '../../models/knowledge_node.dart';
 import '../../widgets/brain_dna_visualizer.dart';
 import '../settings/profile_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});

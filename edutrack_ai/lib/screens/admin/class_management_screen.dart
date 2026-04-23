@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
+import '../../models/class_model.dart';
 import '../../widgets/premium_card.dart';
 import '../../utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';

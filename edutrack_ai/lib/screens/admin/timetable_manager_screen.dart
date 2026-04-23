@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import '../../models/class_model.dart';
 import '../../models/timetable_model.dart';
 import '../../models/user_model.dart';
 import '../../services/timetable_service.dart';
@@ -339,7 +340,8 @@ class _TimetableManagerScreenState extends State<TimetableManagerScreen> {
                       ),
                       items: _classes.map((c) {
                         final d = c.data() as Map<String, dynamic>;
-                        return DropdownMenuItem(value: c.id, child: Text(d['name'] ?? c.id));
+                        final model = ClassModel.fromMap(c.id, d);
+                        return DropdownMenuItem(value: c.id, child: Text(model.displayName));
                       }).toList(),
                       onChanged: (v) {
                         setState(() => _selectedClass = v!);

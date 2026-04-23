@@ -223,7 +223,6 @@ class AttendanceService {
     
     return uniqueDates.toList()..sort((a, b) => b.compareTo(a));
   }
-}
 
   // ─── Stream attendance for a class/date (real-time) ──────────────────────────
   Stream<List<AttendanceModel>> streamAttendanceByDate({
@@ -245,7 +244,7 @@ class AttendanceService {
     }
 
     return query.snapshots().map((snap) => snap.docs
-        .map((d) => AttendanceModel.fromMap(d.id, d.data() as Map<String, dynamic>))
+        .map((d) => AttendanceModel.fromMap(d.id, d.data()))
         .toList());
   }
 }

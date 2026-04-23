@@ -34,7 +34,7 @@ class TimetableModel {
   }
 
   Map<String, dynamic> toMap() {
-    final map = {
+    final Map<String, dynamic> map = {
       'updatedAt': FieldValue.serverTimestamp(),
     };
     weeklySchedule.forEach((day, periods) {

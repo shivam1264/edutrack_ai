@@ -141,6 +141,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                         tooltip: 'Edit Subjects/Classes',
                       ),
                     IconButton(
+                      icon: const Icon(Icons.email_outlined, color: Colors.orange, size: 20),
+                      onPressed: () => _sendResetEmail(data['email'], data['name'] ?? 'User'),
+                      tooltip: 'Send Password Reset',
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.shield_rounded, color: Colors.blueAccent, size: 20),
                       onPressed: () => _changeRoleDialog(doc.id, role),
                       tooltip: 'Change Role',
@@ -164,6 +169,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
     if (role == 'teacher') return AppTheme.secondary;
     if (role == 'parent') return AppTheme.accent;
     return AppTheme.primary;
+  }
+
+  void _sendResetEmail(String? email, String name) async {
+    if (email == null || email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No email found for this user.')));
+      return;
+    }
+    try {
+      await AuthService().sendPasswordResetEmail(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Password reset email sent to $name ($email)'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
+        );
+      }
+    }
   }
 
   void _confirmDelete(String uid, String name) {
@@ -248,11 +274,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                       return Wrap(
                         spacing: 6, runSpacing: 6,
                         children: classes.map((c) {
-                          final isSelected = assignedClasses.contains(c.displayName);
+                          final isSelected = assignedClasses.contains(c.id);
                           return FilterChip(
                             label: Text(c.displayName, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : AppTheme.textPrimary)),
                             selected: isSelected,
-                            onSelected: (val) => setLocalState(() => val ? assignedClasses.add(c.displayName) : assignedClasses.remove(c.displayName)),
+                            onSelected: (val) => setLocalState(() => val ? assignedClasses.add(c.id) : assignedClasses.remove(c.id)),
                             selectedColor: AppTheme.primary,
                             checkmarkColor: Colors.white,
                           );

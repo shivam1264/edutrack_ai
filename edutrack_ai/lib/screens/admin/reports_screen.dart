@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
+import '../../models/class_model.dart';
+import '../../services/class_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ReportsScreen extends StatelessWidget {
@@ -38,17 +40,30 @@ class ReportsScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Class Intelligence', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                        Row(
-                          children: [
-                            Text(classId != null ? 'Analyzing Class: $classId' : 'Global Intelligence Protocol', 
-                                 style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
-                            if (classId != null) ...[
-                              const SizedBox(width: 8),
-                              Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.white54, shape: BoxShape.circle)),
-                              const SizedBox(width: 8),
-                              const Text('Live Sync', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                            ],
-                          ],
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: classId != null 
+                              ? FirebaseFirestore.instance.collection('classes').doc(classId).snapshots()
+                              : null,
+                          builder: (context, snapshot) {
+                            String displayName = classId ?? 'Global Intelligence Protocol';
+                            if (snapshot.hasData && snapshot.data!.exists) {
+                              final model = ClassModel.fromMap(classId!, snapshot.data!.data() as Map<String, dynamic>);
+                              displayName = model.displayName;
+                            }
+                            
+                            return Row(
+                              children: [
+                                Text(classId != null ? 'Analyzing Class: $displayName' : displayName, 
+                                     style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                                if (classId != null) ...[
+                                  const SizedBox(width: 8),
+                                  Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.white54, shape: BoxShape.circle)),
+                                  const SizedBox(width: 8),
+                                  const Text('Live Sync', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                ],
+                              ],
+                            );
+                          }
                         ),
                       ],
                     ),

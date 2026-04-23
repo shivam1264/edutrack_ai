@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/attendance_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/attendance_service.dart';
+import '../../models/user_model.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -30,6 +31,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _students = [];
   List<String> _teacherSubjects = [];
+  DateTime _selectedDate = DateTime.now();
+  final Map<String, AttendanceStatus> _statusMap = {};
 
   @override
   void initState() {
