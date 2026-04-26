@@ -579,7 +579,8 @@ class _QuestionEditorState extends State<_QuestionEditor> {
           TextFormField(
             initialValue: widget.draft.text,
             decoration: const InputDecoration(hintText: 'Describe the question challenge...', isDense: true),
-            maxLines: 2,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
             onChanged: (v) => widget.draft.text = v,
           ),
           if (widget.draft.type == QuestionType.mcq) ...[
@@ -599,6 +600,8 @@ class _QuestionEditorState extends State<_QuestionEditor> {
                       child: TextFormField(
                         initialValue: widget.draft.options[i],
                         decoration: InputDecoration(hintText: 'Choice ${['A', 'B', 'C', 'D'][i]}', isDense: true),
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
                         onChanged: (v) => widget.draft.options[i] = v,
                       ),
                     ),

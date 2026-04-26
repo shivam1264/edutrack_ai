@@ -199,6 +199,7 @@ class _TakeQuizScreenState extends State<TakeQuizScreen> {
                   // Question text
                   Text(
                     question.text,
+                    softWrap: true,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,

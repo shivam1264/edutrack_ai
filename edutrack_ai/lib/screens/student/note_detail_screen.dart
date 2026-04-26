@@ -86,7 +86,7 @@ class NoteDetailScreen extends StatelessWidget {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _launchURL(note.fileUrl!),
+                                onPressed: () => _launchURL(note.fileUrl!, context),
                                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
                                 label: const Text('Open Resource', style: TextStyle(fontWeight: FontWeight.bold)),
                                 style: ElevatedButton.styleFrom(
@@ -117,10 +117,16 @@ class NoteDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _launchURL(String url) async {
+  Future<void> _launchURL(String url, BuildContext context) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open resource: $e')),
+        );
+      }
     }
   }
 
