@@ -120,11 +120,18 @@ class NoteDetailScreen extends StatelessWidget {
   Future<void> _launchURL(String url, BuildContext context) async {
     final uri = Uri.parse(url);
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      // Try platform default first (lets OS decide: browser or PDF app)
+      bool success = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      
+      if (!success) {
+        // Fallback to external application
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     } catch (e) {
+      // If both fail, show error
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open resource: $e')),
+          SnackBar(content: Text('Error opening resource: $e')),
         );
       }
     }
