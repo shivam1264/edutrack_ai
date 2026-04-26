@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import '../../utils/config.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -174,6 +175,66 @@ class AnalyticsService {
       'pending_tasks': pendingSubSnap.docs.length,
       'announcements_count': announceSnap.docs.length,
     };
+  }
+
+  // ─── Get Class Attendance (Today) ───────────────────────────────────────────
+  Future<double> getClassAttendance(String classId) async {
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final attendSnap = await _db.collection('attendance')
+        .where('class_id', isEqualTo: classId)
+        .where('date_string', isEqualTo: todayStr)
+        .get();
+
+    if (attendSnap.docs.isEmpty) return 0.0;
+
+    int present = 0;
+    int total = attendSnap.docs.length;
+    
+    for (var doc in attendSnap.docs) {
+      final data = doc.data();
+      final status = data['status']?.toString().toLowerCase();
+      if (status == 'present') {
+        present++;
+      } else if (status == 'late') {
+        present++; // Counting late as present for % purposes, or 0.5 if preferred
+      }
+    }
+
+    return total > 0 ? (present / total) * 100 : 0.0;
+  }
+
+  // ─── Get Class Performance Trend (Last 7 Days) ──────────────────────────────
+  Future<List<double>> getClassPerformanceTrend(String classId) async {
+    final resultsSnap = await _db.collection('quiz_results')
+        .where('class_id', isEqualTo: classId)
+        .get();
+
+    final now = DateTime.now();
+    final Map<int, List<double>> dailyScores = {};
+
+    for (var doc in resultsSnap.docs) {
+      final data = doc.data();
+      final Timestamp? ts = data['submitted_at'];
+      if (ts == null) continue;
+      
+      final diff = now.difference(ts.toDate()).inDays;
+      if (diff >= 0 && diff < 7) {
+        final score = (data['score'] as num).toDouble();
+        final total = (data['total'] as num).toDouble();
+        dailyScores.putIfAbsent(6 - diff, () => []);
+        dailyScores[6 - diff]!.add((score / total) * 100);
+      }
+    }
+
+    List<double> trend = List.filled(7, 70.0); // Default to 70% if no data
+    for (int i = 0; i < 7; i++) {
+      if (dailyScores.containsKey(i)) {
+        trend[i] = dailyScores[i]!.reduce((a, b) => a + b) / dailyScores[i]!.length;
+      } else if (i > 0) {
+        trend[i] = trend[i-1]; 
+      }
+    }
+    return trend;
   }
 
   // ─── AI Prediction from Firestore ────────────────────────────────────────────
