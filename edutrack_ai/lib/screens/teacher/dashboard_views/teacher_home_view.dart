@@ -102,7 +102,7 @@ class TeacherHomeView extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Class: $currentClassName • Science Teacher',
+                              'Class: $currentClassName • ${user?.subjects != null && user!.subjects!.isNotEmpty ? user.subjects!.join(", ") : "Teacher"}',
                               style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
