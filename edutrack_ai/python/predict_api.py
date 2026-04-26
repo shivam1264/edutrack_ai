@@ -193,7 +193,7 @@ def homework_help():
     if not check_rate_limit(student_id):
         return jsonify({'error': 'Rate limit reached'}), 429
 
-    if not gemini_model:
+    if not GROQ_API_KEY:
         return jsonify({'answer': _fallback_answer(question, subject), 'generated_by': 'fallback'})
 
     try:
@@ -212,7 +212,6 @@ def homework_help():
             "If the student asks a question, guide them step-by-step."
         )
 
-    try:
         response_text = generate_with_groq(
             f"Student Question: {question}", 
             system_instruction=system_instruction,
