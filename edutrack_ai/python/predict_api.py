@@ -246,8 +246,8 @@ def generate_study_plan():
     
     print(f"    [PLAN] Generating rescue plan for {student_name}")
 
-    if not gemini_model:
-        return jsonify({'plan': 'Try again later for a personalized AI study plan.'})
+    if not GROQ_API_KEY:
+        return jsonify({'plan': 'AI Configuration missing on server.'})
 
     try:
         prompt = (
