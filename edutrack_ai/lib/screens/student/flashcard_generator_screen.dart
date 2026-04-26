@@ -7,6 +7,7 @@ import '../../utils/config.dart';
 import '../../utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:math';
+import '../../services/ai_service.dart';
 
 
 class FlashcardGeneratorScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
         Uri.parse(Config.endpoint('/generate-flashcards')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'file_url': url}),
-      ).timeout(const Duration(seconds: 40));
+      ).timeout(const Duration(seconds: 90));
       _handleResponse(response.statusCode, response.body);
     } catch (e) {
       _showError(msg: e is TimeoutException ? 'Server took too long. Try smaller content.' : 'Error generating flashcards.');
@@ -52,14 +53,14 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
     if (content.isEmpty) return;
     _startLoading();
     try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/generate-flashcards')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'content': content}),
-      ).timeout(const Duration(seconds: 40));
-      _handleResponse(response.statusCode, response.body);
+      final flashcards = await AIService().generateFlashcards(content);
+      setState(() {
+        _flashcards = flashcards;
+        _isLoading = false;
+      });
+      if (_flashcards.isEmpty) _showError(msg: 'No flashcards could be extracted.');
     } catch (e) {
-      _showError(msg: e is TimeoutException ? 'AI is busy. Please try again in 30s.' : 'Error connecting to AI Hub.');
+      _showError(msg: 'AI Generation failed: $e');
     }
   }
 
@@ -81,7 +82,7 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
         filename: result.files.single.name,
       ));
       
-      var response = await request.send().timeout(const Duration(seconds: 40));
+      var response = await request.send().timeout(const Duration(seconds: 60));
       var responseBody = await response.stream.bytesToString();
       _handleResponse(response.statusCode, responseBody);
     } catch (e) {
@@ -185,7 +186,7 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : _generateFromText,
                   icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.flash_on_rounded),
-                  label: Text(_isLoading ? 'Generating Magic...' : 'Generate Text'),
+                  label: Text(_isLoading ? 'AI Thinking...' : 'Generate Text'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accent,
                     foregroundColor: Colors.white,
@@ -197,6 +198,15 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
               ),
             ],
           ),
+          if (_isLoading)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                '⚡ AI Server is waking up (30-40s)...',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 11, fontStyle: FontStyle.italic, fontWeight: FontWeight.bold),
+              ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
+            ),
         ],
       ),
     );

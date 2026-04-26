@@ -62,8 +62,20 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
 
       _students = snap.docs
           .where((d) => d.data()['role'] == 'student')
-          .map((d) => {'uid': d.id, 'name': d.data()['name'] ?? 'Incomplete Profile'})
+          .map((d) => {
+                'uid': d.id, 
+                'name': d.data()['name'] ?? 'Incomplete Profile',
+                'rollNo': d.data()['roll_no']?.toString() ?? '?'
+              })
           .toList();
+      
+      // Sort students by roll number numerically if possible, otherwise alphabetically
+      _students.sort((a, b) {
+        final aRoll = int.tryParse(a['rollNo'] ?? '');
+        final bRoll = int.tryParse(b['rollNo'] ?? '');
+        if (aRoll != null && bRoll != null) return aRoll.compareTo(bRoll);
+        return (a['rollNo'] ?? '').compareTo(b['rollNo'] ?? '');
+      });
 
       final existing = await AttendanceService().getAttendanceByDate(
         classId: widget.classId,
@@ -166,16 +178,20 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${widget.className} Roll Call', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Expanded(
+                          child: Text(
+                            '${widget.className} Roll Call', 
+                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         Row(
                           children: [
                             const Icon(Icons.calendar_month_rounded, color: Colors.white70, size: 14),
                             const SizedBox(width: 4),
                             Text(DateFormat('EEE, dd MMM').format(_selectedDate), style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                            const SizedBox(width: 8),
-                            Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
-                            const SizedBox(width: 8),
-                            Text('Class: ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -229,11 +245,11 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                             final name = student['name'] as String;
                             final status = _statusMap[uid] ?? AttendanceStatus.present;
 
-                            return Padding(
+                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _StudentAttendanceTile(
                                 name: name,
-                                rollNo: index + 1,
+                                rollNo: student['rollNo'],
                                 status: status,
                                 onStatusChange: (newStatus) {
                                   setState(() => _statusMap[uid] = newStatus);
@@ -316,7 +332,7 @@ class _StatBadge extends StatelessWidget {
 
 class _StudentAttendanceTile extends StatelessWidget {
   final String name;
-  final int rollNo;
+  final String rollNo;
   final AttendanceStatus status;
   final ValueChanged<AttendanceStatus> onStatusChange;
   const _StudentAttendanceTile({required this.name, required this.rollNo, required this.status, required this.onStatusChange});

@@ -8,7 +8,9 @@ import '../../services/assignment_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:intl/intl.dart';
+import '../../models/class_model.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../services/class_service.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
   final String classId;
@@ -110,7 +112,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
           SliverAppBar(
             expandedHeight: 160,
             pinned: true,
-            backgroundColor: AppTheme.primary,
+            backgroundColor: AppTheme.secondary,
             foregroundColor: Colors.white,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
@@ -129,14 +131,25 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Create Assignment', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                        Row(
-                          children: [
-                            const Text('Deploy new academic missions', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            const SizedBox(width: 8),
-                            Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
-                            const SizedBox(width: 8),
-                            Text('Target Class: ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
-                          ],
+                        StreamBuilder<ClassModel>(
+                          stream: ClassService().getClassById(widget.classId),
+                          builder: (context, classSnap) {
+                            final className = classSnap.data?.displayName ?? '';
+                            return Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                const Text('Deploy new academic missions', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                if (className.isNotEmpty) ...[
+                                  Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
+                                  Text('Target: $className', 
+                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, decoration: TextDecoration.underline),
+                                  ),
+                                ],
+                              ],
+                            );
+                          }
                         ),
                       ],
                     ),
@@ -162,7 +175,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                             controller: _titleCtrl,
                             decoration: const InputDecoration(
                               hintText: 'e.g. Quantum Mechanics Intro',
-                              prefixIcon: Icon(Icons.title_rounded, color: AppTheme.primary),
+                              prefixIcon: Icon(Icons.title_rounded, color: AppTheme.secondary),
                             ),
                             validator: (v) => v?.isEmpty == true ? 'Title required' : null,
                           ),
@@ -170,8 +183,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                           _label('Subject'),
                           DropdownButtonFormField<String>(
                             value: _subject,
+                            isExpanded: true,
                             decoration: const InputDecoration(
-                              prefixIcon: Icon(Icons.subject_rounded, color: AppTheme.primary),
+                              prefixIcon: Icon(Icons.subject_rounded, color: AppTheme.secondary),
                             ),
                             items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                             onChanged: (v) => setState(() => _subject = v!),
@@ -234,7 +248,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                         ),
                                         child: Row(
                                           children: [
-                                            const Icon(Icons.event_rounded, color: AppTheme.primary, size: 18),
+                                            const Icon(Icons.event_rounded, color: AppTheme.secondary, size: 18),
                                             const SizedBox(width: 8),
                                             Text(DateFormat('dd MMM').format(_dueDate), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                                           ],
@@ -261,13 +275,13 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                 color: AppTheme.bgLight,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: _pickedFile != null ? AppTheme.primary : AppTheme.borderLight,
+                                  color: _pickedFile != null ? AppTheme.secondary : AppTheme.borderLight,
                                   style: BorderStyle.solid,
                                 ),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(_pickedFile != null ? Icons.description_rounded : Icons.cloud_upload_outlined, color: _pickedFile != null ? AppTheme.primary : AppTheme.textHint),
+                                  Icon(_pickedFile != null ? Icons.description_rounded : Icons.cloud_upload_outlined, color: _pickedFile != null ? AppTheme.secondary : AppTheme.textHint),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Text(
@@ -275,7 +289,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                       style: TextStyle(color: _pickedFile != null ? AppTheme.textPrimary : AppTheme.textHint, fontWeight: FontWeight.w600),
                                     ),
                                   ),
-                                  if (_pickedFile != null) const Icon(Icons.check_circle_rounded, color: AppTheme.primary, size: 18),
+                                  if (_pickedFile != null) const Icon(Icons.check_circle_rounded, color: AppTheme.secondary, size: 18),
                                 ],
                               ),
                             ),
@@ -291,11 +305,11 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                           icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.rocket_launch_rounded),
                           label: Text(_isSaving ? 'Deploying...' : 'Deploy Assignment', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
+                            backgroundColor: AppTheme.secondary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             elevation: 8,
-                            shadowColor: AppTheme.primary.withOpacity(0.4),
+                            shadowColor: AppTheme.secondary.withOpacity(0.4),
                           ),
                         ),
                       ).animate().fadeIn(delay: 400.ms).scale(),

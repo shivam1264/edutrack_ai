@@ -8,6 +8,8 @@ import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import '../../services/cloudinary_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../models/class_model.dart';
+import '../../services/class_service.dart';
 
 class UploadNotesScreen extends StatefulWidget {
   final String classId;
@@ -200,14 +202,25 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('Upload Notes', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                      Row(
-                        children: [
-                          const Text('Share study materials', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          const SizedBox(width: 8),
-                          Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
-                          const SizedBox(width: 8),
-                          Text('Target: Class $classId', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
-                        ],
+                      StreamBuilder<ClassModel>(
+                        stream: ClassService().getClassById(classId),
+                        builder: (context, classSnap) {
+                          final className = classSnap.data?.displayName ?? '';
+                          return Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              const Text('Share study materials', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                              if (className.isNotEmpty) ...[
+                                Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
+                                Text('Target: $className', 
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, decoration: TextDecoration.underline),
+                                ),
+                              ],
+                            ],
+                          );
+                        }
                       ),
                     ],
                   ),
@@ -240,6 +253,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         value: _selectedSubject,
+                        isExpanded: true,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -341,18 +355,30 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                             opacity: 1,
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                             child: ListTile(
-                              leading: const Icon(Icons.description_rounded, color: Color(0xFF059669)),
-                              title: Text(d['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
-                              subtitle: Text(d['subject'] ?? ''),
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: const Color(0xFF059669).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                                child: const Icon(Icons.description_rounded, color: Color(0xFF059669)),
+                              ),
+                              title: Text(d['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                              subtitle: Row(
+                                children: [
+                                  Text(d['subject'] ?? '', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.remove_red_eye_outlined, size: 12, color: AppTheme.textHint),
+                                  const SizedBox(width: 4),
+                                  Text('${d['view_count'] ?? 0} Views', style: const TextStyle(fontSize: 11, color: AppTheme.textHint, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit_note_rounded, color: AppTheme.primary),
+                                    icon: const Icon(Icons.edit_note_rounded, color: AppTheme.primary, size: 20),
                                     onPressed: () => _editNote(docId, d),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
+                                    icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger, size: 20),
                                     onPressed: () => _deleteNote(docId),
                                   ),
                                 ],

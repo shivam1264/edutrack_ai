@@ -18,11 +18,17 @@ class AnalyticsService {
     final quizSnap = await _db
         .collection('quiz_results')
         .where('student_id', isEqualTo: studentId)
-        .orderBy('submitted_at', descending: true)
-        .limit(20)
         .get();
 
-    final scores = quizSnap.docs.map((d) {
+    final docs = quizSnap.docs.toList();
+    // Sort in-memory to avoid composite index requirements
+    docs.sort((a, b) {
+      final aTime = (a.data() as Map<String, dynamic>)['submitted_at'] as Timestamp?;
+      final bTime = (b.data() as Map<String, dynamic>)['submitted_at'] as Timestamp?;
+      return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+    });
+
+    final scores = docs.take(20).map((d) {
       final data = d.data();
       final score = (data['score'] as num?)?.toDouble() ?? 0;
       final total = (data['total'] as num?)?.toDouble() ?? 1;
@@ -116,18 +122,44 @@ class AnalyticsService {
         .get();
 
     final List<Map<String, dynamic>> studentData = [];
+    
     for (final sDoc in studentsSnap.docs) {
       final uid = sDoc.id;
-      final analytics = await getStudentAnalytics(uid);
-      studentData.add({
-        'uid': uid,
-        'name': sDoc.data()['name'] ?? 'Incomplete Profile',
-        ...analytics,
-      });
+      try {
+        final analytics = await getStudentAnalytics(uid);
+        studentData.add({
+          'uid': uid,
+          'name': sDoc.data()['name'] ?? 'Incomplete Profile',
+          ...analytics,
+        });
+      } catch (e) {
+        print('DEBUG: Error processing student $uid: $e');
+        // Add basic info even if analytics fail
+        studentData.add({
+          'uid': uid,
+          'name': sDoc.data()['name'] ?? 'Incomplete Profile',
+          'avg_score': 0.0,
+          'last_5_scores': [],
+          'subject_avg': {},
+          'submitted_count': 0,
+          'graded_count': 0,
+        });
+      }
     }
 
     studentData.sort((a, b) =>
         (b['avg_score'] as double).compareTo(a['avg_score'] as double));
+
+    // Fetch pending submissions (ungraded)
+    final pendingSubSnap = await _db.collection('submissions')
+        .where('class_id', isEqualTo: classId)
+        .where('status', isEqualTo: 'pending')
+        .get();
+
+    // Fetch announcements for this class
+    final announceSnap = await _db.collection('announcements')
+        .where('class_id', isEqualTo: classId)
+        .get();
 
     return {
       'students': studentData,
@@ -139,6 +171,8 @@ class AnalyticsService {
                   .map((s) => s['avg_score'] as double)
                   .reduce((a, b) => a + b) /
               studentData.length,
+      'pending_tasks': pendingSubSnap.docs.length,
+      'announcements_count': announceSnap.docs.length,
     };
   }
 
@@ -170,7 +204,8 @@ class AnalyticsService {
       ).timeout(const Duration(seconds: 40));
       
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        final dynamic data = jsonDecode(response.body);
+        return Map<String, dynamic>.from(data);
       }
     } catch (e) {
       print('AI Study Plan Hub Error: $e');
@@ -191,7 +226,8 @@ class AnalyticsService {
       ).timeout(const Duration(seconds: 40));
       
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        final dynamic data = jsonDecode(response.body);
+        return Map<String, dynamic>.from(data);
       }
     } catch (e) {
       print('Unified Wellness Error: $e');

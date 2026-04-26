@@ -6,6 +6,9 @@ import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
 import '../../models/class_model.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'admin_student_detail_screen.dart';
+import 'admin_teacher_detail_screen.dart';
+import 'admin_parent_detail_screen.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -18,6 +21,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  String _statusFilter = 'all'; // 'all', 'active', 'inactive'
+
+  final List<String> _subjectsList = [
+    'Mathematics', 'Science', 'English', 'Hindi', 'History', 'Physics', 
+    'Chemistry', 'Biology', 'Social Studies', 'Computer Science', 'Economics', 'Geography'
+  ];
 
   @override
   void initState() {
@@ -34,6 +43,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list_rounded),
+            onSelected: (val) => setState(() => _statusFilter = val),
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'all', child: Text('Show All Status')),
+              const PopupMenuItem(value: 'active', child: Text('Active Only')),
+              const PopupMenuItem(value: 'inactive', child: Text('Inactive Only')),
+            ],
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.blueAccent,
@@ -49,7 +69,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -86,10 +105,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
 
   Widget _buildUserList(String role) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .where('role', isEqualTo: role)
-          .snapshots(),
+      stream: (() {
+        var q = FirebaseFirestore.instance.collection('users').where('role', isEqualTo: role);
+        if (_statusFilter == 'active') q = q.where('status', isEqualTo: 'active');
+        if (_statusFilter == 'inactive') q = q.where('status', isEqualTo: 'inactive');
+        return q.snapshots();
+      })(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         
@@ -107,7 +128,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
               children: [
                 Icon(Icons.person_off_rounded, size: 64, color: Colors.grey.withOpacity(0.3)),
                 const SizedBox(height: 16),
-                Text('No ${role}s found', style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                Text('No ${role}s matching filters', style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
               ],
             ),
           );
@@ -119,41 +140,41 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
+            final isActive = data['status'] != 'inactive';
             
             return PremiumCard(
               opacity: 1,
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(8),
               child: ListTile(
+                onTap: () => _navigateToDetail(doc.id, data, role),
                 leading: CircleAvatar(
                   backgroundColor: _getRoleColor(role).withOpacity(0.1),
                   child: Text(data['name']?[0].toUpperCase() ?? '?', style: TextStyle(color: _getRoleColor(role), fontWeight: FontWeight.bold)),
                 ),
-                title: Text(data['name'] ?? 'Unknown User', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                subtitle: Text('ID: ${doc.id.substring(0, 8)}...', style: const TextStyle(fontSize: 12)),
+                title: Row(
+                  children: [
+                    Text(data['name'] ?? 'Unknown User', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 8, height: 8,
+                      decoration: BoxDecoration(color: isActive ? Colors.green : Colors.grey, shape: BoxShape.circle),
+                    ),
+                  ],
+                ),
+                subtitle: Text('${isActive ? "Active" : "Suspended"} • ${data['email'] ?? "No Email"}', style: const TextStyle(fontSize: 12)),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (role == 'teacher')
-                      IconButton(
-                        icon: const Icon(Icons.edit_note_rounded, color: AppTheme.secondary, size: 22),
-                        onPressed: () => _editFacultyProfile(doc.id, data),
-                        tooltip: 'Edit Subjects/Classes',
-                      ),
                     IconButton(
-                      icon: const Icon(Icons.email_outlined, color: Colors.orange, size: 20),
-                      onPressed: () => _sendResetEmail(data['email'], data['name'] ?? 'User'),
-                      tooltip: 'Send Password Reset',
+                      icon: const Icon(Icons.edit_rounded, color: Colors.blueAccent, size: 20),
+                      onPressed: () => _editUserDialog(doc.id, data, role),
+                      tooltip: 'Quick Edit',
                     ),
                     IconButton(
-                      icon: const Icon(Icons.shield_rounded, color: Colors.blueAccent, size: 20),
-                      onPressed: () => _changeRoleDialog(doc.id, role),
-                      tooltip: 'Change Role',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger, size: 22),
-                      onPressed: () => _confirmDelete(doc.id, data['name'] ?? 'this user'),
-                      tooltip: 'Delete User',
+                      icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.danger, size: 20),
+                      onPressed: () => _confirmDelete(doc.id, data['name'] ?? 'User'),
+                      tooltip: 'Permanent Delete',
                     ),
                   ],
                 ),
@@ -165,107 +186,64 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
     );
   }
 
-  Color _getRoleColor(String role) {
-    if (role == 'teacher') return AppTheme.secondary;
-    if (role == 'parent') return AppTheme.accent;
-    return AppTheme.primary;
-  }
-
-  void _sendResetEmail(String? email, String name) async {
-    if (email == null || email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No email found for this user.')));
-      return;
+  void _navigateToDetail(String uid, Map<String, dynamic> data, String role) {
+    Widget target;
+    if (role == 'student') {
+      target = AdminStudentDetailScreen(studentId: uid, studentData: data);
+    } else if (role == 'teacher') {
+      target = AdminTeacherDetailScreen(teacherId: uid, teacherData: data);
+    } else {
+      target = AdminParentDetailScreen(parentId: uid, parentData: data);
     }
-    try {
-      await AuthService().sendPasswordResetEmail(email);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Password reset email sent to $name ($email)'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
-        );
-      }
-    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => target));
   }
 
-  void _confirmDelete(String uid, String name) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Account?', style: TextStyle(fontWeight: FontWeight.w900)),
-        content: Text('Are you sure you want to remove $name? This action will wipe their Firestore record and block access.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await AuthService().deleteUserRecord(uid);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$name removed successfully'), backgroundColor: AppTheme.danger),
-                );
-              }
-            },
-            child: const Text('Delete Permanently', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _changeRoleDialog(String uid, String currentRole) {
-    final roles = ['admin', 'teacher', 'student', 'parent'];
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Modify Permissions', style: TextStyle(fontWeight: FontWeight.w900)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: roles.map((role) => RadioListTile<String>(
-            title: Text(role.toUpperCase()),
-            value: role,
-            groupValue: currentRole,
-            onChanged: (val) {
-              if (val != null) {
-                FirebaseFirestore.instance.collection('users').doc(uid).update({'role': val});
-                Navigator.pop(context);
-              }
-            },
-          )).toList(),
-        ),
-      ),
-    );
-  }
-
-  void _editFacultyProfile(String uid, Map<String, dynamic> data) {
-    List<String> assignedClasses = List<String>.from(data['assigned_classes'] ?? []);
-    List<String> subjects = List<String>.from(data['subjects'] ?? []);
-    final masterSubjects = [
-      'Mathematics', 'Science', 'English', 'Hindi', 
-      'Social Studies', 'Computer Science', 'Physics', 
-      'Chemistry', 'Biology', 'History', 'Geography', 'Economics'
-    ];
-
+  void _editUserDialog(String uid, Map<String, dynamic> data, String role) {
+    final nameCtrl = TextEditingController(text: data['name']);
+    final emailCtrl = TextEditingController(text: data['email']);
+    List<String> selectedSubjects = List<String>.from(data['subjects'] ?? []);
+    List<String> selectedClasses = List<String>.from(data['assigned_classes'] ?? []);
+    
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('Edit ${data['name']}', style: const TextStyle(fontWeight: FontWeight.w900)),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('ASSIGNED CLASSES', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+          title: Text('Modify ${role.toUpperCase()} Details', style: const TextStyle(fontWeight: FontWeight.w900)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Display Name', icon: Icon(Icons.person_rounded)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailCtrl,
+                  decoration: const InputDecoration(labelText: 'Email Address', icon: Icon(Icons.email_rounded)),
+                ),
+                
+                if (role == 'teacher') ...[
+                  const SizedBox(height: 24),
+                  const Text('MODIFY SUBJECTS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6, runSpacing: 6,
+                    children: _subjectsList.map((s) {
+                      final isSelected = selectedSubjects.contains(s);
+                      return FilterChip(
+                        label: Text(s, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : AppTheme.textPrimary)),
+                        selected: isSelected,
+                        onSelected: (val) => setLocalState(() => val ? selectedSubjects.add(s) : selectedSubjects.remove(s)),
+                        selectedColor: Colors.blueAccent,
+                        checkmarkColor: Colors.white,
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('MODIFY CLASSES', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
                   const SizedBox(height: 12),
                   StreamBuilder<List<ClassModel>>(
                     stream: ClassService().getClasses(),
@@ -274,11 +252,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                       return Wrap(
                         spacing: 6, runSpacing: 6,
                         children: classes.map((c) {
-                          final isSelected = assignedClasses.contains(c.id);
+                          final isSelected = selectedClasses.contains(c.id);
                           return FilterChip(
                             label: Text(c.displayName, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : AppTheme.textPrimary)),
                             selected: isSelected,
-                            onSelected: (val) => setLocalState(() => val ? assignedClasses.add(c.id) : assignedClasses.remove(c.id)),
+                            onSelected: (val) => setLocalState(() => val ? selectedClasses.add(c.id) : selectedClasses.remove(c.id)),
                             selectedColor: AppTheme.primary,
                             checkmarkColor: Colors.white,
                           );
@@ -286,36 +264,25 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                       );
                     },
                   ),
-                  const SizedBox(height: 24),
-                  const Text('ASSIGNED SUBJECTS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6, runSpacing: 6,
-                    children: masterSubjects.map((s) {
-                      final isSelected = subjects.contains(s);
-                      return FilterChip(
-                        label: Text(s, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : AppTheme.textPrimary)),
-                        selected: isSelected,
-                        onSelected: (val) => setLocalState(() => val ? subjects.add(s) : subjects.remove(s)),
-                        selectedColor: AppTheme.secondary,
-                        checkmarkColor: Colors.white,
-                      );
-                    }).toList(),
-                  ),
                 ],
-              ),
+              ],
             ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: () async {
-                await FirebaseFirestore.instance.collection('users').doc(uid).update({
-                  'assigned_classes': assignedClasses,
-                  'subjects': subjects,
-                });
-                if (context.mounted) Navigator.pop(context);
+                final Map<String, dynamic> updateData = {
+                  'name': nameCtrl.text.trim(),
+                  'email': emailCtrl.text.trim(),
+                };
+                if (role == 'teacher') {
+                  updateData['subjects'] = selectedSubjects;
+                  updateData['assigned_classes'] = selectedClasses;
+                }
+                
+                await FirebaseFirestore.instance.collection('users').doc(uid).update(updateData);
+                if (mounted) Navigator.pop(context);
               },
               child: const Text('Save Changes'),
             ),
@@ -323,5 +290,42 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         ),
       ),
     );
+  }
+
+  void _toggleStatus(String uid, String? currentStatus) {
+    final nextStatus = currentStatus == 'inactive' ? 'active' : 'inactive';
+    FirebaseFirestore.instance.collection('users').doc(uid).update({'status': nextStatus});
+  }
+
+  void _confirmDelete(String uid, String name) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Permanent Deletion', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.red)),
+        content: Text('Are you sure you want to PERMANENTLY delete $name? This will remove their record from Firebase immediately.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await AuthService().deleteUserFullAccount(uid);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$name fully removed from system'), backgroundColor: AppTheme.danger),
+                );
+              }
+            },
+            child: const Text('Delete from Firebase', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getRoleColor(String role) {
+    if (role == 'teacher') return AppTheme.secondary;
+    if (role == 'parent') return AppTheme.accent;
+    return AppTheme.primary;
   }
 }

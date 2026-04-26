@@ -41,6 +41,7 @@ class AttendanceModel {
       'student_id': studentId,
       'class_id': classId,
       'date': Timestamp.fromDate(date),
+      'date_string': '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
       'status': status.name,
       'marked_by': markedBy,
       if (subject != null) 'subject': subject,

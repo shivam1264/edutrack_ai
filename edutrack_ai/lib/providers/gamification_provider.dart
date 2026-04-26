@@ -95,4 +95,35 @@ class GamificationProvider with ChangeNotifier {
       }
     }
   }
+
+  Future<List<UserModel>> getLeaderboard(String classId) async {
+    try {
+      final snap = await _db.collection('users')
+        .where('role', isEqualTo: 'student')
+        .where('class_id', isEqualTo: classId)
+        .orderBy('xp', descending: true)
+        .limit(10)
+        .get();
+        
+      return snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
+    } catch (e) {
+      print('Error fetching leaderboard: $e');
+      return [];
+    }
+  }
+
+  Future<List<UserModel>> getGlobalLeaderboard() async {
+    try {
+      final snap = await _db.collection('users')
+        .where('role', isEqualTo: 'student')
+        .orderBy('xp', descending: true)
+        .limit(20)
+        .get();
+        
+      return snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
+    } catch (e) {
+      print('Error fetching global leaderboard: $e');
+      return [];
+    }
+  }
 }

@@ -37,7 +37,7 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
         Uri.parse(Config.endpoint('/generate-mindmap')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'file_url': url}),
-      ).timeout(const Duration(seconds: 40));
+      ).timeout(const Duration(seconds: 90));
       _handleResponse(response.statusCode, response.body);
     } catch (e) {
       _showError(msg: e is TimeoutException ? 'Visualizer Hub timeout. Try a shorter text.' : null);
@@ -53,7 +53,7 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
         Uri.parse(Config.endpoint('/generate-mindmap')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'content': content}),
-      ).timeout(const Duration(seconds: 40));
+      ).timeout(const Duration(seconds: 90));
       _handleResponse(response.statusCode, response.body);
     } catch (e) {
       _showError(msg: e is TimeoutException ? 'AI is analyzing deep patterns. Please wait 1 min.' : null);
@@ -78,7 +78,7 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
         filename: result.files.single.name,
       ));
       
-      var response = await request.send().timeout(const Duration(seconds: 40));
+      var response = await request.send().timeout(const Duration(seconds: 60));
       var responseBody = await response.stream.bytesToString();
       _handleResponse(response.statusCode, responseBody);
     } catch (e) {
@@ -175,7 +175,7 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : _generateFromText,
                   icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.account_tree_rounded),
-                  label: Text(_isLoading ? 'Visualizing...' : 'Generate Map'),
+                  label: Text(_isLoading ? 'AI Thinking...' : 'Generate Map'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accent,
                     foregroundColor: Colors.white,
@@ -187,6 +187,15 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
               ),
             ],
           ),
+          if (_isLoading)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                '⚡ AI Server is waking up (30-40s)...',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 11, fontStyle: FontStyle.italic, fontWeight: FontWeight.bold),
+              ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
+            ),
         ],
       ),
     );
@@ -239,7 +248,7 @@ class _MindMapNodeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = nodeData['title'] ?? 'Unknown Node';
-    final List<dynamic>? rawChildren = nodeData['children'] ?? nodeData['branches'];
+    final List<dynamic>? rawChildren = nodeData['children'] ?? nodeData['branches'] ?? nodeData['subtopics'];
     
     // Convert to list of maps safely
     final children = rawChildren?.map((e) => e as Map<String, dynamic>).toList() ?? [];

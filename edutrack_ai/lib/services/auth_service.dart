@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -45,6 +46,7 @@ class AuthService {
     List<String>? assignedClasses,
     List<String>? parentOf,
     List<String>? subjects,
+    String? rollNo,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -72,6 +74,7 @@ class AuthService {
         assignedClasses: assignedClasses,
         parentOf: parentOf,
         subjects: subjects,
+        rollNo: rollNo,
       );
 
       await _firestore
@@ -133,6 +136,19 @@ class AuthService {
   // ─── Delete User Record (Admin) ───────────────────────────────────────────
   Future<void> deleteUserRecord(String uid) async {
     await _firestore.collection('users').doc(uid).delete();
+  }
+
+  // ─── Delete Full Account (Auth + Firestore via Cloud Function) ─────────────
+  Future<void> deleteUserFullAccount(String uid) async {
+    try {
+      final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('deleteUser');
+      await callable.call({'targetUid': uid});
+    } catch (e) {
+      print('❌ Failed to delete full account: $e');
+      // Fallback: at least delete from Firestore if function fails
+      await deleteUserRecord(uid);
+      throw e;
+    }
   }
 
   // ─── Update User Profile Data ─────────────────────────────────────────────

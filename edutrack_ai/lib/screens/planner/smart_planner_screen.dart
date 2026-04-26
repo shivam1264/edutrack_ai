@@ -1,198 +1,257 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:convert';
-import '../../utils/config.dart';
+import '../../models/study_plan_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/analytics_provider.dart';
+import '../../services/mock_data_service.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/premium_card.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class SmartPlannerScreen extends StatefulWidget {
-  final String? studentId;
-  const SmartPlannerScreen({super.key, this.studentId});
+  const SmartPlannerScreen({super.key});
 
   @override
   State<SmartPlannerScreen> createState() => _SmartPlannerScreenState();
 }
 
 class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
-  bool _isLoading = true;
-  String _schedule = '';
-  String _error = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _generatePlan();
-  }
-
-  Future<void> _generatePlan() async {
-    final studentId = widget.studentId ?? context.read<AuthProvider>().user?.uid;
-    if (studentId == null) return;
-
-    final analytics = context.read<AnalyticsProvider>();
-    final data = analytics.studentAnalytics;
-
-    try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/generate-smart-schedule')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'subject_avg': data?['subject_avg'] ?? {},
-          'avg_score': data?['avg_score'] ?? 0,
-          'attendance': data?['attendance'] ?? 0,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        final schedule = result['schedule'];
-        
-        setState(() {
-          _schedule = schedule;
-          _isLoading = false;
-        });
-
-        // Persist to Firestore
-        final studentId = widget.studentId ?? context.read<AuthProvider>().user?.uid;
-        if (studentId != null) {
-          await FirebaseFirestore.instance.collection('study_plans').doc(studentId).set({
-            'student_id': studentId,
-            'schedule': schedule,
-            'updated_at': FieldValue.serverTimestamp(),
-          });
-        }
-      } else {
-        setState(() {
-          _error = 'Failed to generate mission strategy.';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Neural connectivity error: $e';
-        _isLoading = false;
-      });
-    }
-  }
+  int _selectedTabIndex = 0;
+  final List<String> _tabs = ['Today', 'This Week', 'This Month'];
 
   @override
   Widget build(BuildContext context) {
+    final userId = context.read<AuthProvider>().user?.uid ?? '';
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      body: Column(
+      appBar: AppBar(
+        title: const Text('Study Plan'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Stack(
         children: [
-          // ── Premium Header ──
-          Container(
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 10, bottom: 20, left: 20, right: 20),
-            decoration: const BoxDecoration(gradient: AppTheme.meshGradient),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Strategic Planner', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
-                      Text('AI-Generated Study Roadmap', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.auto_awesome_rounded, color: AppTheme.accent, size: 28),
-              ],
-            ),
-          ),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _buildTabs(),
+              ),
+              Expanded(
+                child: StreamBuilder<List<StudyTaskModel>>(
+                  stream: MockDataService.instance.streamStudyTasks(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-          Expanded(
-            child: _isLoading
-                ? _buildLoading()
-                : _error.isNotEmpty
-                    ? _buildError()
-                    : _buildRoadmap(),
+                    final tasks = snapshot.data ?? [];
+                    final completedCount = tasks.where((t) => t.isCompleted).length;
+                    final totalCount = tasks.length;
+                    final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
+
+                    return SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Today\'s Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary)),
+                              Text('$completedCount/$totalCount Completed', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.primary)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Stack(
+                            children: [
+                              Container(height: 6, decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(3))),
+                              FractionallySizedBox(
+                                widthFactor: progress,
+                                child: Container(height: 6, decoration: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(3))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          if (tasks.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Center(child: Text('No tasks planned.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold))),
+                            )
+                          else
+                            ...tasks.map((task) {
+                              return GestureDetector(
+                                onTap: () => _toggleTask(task),
+                                child: _TaskItem(
+                                  task: '${task.subject} - ${task.title}',
+                                  time: '${task.durationMinutes} min',
+                                  isCompleted: task.isCompleted,
+                                ),
+                              );
+                            }),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            bottom: 24,
+            left: 16,
+            right: 16,
+            child: ElevatedButton(
+              onPressed: () => _showAddTaskDialog(context, userId),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              child: const Text('+ Add Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(color: AppTheme.primary),
-          const SizedBox(height: 24),
-          const Text('Analyzing academic performance...', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-          Text('Designing your optimization roadmap...', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+  Future<void> _toggleTask(StudyTaskModel task) async {
+    await FirebaseFirestore.instance
+        .collection('study_tasks')
+        .doc(task.id)
+        .update({'is_completed': !task.isCompleted});
+  }
+
+  void _showAddTaskDialog(BuildContext context, String userId) {
+    final titleCtrl = TextEditingController();
+    final subjectCtrl = TextEditingController();
+    final durationCtrl = TextEditingController(text: '30');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Task'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Task Title')),
+            TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: 'Subject')),
+            TextField(controller: durationCtrl, decoration: const InputDecoration(labelText: 'Duration (minutes)'), keyboardType: TextInputType.number),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleCtrl.text.isEmpty || subjectCtrl.text.isEmpty) return;
+              
+              await FirebaseFirestore.instance.collection('study_tasks').add({
+                'userId': userId,
+                'title': titleCtrl.text,
+                'subject': subjectCtrl.text,
+                'duration_minutes': int.tryParse(durationCtrl.text) ?? 30,
+                'is_completed': false,
+                'type': 'Review',
+                'created_at': FieldValue.serverTimestamp(),
+              });
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task added to your real study plan! ✅')));
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
         ],
-      ).animate().fadeIn().scale(),
+      ),
     );
   }
 
-  Widget _buildError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 60),
-            const SizedBox(height: 20),
-            Text(_error, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.danger)),
-            const SizedBox(height: 24),
-            ElevatedButton(onPressed: _generatePlan, child: const Text('Retry Analysis')),
-          ],
+  Widget _buildTabs() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: Row(
+        children: List.generate(_tabs.length, (index) {
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTabIndex = index),
+              child: _TabItem(_tabs[index], isSelected: _selectedTabIndex == index),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _TabItem extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+
+  const _TabItem(this.label, {this.isSelected = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.primaryLight : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildRoadmap() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+class _TaskItem extends StatelessWidget {
+  final String task;
+  final String time;
+  final bool isCompleted;
+
+  const _TaskItem({required this.task, required this.time, required this.isCompleted});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppTheme.borderLight))),
+      child: Row(
         children: [
-          PremiumCard(
-            opacity: 1,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.insights_rounded, color: AppTheme.primary, size: 20),
-                    SizedBox(width: 10),
-                    Text('AI GUIDANCE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.primary, fontSize: 12)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                MarkdownBody(
-                  data: _schedule,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, height: 1.6),
-                    h1: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 24),
-                    h2: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w800, fontSize: 20, height: 2.0),
-                    h3: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 16, height: 1.8),
-                    tableBorder: TableBorder.all(color: AppTheme.borderLight, width: 1),
-                    tableHead: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary),
-                    tableBody: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
-                    listBullet: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ],
+          Icon(
+            isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: isCompleted ? AppTheme.primary : AppTheme.borderStrong,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              task,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: isCompleted ? AppTheme.textSecondary : AppTheme.textPrimary,
+                decoration: isCompleted ? TextDecoration.lineThrough : null,
+              ),
             ),
-          ).animate().fadeIn().slideY(begin: 0.1),
-          const SizedBox(height: 100),
+          ),
+          Text(time, style: const TextStyle(color: AppTheme.textHint, fontSize: 12)),
         ],
       ),
     );

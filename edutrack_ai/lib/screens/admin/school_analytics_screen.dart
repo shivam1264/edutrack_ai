@@ -37,7 +37,7 @@ class SchoolAnalyticsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
                           Text('School Analytics', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                          Text('Institution-wide performance overview', style: TextStyle(color: Colors.white70)),
+                          Text('Real-time institutional performance hub', style: TextStyle(color: Colors.white70)),
                         ],
                       ),
                     ),
@@ -49,18 +49,19 @@ class SchoolAnalyticsScreen extends StatelessWidget {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     _buildOverallStats(),
-                    const SizedBox(height: 20),
-                    const Text('📊 Class Performance', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 24),
+                    const Text('📊 Enrollment & Unit Distribution', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
                     const SizedBox(height: 12),
                     _buildClassBreakdown(classSnap.data ?? []),
-                    const SizedBox(height: 20),
-                    const Text('👨‍🏫 Teacher Activity', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 24),
+                    const Text('👩‍🏫 Faculty Engagement', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
                     const SizedBox(height: 12),
                     _buildTeacherStats(classMap),
-                    const SizedBox(height: 20),
-                    const Text('🎯 Doubt Resolution', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 24),
+                    const Text('🎯 AI Doubt Resolution Efficiency', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.textPrimary)),
                     const SizedBox(height: 12),
                     _buildDoubtStats(),
+                    const SizedBox(height: 40),
                   ]),
                 ),
               ),
@@ -84,10 +85,10 @@ class SchoolAnalyticsScreen extends StatelessWidget {
           crossAxisSpacing: 12,
           childAspectRatio: 1.6,
           children: [
-            _StatCard('👨‍🎓 Students', '${data['students'] ?? '--'}', AppTheme.primary),
-            _StatCard('👩‍🏫 Teachers', '${data['teachers'] ?? '--'}', const Color(0xFF059669)),
-            _StatCard('📝 Assignments', '${data['assignments'] ?? '--'}', const Color(0xFFD97706)),
-            _StatCard('❓ Doubts', '${data['doubts'] ?? '--'}', const Color(0xFF7C3AED)),
+            _StatCard('👨‍🎓 Total Students', '${data['students'] ?? '--'}', AppTheme.primary),
+            _StatCard('👩‍🏫 Active Faculty', '${data['teachers'] ?? '--'}', const Color(0xFF059669)),
+            _StatCard('📝 Total Lessons', '${data['lessons'] ?? '--'}', const Color(0xFFD97706)),
+            _StatCard('❓ Global Doubts', '${data['doubts'] ?? '--'}', const Color(0xFF7C3AED)),
           ].asMap().entries.map((e) => e.value.animate().fadeIn(delay: (e.key * 100).ms).scale()).toList(),
         );
       },
@@ -96,41 +97,49 @@ class SchoolAnalyticsScreen extends StatelessWidget {
 
   Widget _buildClassBreakdown(List<ClassModel> classes) {
     if (classes.isEmpty) {
-      return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No classes configured yet', style: TextStyle(color: Colors.grey))));
+      return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No academic units configured.', style: TextStyle(color: Colors.grey))));
     }
     return Column(
       children: classes.asMap().entries.map((e) {
         final cls = e.value;
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: PremiumCard(
-            opacity: 1,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.class_rounded, color: AppTheme.primary),
+          child: FutureBuilder<int>(
+            future: _getStudentCount(cls.id),
+            builder: (context, snap) {
+              final count = snap.data ?? 0;
+              return PremiumCard(
+                opacity: 1,
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.hub_rounded, color: AppTheme.primary),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(cls.displayName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                          Text('Head: ${cls.classTeacherName ?? "Unassigned"}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('$count', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, fontSize: 18)),
+                        const Text('Students', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(cls.displayName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                      const Text('Active Academic Stream', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: const Text('Live', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primary, fontSize: 12)),
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: (e.key * 80).ms),
+              ).animate().fadeIn(delay: (e.key * 80).ms);
+            }
+          ),
         );
       }).toList(),
     );
@@ -138,36 +147,38 @@ class SchoolAnalyticsScreen extends StatelessWidget {
 
   Widget _buildTeacherStats(Map<String, String> classMap) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('users')
-          .where('role', isEqualTo: 'teacher').snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'teacher').snapshots(),
       builder: (context, snap) {
         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
         final teachers = snap.data!.docs;
         return Column(
           children: teachers.asMap().entries.map((e) {
             final d = e.value.data() as Map<String, dynamic>;
-            final assigned = d['assigned_classes'] as List<dynamic>? ?? (d['class_id'] != null ? [d['class_id']] : []);
-            final classNames = assigned.map((id) => classMap[id] ?? id).join(', ');
+            final subjects = (d['subjects'] as List<dynamic>? ?? []).join(', ');
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: PremiumCard(
                 opacity: 1,
-                padding: const EdgeInsets.all(16),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFF059669).withOpacity(0.1),
-                    child: Text((d['name'] ?? 'T')[0].toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF059669))),
-                  ),
-                  title: Text(d['name'] ?? 'Teacher', style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text(classNames.isEmpty ? 'No Classes' : classNames, 
-                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: const Color(0xFF059669).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                    child: const Text('Active', style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.w700, fontSize: 12)),
-                  ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: const Color(0xFF059669).withOpacity(0.1),
+                      child: Text((d['name'] ?? 'T')[0].toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF059669))),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(d['name'] ?? 'Faculty', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                          Text(subjects.isEmpty ? 'General' : subjects, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11), overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.trending_up_rounded, color: Colors.green, size: 16),
+                  ],
                 ),
               ).animate().fadeIn(delay: (e.key * 60).ms),
             );
@@ -177,7 +188,6 @@ class SchoolAnalyticsScreen extends StatelessWidget {
     );
   }
 
-
   Widget _buildDoubtStats() {
     return FutureBuilder<Map<String, int>>(
       future: _getDoubtStats(),
@@ -185,7 +195,6 @@ class SchoolAnalyticsScreen extends StatelessWidget {
         final data = snap.data ?? {};
         final total = (data['total'] ?? 0);
         final answered = (data['answered'] ?? 0);
-        final pending = (data['pending'] ?? 0);
         final rate = total > 0 ? (answered / total * 100).toStringAsFixed(0) : '0';
 
         return PremiumCard(
@@ -198,22 +207,21 @@ class SchoolAnalyticsScreen extends StatelessWidget {
                 children: [
                   _DoubtStat('Total', '$total', Colors.blue),
                   _DoubtStat('Answered', '$answered', Colors.green),
-                  _DoubtStat('Pending', '$pending', Colors.orange),
-                  _DoubtStat('Rate', '$rate%', const Color(0xFF7C3AED)),
+                  _DoubtStat('Efficiency', '$rate%', const Color(0xFF7C3AED)),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
                   value: total > 0 ? answered / total : 0,
-                  backgroundColor: Colors.orange.withOpacity(0.2),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-                  minHeight: 8,
+                  backgroundColor: Colors.purple.withOpacity(0.1),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                  minHeight: 10,
                 ),
               ),
               const SizedBox(height: 8),
-              Text('$rate% doubts resolved', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              Text('System resolution rate: $rate%', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
             ],
           ),
         ).animate().fadeIn().scale();
@@ -225,27 +233,28 @@ class SchoolAnalyticsScreen extends StatelessWidget {
     final futures = await Future.wait([
       FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'student').count().get(),
       FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'teacher').count().get(),
-      FirebaseFirestore.instance.collection('assignments').count().get(),
+      FirebaseFirestore.instance.collection('lesson_plans').count().get(),
       FirebaseFirestore.instance.collection('doubts').count().get(),
     ]);
     return {
       'students': futures[0].count ?? 0,
       'teachers': futures[1].count ?? 0,
-      'assignments': futures[2].count ?? 0,
+      'lessons': futures[2].count ?? 0,
       'doubts': futures[3].count ?? 0,
     };
   }
 
+  Future<int> _getStudentCount(String classId) async {
+    final snap = await FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'student').where('class_id', isEqualTo: classId).count().get();
+    return snap.count ?? 0;
+  }
+
   Future<Map<String, int>> _getDoubtStats() async {
     final total = await FirebaseFirestore.instance.collection('doubts').count().get();
-    final answered = await FirebaseFirestore.instance.collection('doubts')
-        .where('status', whereIn: ['answered', 'ai_answered']).count().get();
-    final pending = await FirebaseFirestore.instance.collection('doubts')
-        .where('status', isEqualTo: 'pending').count().get();
+    final answered = await FirebaseFirestore.instance.collection('doubts').where('status', whereIn: ['answered', 'ai_answered']).count().get();
     return {
       'total': total.count ?? 0,
       'answered': answered.count ?? 0,
-      'pending': pending.count ?? 0,
     };
   }
 }
@@ -286,7 +295,7 @@ class _DoubtStat extends StatelessWidget {
     return Column(
       children: [
         Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color)),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
       ],
     );
   }

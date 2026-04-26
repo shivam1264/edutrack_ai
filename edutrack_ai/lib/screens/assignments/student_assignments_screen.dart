@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../models/assignment_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/assignment_service.dart';
 import '../../utils/app_theme.dart';
-import '../../providers/gamification_provider.dart';
 import '../../widgets/premium_card.dart';
-import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import '../student/doubt_box_screen.dart';
+import 'submit_assignment_screen.dart';
 
 class StudentAssignmentsScreen extends StatefulWidget {
   const StudentAssignmentsScreen({super.key});
@@ -17,406 +16,291 @@ class StudentAssignmentsScreen extends StatefulWidget {
   State<StudentAssignmentsScreen> createState() => _StudentAssignmentsScreenState();
 }
 
-class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  List<AssignmentModel> _assignments = [];
-  List<SubmissionModel> _submissions = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    final user = context.read<AuthProvider>().user;
-    final uid = user?.uid ?? '';
-    final classId = user?.classId ?? '';
-
-    try {
-      final results = await Future.wait([
-        AssignmentService().getAssignmentsByClass(classId),
-        AssignmentService().getStudentSubmissions(uid),
-      ]);
-      _assignments = results[0] as List<AssignmentModel>;
-      _submissions = results[1] as List<SubmissionModel>;
-    } catch (_) {}
-    setState(() => _isLoading = false);
-  }
-
-  bool _isSubmitted(String assignmentId) => _submissions.any((s) => s.assignmentId == assignmentId);
-
-  SubmissionModel? _getSubmission(String assignmentId) {
-    try {
-      return _submissions.firstWhere((s) => s.assignmentId == assignmentId);
-    } catch (_) {
-      return null;
-    }
-  }
+class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
+  int _selectedTabIndex = 0;
+  final List<String> _tabs = ['All', 'Pending', 'Submitted', 'Graded'];
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final classId = user?.classId ?? '';
+    final studentId = user?.uid ?? '';
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 180,
-            pinned: true,
-            backgroundColor: AppTheme.accent,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
-                  Positioned(
-                    top: -20, right: -20,
-                    child: Icon(Icons.assignment_ind_rounded, color: Colors.white.withOpacity(0.1), size: 200),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Mission Logs', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
-                        Row(
-                          children: [
-                            Text('Manage academic objectives', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
-                            const SizedBox(width: 8),
-                            Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
-                            const SizedBox(width: 8),
-                            Text('Class: ${context.read<AuthProvider>().user?.classId ?? 'N/A'}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+      appBar: AppBar(
+        title: const Text('Assignments'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Column(
+        children: [
+          _buildTabs(),
+          Expanded(
+            child: StreamBuilder<List<AssignmentModel>>(
+              stream: AssignmentService().streamAssignmentsByClass(classId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Failed to load assignments'));
+                }
+
+                final assignments = snapshot.data ?? [];
+                
+                return FutureBuilder<List<SubmissionModel>>(
+                  future: AssignmentService().getStudentSubmissions(studentId),
+                  builder: (context, subSnapshot) {
+                    if (subSnapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final submissions = subSnapshot.data ?? [];
+                    final submissionMap = {for (var sub in submissions) sub.assignmentId: sub};
+
+                    final filteredAssignments = assignments.where((a) {
+                      final sub = submissionMap[a.id];
+                      if (_selectedTabIndex == 0) return true;
+                      if (_selectedTabIndex == 1) return sub == null; // Pending
+                      if (_selectedTabIndex == 2) return sub != null && sub.status == AssignmentStatus.submitted; // Submitted
+                      if (_selectedTabIndex == 3) return sub != null && sub.status == AssignmentStatus.graded; // Graded
+                      return true;
+                    }).toList();
+
+                    return SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Column(
+                        children: [
+                          if (filteredAssignments.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Center(child: Text('No assignments found.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold))),
+                            )
+                          else
+                            ...filteredAssignments.map((assignment) {
+                              final sub = submissionMap[assignment.id];
+                              String status = 'Pending';
+                              Color statusColor = Colors.blue;
+                              
+                              if (sub != null) {
+                                if (sub.status == AssignmentStatus.graded) {
+                                  status = 'Graded (${sub.marks}/${assignment.maxMarks})';
+                                  statusColor = Colors.green;
+                                } else {
+                                  status = 'Submitted';
+                                  statusColor = Colors.orange;
+                                }
+                              } else if (assignment.dueDate.isBefore(DateTime.now())) {
+                                status = 'Overdue';
+                                statusColor = Colors.red;
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => SubmitAssignmentScreen(assignment: assignment, existingSubmission: sub)),
+                                    );
+                                  },
+                                  child: _AssignmentCard(
+                                    subject: assignment.subject,
+                                    title: assignment.title,
+                                    dueDate: 'Due: ${DateFormat('MMM dd, yyyy').format(assignment.dueDate)}',
+                                    status: status,
+                                    statusColor: statusColor,
+                                    icon: _getIconForSubject(assignment.subject),
+                                    color: _getColorForSubject(assignment.subject),
+                                  ),
+                                ),
+                              );
+                            }),
+                          const SizedBox(height: 24),
+                          _buildHelpBanner(context),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    );
+                  }
+                );
+              },
             ),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SliverAppBarDelegate(
-              child: Container(
-                color: AppTheme.bgLight,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: AppTheme.textSecondary,
-                    indicator: BoxDecoration(
-                      color: AppTheme.accent,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: AppTheme.accent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
-                    ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    tabs: const [
-                      Tab(text: '🚨 Pending'),
-                      Tab(text: '✅ Done'),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverFillRemaining(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildList(pending: true),
-                      _buildList(pending: false),
-                    ],
-                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildList({required bool pending}) {
-    final filtered = _assignments.where((a) {
-      final submitted = _isSubmitted(a.id);
-      return pending ? !submitted : submitted;
-    }).toList();
-
-    if (filtered.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(pending ? Icons.assignment_turned_in_rounded : Icons.assignment_rounded, size: 80, color: AppTheme.accent.withOpacity(0.2)),
-            const SizedBox(height: 16),
-            Text(pending ? 'All clear! No pending tasks 🎉' : 'No submission records yet', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600)),
-          ],
+  Widget _buildTabs() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: List.generate(_tabs.length, (index) {
+            return GestureDetector(
+              onTap: () => setState(() => _selectedTabIndex = index),
+              child: _TabItem(_tabs[index], isSelected: _selectedTabIndex == index),
+            );
+          }),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-        itemCount: filtered.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          final assignment = filtered[index];
-          final submission = _getSubmission(assignment.id);
-          return _AssignmentCard(
-            assignment: assignment,
-            submission: submission,
-            studentId: context.read<AuthProvider>().user?.uid ?? '',
-            onSubmitted: _loadData,
-          ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.1);
-        },
+  Widget _buildHelpBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Need help?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.primaryDark)),
+                const SizedBox(height: 4),
+                const Text('Ask your doubt in Doubt Box', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DoubtBoxScreen())),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Text('Ask Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle),
+            child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 32),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getIconForSubject(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+      case 'math': return Icons.calculate;
+      case 'science': return Icons.science;
+      case 'english': return Icons.book;
+      case 'history': return Icons.history_edu;
+      case 'computer': return Icons.computer;
+      default: return Icons.library_books;
+    }
+  }
+
+  Color _getColorForSubject(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+      case 'math': return Colors.blue;
+      case 'science': return Colors.green;
+      case 'english': return Colors.orange;
+      case 'history': return Colors.purple;
+      case 'computer': return Colors.teal;
+      default: return AppTheme.primary;
+    }
+  }
+}
+
+class _TabItem extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+
+  const _TabItem(this.label, {this.isSelected = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.primaryLight : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          fontSize: 14,
+        ),
       ),
     );
   }
 }
 
 class _AssignmentCard extends StatelessWidget {
-  final AssignmentModel assignment;
-  final SubmissionModel? submission;
-  final String studentId;
-  final VoidCallback onSubmitted;
+  final String subject;
+  final String title;
+  final String dueDate;
+  final String status;
+  final Color statusColor;
+  final IconData icon;
+  final Color color;
 
-  const _AssignmentCard({required this.assignment, required this.submission, required this.studentId, required this.onSubmitted});
-
-  Color get _dueDateColor {
-    final daysLeft = assignment.dueDate.difference(DateTime.now()).inDays;
-    if (daysLeft < 0) return AppTheme.danger;
-    if (daysLeft <= 2) return AppTheme.warning;
-    return AppTheme.secondary;
-  }
-
-  String get _dueDateLabel {
-    final daysLeft = assignment.dueDate.difference(DateTime.now()).inDays;
-    if (daysLeft < 0) return '${daysLeft.abs()}d overdue';
-    if (daysLeft == 0) return 'Due Today!';
-    if (daysLeft == 1) return 'Due Tomorrow';
-    return 'Due in ${daysLeft}d';
-  }
+  const _AssignmentCard({
+    required this.subject,
+    required this.title,
+    required this.dueDate,
+    required this.status,
+    required this.statusColor,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isSubmitted = submission != null;
-    final graded = submission?.marks != null;
-
     return PremiumCard(
-      opacity: 1,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  assignment.title,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary),
-                ),
-              ),
-              if (graded)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: AppTheme.primaryLight.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
-                  child: Text(
-                    '${submission!.marks!.toStringAsFixed(0)}/${assignment.maxMarks.toStringAsFixed(0)}',
-                    style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 12),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildTag(assignment.subject, AppTheme.accent),
-              const SizedBox(width: 12),
-              Icon(Icons.schedule_rounded, size: 14, color: _dueDateColor),
-              const SizedBox(width: 4),
-              Text(_dueDateLabel, style: TextStyle(color: _dueDateColor, fontSize: 12, fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            assignment.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
-          ),
-          const SizedBox(height: 20),
-          if (!isSubmitted)
-            Row(
-              children: [
-                if (assignment.fileUrl != null)
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final url = Uri.parse(assignment.fileUrl!);
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      icon: const Icon(Icons.description_rounded, size: 16),
-                      label: const Text('View Brief'),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                if (assignment.fileUrl != null) const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showSubmitDialog(context),
-                    icon: const Icon(Icons.rocket_launch_rounded, size: 16),
-                    label: const Text('Submit'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accent,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                children: [
-                  const Icon(Icons.verified_rounded, color: AppTheme.secondary, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      graded ? 'Mission Evaluated' : 'Mission Submitted — Pending Review',
-                      style: const TextStyle(color: AppTheme.secondary, fontWeight: FontWeight.w800, fontSize: 13),
-                    ),
-                  ),
-                  if (submission?.submittedAt != null)
-                    Text(DateFormat('dd MMM').format(submission!.submittedAt!), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
-                ],
-              ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
+                const SizedBox(height: 2),
+                Text(title, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(dueDate, style: const TextStyle(color: AppTheme.textHint, fontSize: 10)),
+              ],
+            ),
+          ),
+          Text(
+            status,
+            style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
         ],
       ),
     );
   }
-
-  Widget _buildTag(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
-    );
-  }
-
-  void _showSubmitDialog(BuildContext context) {
-    final noteCtrl = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Final Submission', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: AppTheme.textPrimary)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: noteCtrl,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: 'Any message for your teacher?',
-                filled: true,
-                fillColor: AppTheme.bgLight,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  try {
-                    await AssignmentService().submitAssignment(assignmentId: assignment.id, studentId: studentId, note: noteCtrl.text.trim());
-
-                    // Award XP for assignment submission (fixed 50 XP)
-                    if (context.mounted) {
-                      context.read<GamificationProvider>().addXp(studentId, 50);
-                    }
-
-                    onSubmitted();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Mission Complete! Assignment submitted. ✅'),
-                          backgroundColor: AppTheme.secondary,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger));
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                child: const Text('Transmit Submission', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-  _SliverAppBarDelegate({required this.child});
-
-  @override
-  double get minExtent => 80;
-  @override
-  double get maxExtent => 80;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }

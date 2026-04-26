@@ -8,13 +8,15 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/assignment_model.dart'; // To use AssignmentStatus enum
 
 class BulkGradeScreen extends StatefulWidget {
-  const BulkGradeScreen({super.key});
+  final String? classId;
+  const BulkGradeScreen({super.key, this.classId});
 
   @override
   State<BulkGradeScreen> createState() => _BulkGradeScreenState();
 }
 
 class _BulkGradeScreenState extends State<BulkGradeScreen> {
+  String? _selectedClassId;
   String? _selectedAssignmentId;
   List<QueryDocumentSnapshot> _assignments = [];
   List<QueryDocumentSnapshot> _students = [];
@@ -24,23 +26,35 @@ class _BulkGradeScreenState extends State<BulkGradeScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedClassId = widget.classId;
     _loadAssignments();
   }
 
   Future<void> _loadAssignments() async {
     final user = context.read<AuthProvider>().user;
     final classId = user?.classId ?? '';
-    // Querying main assignments collection
-    final snap = await FirebaseFirestore.instance
-        .collection('assignments')
-        .where('class_id', isEqualTo: classId)
-        .where('teacher_id', isEqualTo: user?.uid)
-        .orderBy('created_at', descending: true)
-        .limit(20)
-        .get();
+    
+    // Build query without orderBy to avoid index requirement
+    Query query = FirebaseFirestore.instance.collection('assignments');
+    
+    if (classId.isNotEmpty) {
+      query = query.where('class_id', isEqualTo: classId);
+    } else {
+      query = query.where('teacher_id', isEqualTo: user?.uid);
+    }
+    
+    final snap = await query.get();
+    
+    // Sort in-memory
+    final docs = snap.docs.toList();
+    docs.sort((a, b) {
+      final aTime = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+      final bTime = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+      return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+    });
     
     setState(() {
-      _assignments = snap.docs;
+      _assignments = docs;
       if (_assignments.isNotEmpty) {
         _selectedAssignmentId = _assignments.first.id;
         _loadStudentsAndGrades(classId);

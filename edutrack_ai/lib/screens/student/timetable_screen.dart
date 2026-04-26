@@ -1,294 +1,227 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../models/timetable_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/timetable_service.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/premium_card.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
-class TimetableScreen extends StatelessWidget {
+class TimetableScreen extends StatefulWidget {
   const TimetableScreen({super.key});
 
   @override
+  State<TimetableScreen> createState() => _TimetableScreenState();
+}
+
+class _TimetableScreenState extends State<TimetableScreen> {
+  final List<String> _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  late String _selectedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    // Default to today or Monday
+    int weekday = DateTime.now().weekday;
+    if (weekday >= 1 && weekday <= 6) {
+      _selectedDay = _days[weekday - 1];
+    } else {
+      _selectedDay = 'Monday'; // Default for Sunday
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    final classId = user?.classId ?? '';
-    final today = _getDayName(DateTime.now().weekday);
+    final classId = context.read<AuthProvider>().user?.classId ?? '';
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 180,
-            pinned: true,
-            backgroundColor: const Color(0xFF0F766E),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
-                  Positioned(
-                    top: -10, right: -10,
-                    child: Icon(Icons.schedule_rounded, color: Colors.white.withOpacity(0.1), size: 180),
+      appBar: AppBar(
+        title: const Text('Timetable'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Column(
+        children: [
+          _buildDaysSelector(),
+          Expanded(
+            child: FutureBuilder<TimetableModel?>(
+              future: TimetableService().getTimetable(classId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return const Center(child: Text('No timetable found.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)));
+                }
+
+                final timetable = snapshot.data!;
+                final periods = timetable.weeklySchedule[_selectedDay] ?? [];
+
+                if (periods.isEmpty) {
+                  return const Center(child: Text('No classes scheduled.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)));
+                }
+
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  child: Column(
+                    children: periods.map((period) {
+                      return _TimetableItem(
+                        time: period.startTimeStr,
+                        subject: period.subject,
+                        room: period.room ?? 'TBA',
+                        icon: _getIconForSubject(period.subject),
+                        color: _getColorForSubject(period.subject),
+                      );
+                    }).toList(),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Daily Schedule', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                        Row(
-                          children: [
-                            const Icon(Icons.event_available_rounded, color: Colors.white70, size: 14),
-                            const SizedBox(width: 8),
-                            Text('Today is $today', style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
-          _TimetableBody(classId: classId, today: today),
         ],
       ),
     );
   }
 
-  String _getDayName(int weekday) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    if (weekday > 7) return 'Monday';
-    return days[weekday - 1];
+  Widget _buildDaysSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: _days.map((day) {
+          // Mock date calculation for UI
+          final offset = _days.indexOf(day) - _days.indexOf(_selectedDay);
+          final dateStr = DateFormat('dd').format(DateTime.now().add(Duration(days: offset)));
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedDay = day),
+            child: _DayItem(
+              day: day.substring(0, 3),
+              date: dateStr,
+              isSelected: _selectedDay == day,
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  IconData _getIconForSubject(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+      case 'math': return Icons.calculate;
+      case 'science': return Icons.science;
+      case 'english': return Icons.book;
+      case 'history': return Icons.history_edu;
+      case 'computer': return Icons.computer;
+      default: return Icons.library_books;
+    }
+  }
+
+  Color _getColorForSubject(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+      case 'math': return Colors.blue;
+      case 'science': return Colors.green;
+      case 'english': return Colors.orange;
+      case 'history': return Colors.purple;
+      case 'computer': return Colors.teal;
+      default: return AppTheme.primary;
+    }
   }
 }
 
-class _TimetableBody extends StatefulWidget {
-  final String classId;
-  final String today;
+class _DayItem extends StatelessWidget {
+  final String day;
+  final String date;
+  final bool isSelected;
 
-  const _TimetableBody({required this.classId, required this.today});
-
-  @override
-  State<_TimetableBody> createState() => _TimetableBodyState();
-}
-
-class _TimetableBodyState extends State<_TimetableBody> {
-  late String _selectedDay;
-  final List<String> _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedDay = _days.contains(widget.today) ? widget.today : 'Monday';
-  }
+  const _DayItem({required this.day, required this.date, required this.isSelected});
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      sliver: SliverList(
-        delegate: SliverChildListDelegate([
-          // Day selector
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              height: 50,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _days.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
-                itemBuilder: (context, i) {
-                  final day = _days[i];
-                  final selected = day == _selectedDay;
-                  final isToday = day == widget.today;
-                  
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedDay = day),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                        gradient: selected ? AppTheme.meshGradient : null,
-                        color: selected ? null : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: isToday && !selected ? Border.all(color: const Color(0xFF0F766E), width: 1.5) : null,
-                        boxShadow: selected ? [BoxShadow(color: const Color(0xFF0F766E).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))] : [],
-                      ),
-                      child: Center(
-                        child: Text(
-                          day.substring(0, 3).toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900, 
-                            fontSize: 12,
-                            letterSpacing: 0.5,
-                            color: selected ? Colors.white : AppTheme.textHint,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.primaryLight : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            day,
+            style: TextStyle(
+              color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 12,
             ),
-          ).animate().fadeIn().slideX(begin: 0.1),
-          
-          const SizedBox(height: 12),
-          
-          // Periods List
-          StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('timetable')
-                .doc(widget.classId)
-                .snapshots(),
-            builder: (context, snap) {
-              if (!snap.hasData || !snap.data!.exists) {
-                return Padding(
-                  padding: const EdgeInsets.all(80),
-                  child: Column(
-                    children: [
-                      Icon(Icons.event_busy_rounded, size: 64, color: AppTheme.textHint.withOpacity(0.2)),
-                      const SizedBox(height: 16),
-                      const Text('Schedule Unavailable', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint)),
-                      const Text('Ask your Admin to post the timetable.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
-                    ],
-                  ),
-                );
-              }
-              
-              final timetable = TimetableModel.fromMap(widget.classId, snap.data!.data() as Map<String, dynamic>);
-              final periods = timetable.weeklySchedule[_selectedDay] ?? [];
-              
-              if (periods.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(60),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.celebration_rounded, size: 64, color: AppTheme.secondary),
-                      const SizedBox(height: 16),
-                      const Text('Rest Day!', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.secondary, fontSize: 18)),
-                      const Text('No classes scheduled for today.', style: TextStyle(color: AppTheme.textHint, fontSize: 13)),
-                    ],
-                  ),
-                ).animate().scale();
-              }
-
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
-                itemCount: periods.length,
-                itemBuilder: (context, i) {
-                  final p = periods[i];
-                  return _TimelineNode(period: p, index: i, isLast: i == periods.length - 1)
-                      .animate().fadeIn(delay: (i * 100).ms).slideY(begin: 0.2);
-                },
-              );
-            },
           ),
-        ]),
+          const SizedBox(height: 4),
+          Text(
+            date,
+            style: TextStyle(
+              color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _TimelineNode extends StatelessWidget {
-  final PeriodModel period;
-  final int index;
-  final bool isLast;
+class _TimetableItem extends StatelessWidget {
+  final String time;
+  final String subject;
+  final String room;
+  final IconData icon;
+  final Color color;
 
-  const _TimelineNode({required this.period, required this.index, required this.isLast});
+  const _TimetableItem({
+    required this.time,
+    required this.subject,
+    required this.room,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colors = [
-      const Color(0xFF6366F1), const Color(0xFF0F766E), const Color(0xFFFF6B35),
-      const Color(0xFF7C3AED), const Color(0xFFEF4444), const Color(0xFF059669),
-      const Color(0xFFF59E0B), const Color(0xFF3B82F6),
-    ];
-    final color = colors[index % colors.length];
-
-    return IntrinsicHeight(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Time Panel
           SizedBox(
             width: 70,
-            child: Column(
-              children: [
-                Text(period.startTimeStr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppTheme.textPrimary)),
-                const SizedBox(height: 4),
-                Text(period.endTimeStr, style: const TextStyle(color: AppTheme.textHint, fontSize: 10, fontWeight: FontWeight.bold)),
-              ],
+            child: Text(
+              time,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.textSecondary),
             ),
           ),
-          
-          // Timeline indicator
-          Column(
-            children: [
-              Container(
-                width: 12, height: 12,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2), boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 4)]),
-              ),
-              if (!isLast)
-                Expanded(child: Container(width: 2, decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(1)))),
-            ],
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 16),
-          
-          // Lesson Card
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: PremiumCard(
-                opacity: 1,
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-                      child: Icon(Icons.school_rounded, color: color, size: 20),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(period.subject, style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontSize: 15)),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.person_outline_rounded, size: 12, color: AppTheme.textHint),
-                              const SizedBox(width: 4),
-                              Text(period.teacherName, style: const TextStyle(fontSize: 11, color: AppTheme.textHint, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                          if (period.room != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textHint),
-                                const SizedBox(width: 4),
-                                Text('Room: ${period.room}', style: const TextStyle(fontSize: 11, color: AppTheme.textHint)),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
+                const SizedBox(height: 4),
+                Text(room, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              ],
             ),
           ),
         ],

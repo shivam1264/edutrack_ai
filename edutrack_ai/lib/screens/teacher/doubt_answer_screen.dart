@@ -49,19 +49,28 @@ class DoubtAnswerScreen extends StatelessWidget {
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('doubts')
-                .where('schoolId', isEqualTo: user?.schoolId ?? '')
                 .where('classId', whereIn: assignedClasses.isNotEmpty ? assignedClasses : ['__none__'])
-                .where('subject', whereIn: user?.subjects != null && user!.subjects!.isNotEmpty ? user.subjects : ['__none__'])
-                .orderBy('createdAt', descending: false)
                 .snapshots(),
             builder: (context, snap) {
+              if (snap.hasError) return SliverToBoxAdapter(child: Center(child: Text('Error: ${snap.error}')));
               if (!snap.hasData) return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())));
+              
               final docs = snap.data!.docs;
-              final pending = docs.where((d) {
+              
+              // In-memory sorting to avoid composite index requirements
+              final sortedDocs = docs.toList();
+              sortedDocs.sort((a, b) {
+                final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                final bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                // Descending: Newest first
+                return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+              });
+
+              final pending = sortedDocs.where((d) {
                 final status = (d.data() as Map)['status'];
                 return status == 'pending' || status == 'ai_answered';
               }).toList();
-              final answered = docs.where((d) => (d.data() as Map)['status'] == 'answered').toList();
+              final answered = sortedDocs.where((d) => (d.data() as Map)['status'] == 'answered').toList();
 
               if (docs.isEmpty) {
                 return const SliverToBoxAdapter(

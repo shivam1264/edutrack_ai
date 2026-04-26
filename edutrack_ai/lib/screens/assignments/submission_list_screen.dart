@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../utils/config.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SubmissionListScreen extends StatefulWidget {
   final AssignmentModel assignment;
@@ -33,7 +34,6 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
   Future<void> _loadSubmissions() async {
     final list = await _service.getSubmissionsByAssignment(widget.assignment.id);
     
-    // Resolve names for all students who submitted
     for (var sub in list) {
       if (!_studentNames.containsKey(sub.studentId)) {
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(sub.studentId).get();
@@ -45,10 +45,12 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
       }
     }
 
-    setState(() {
-      _submissions = list;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _submissions = list;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -61,7 +63,7 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
           SliverAppBar(
             expandedHeight: 180,
             pinned: true,
-            backgroundColor: AppTheme.primary,
+            backgroundColor: AppTheme.secondary,
             foregroundColor: Colors.white,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
@@ -99,8 +101,12 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
                           (context, index) {
                             final sub = _submissions[index];
                             final studentName = _studentNames[sub.studentId] ?? 'Resolving Identity...';
-                            return _SubmissionListItem(submission: sub, studentName: studentName)
-                                .animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.1);
+                            return _SubmissionListItem(
+                              submission: sub, 
+                              studentName: studentName, 
+                              maxMarks: widget.assignment.maxMarks,
+                              onGraded: _loadSubmissions,
+                            ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.1);
                           },
                           childCount: _submissions.length,
                         ),
@@ -131,7 +137,15 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
 class _SubmissionListItem extends StatefulWidget {
   final SubmissionModel submission;
   final String studentName;
-  const _SubmissionListItem({required this.submission, required this.studentName});
+  final double maxMarks;
+  final VoidCallback onGraded;
+
+  const _SubmissionListItem({
+    required this.submission, 
+    required this.studentName, 
+    required this.maxMarks,
+    required this.onGraded,
+  });
 
   @override
   State<_SubmissionListItem> createState() => _SubmissionListItemState();
@@ -142,6 +156,8 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
   Map<String, dynamic>? _aiResult;
 
   Future<void> _checkOriginality() async {
+    if (widget.submission.content == null || widget.submission.content!.isEmpty) return;
+    
     setState(() => _isChecking = true);
     try {
       final response = await http.post(
@@ -154,13 +170,95 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
         setState(() => _aiResult = jsonDecode(response.body));
       }
     } catch (e) {
-      print('Originality Check Error: $e');
+      debugPrint('Originality Check Error: $e');
     }
     setState(() => _isChecking = false);
   }
 
+  Future<void> _openFile() async {
+    if (widget.submission.fileUrl != null) {
+      final url = Uri.parse(widget.submission.fileUrl!);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
+
+  Future<void> _showGradeDialog() async {
+    final marksCtrl = TextEditingController(text: widget.submission.marks?.toString() ?? '');
+    final feedbackCtrl = TextEditingController(text: widget.submission.feedback ?? '');
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              const Icon(Icons.grade_rounded, color: AppTheme.secondary),
+              const SizedBox(width: 12),
+              const Text('Evaluate Mission', style: TextStyle(fontWeight: FontWeight.w900)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Student: ${widget.studentName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textHint)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: marksCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Marks Awarded (Max: ${widget.maxMarks})',
+                  prefixIcon: const Icon(Icons.star_rounded, color: AppTheme.accent),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: feedbackCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Feedback / Remarks',
+                  prefixIcon: Icon(Icons.comment_rounded, color: AppTheme.secondary),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: isSaving ? null : () async {
+                final m = double.tryParse(marksCtrl.text);
+                if (m == null || m > widget.maxMarks) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid Marks!')));
+                  return;
+                }
+                setLocalState(() => isSaving = true);
+                await AssignmentService().gradeSubmission(
+                  submissionId: widget.submission.id,
+                  marks: m,
+                  feedback: feedbackCtrl.text.trim(),
+                );
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  widget.onGraded();
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Save Grade'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isGraded = widget.submission.status == AssignmentStatus.graded;
+
     return PremiumCard(
       opacity: 1,
       padding: const EdgeInsets.all(20),
@@ -172,8 +270,8 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
             children: [
               Container(
                 width: 48, height: 48,
-                decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-                child: Center(child: Text(widget.studentName[0].toUpperCase(), style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 18))),
+                decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                child: Center(child: Text(widget.studentName[0].toUpperCase(), style: const TextStyle(color: AppTheme.secondary, fontWeight: FontWeight.w900, fontSize: 18))),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -181,70 +279,89 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.studentName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.textPrimary)),
-                    Text('UID Hash: ${widget.submission.studentId.substring(0, 8)}...', style: const TextStyle(fontSize: 10, color: AppTheme.textHint, fontWeight: FontWeight.bold)),
+                    Text(isGraded ? 'Status: Evaluated ✅' : 'Status: Pending Review ⏳', 
+                      style: TextStyle(fontSize: 10, color: isGraded ? AppTheme.success : AppTheme.accent, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
-              if (_aiResult != null)
-                 _buildRiskBadge(_aiResult!['ai_probability']),
+              if (isGraded)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                  child: Text('${widget.submission.marks}/${widget.maxMarks}', style: const TextStyle(color: AppTheme.secondary, fontWeight: FontWeight.w900, fontSize: 12)),
+                ),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Divider(height: 1),
-          ),
-          const Row(
-            children: [
-              Icon(Icons.description_rounded, size: 14, color: AppTheme.textHint),
-              SizedBox(width: 8),
-              Text('SUBMISSION LOG', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textHint, letterSpacing: 1.2)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.submission.content ?? '[No text content transmitted]', 
-            maxLines: 4, 
-            overflow: TextOverflow.ellipsis, 
-            style: const TextStyle(fontSize: 13, height: 1.6, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 24),
-          if (_aiResult == null)
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _isChecking ? null : _checkOriginality,
-                icon: _isChecking 
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                    : const Icon(Icons.bolt_rounded, size: 18),
-                label: Text(_isChecking ? 'Scanning Content...' : 'Initiate Originality Scan'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
+          const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1)),
+          if (widget.submission.fileUrl != null) ...[
+            InkWell(
+              onTap: _openFile,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.secondary.withOpacity(0.3))),
+                child: const Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf_rounded, color: AppTheme.danger, size: 20),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('View Attached Asset', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.secondary))),
+                    Icon(Icons.open_in_new_rounded, size: 16, color: AppTheme.secondary),
+                  ],
                 ),
               ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderLight)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.auto_awesome_rounded, size: 14, color: AppTheme.primary),
-                      SizedBox(width: 8),
-                      Text('AI ANALYSIS VERDICT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.primary)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(_aiResult!['analysis'], style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.5, fontWeight: FontWeight.w600)),
-                ],
-              ),
             ),
+            const SizedBox(height: 16),
+          ],
+          Text(
+            widget.submission.content ?? '[No textual log transmitted]', 
+            maxLines: 3, 
+            overflow: TextOverflow.ellipsis, 
+            style: const TextStyle(fontSize: 13, height: 1.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              if (widget.submission.content != null && widget.submission.content!.isNotEmpty && _aiResult == null)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isChecking ? null : _checkOriginality,
+                    icon: _isChecking ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.bolt_rounded, size: 16),
+                    label: const Text('AI Scan', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.secondary,
+                      side: const BorderSide(color: AppTheme.secondary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              if (_aiResult != null)
+                 Padding(
+                   padding: const EdgeInsets.only(right: 8),
+                   child: _buildRiskBadge(_aiResult!['ai_probability']),
+                 ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _showGradeDialog,
+                  icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
+                  label: Text(isGraded ? 'Re-Evaluate' : 'Grade Mission', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.secondary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_aiResult != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(12)),
+              child: Text('AI Insights: ${_aiResult!['analysis']}', style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontStyle: FontStyle.italic)),
+            ),
+          ],
         ],
       ),
     );
@@ -253,21 +370,13 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
   Widget _buildRiskBadge(dynamic prob) {
     final double p = (prob is int) ? prob.toDouble() : (prob as double);
     final isHigh = p > 0.7;
-    final isMed = p > 0.4;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isHigh ? AppTheme.danger.withOpacity(0.1) : (isMed ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(10),
+        color: isHigh ? AppTheme.danger.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        'AI PROB: ${(p * 100).toStringAsFixed(0)}%',
-        style: TextStyle(
-          color: isHigh ? AppTheme.danger : (isMed ? Colors.orange : Colors.green),
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      child: Text('AI: ${(p * 100).toStringAsFixed(0)}%', style: TextStyle(color: isHigh ? AppTheme.danger : Colors.green, fontSize: 10, fontWeight: FontWeight.w900)),
     );
   }
 }

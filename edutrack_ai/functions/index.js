@@ -267,3 +267,36 @@ exports.onAIPredictionUpdated = functions.firestore
 
     return null;
   });
+
+// ── 6. deleteUser (Admin Only) ────────────────────────────────────────────────
+exports.deleteUser = functions.https.onCall(async (data, context) => {
+  // 1. Check if caller is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Please log in first.");
+  }
+
+  // 2. Check if caller is an admin
+  const callerUid = context.auth.uid;
+  const callerDoc = await db.collection("users").doc(callerUid).get();
+  if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+    throw new functions.https.HttpsError("permission-denied", "Only administrators can delete accounts.");
+  }
+
+  const { targetUid } = data;
+  if (!targetUid) {
+    throw new functions.https.HttpsError("invalid-argument", "Missing target user ID.");
+  }
+
+  try {
+    // Delete from Firebase Auth
+    await admin.auth().deleteUser(targetUid);
+    
+    // Delete from Firestore
+    await db.collection("users").doc(targetUid).delete();
+
+    return { success: true, message: `Account ${targetUid} deleted successfully from Auth and Firestore.` };
+  } catch (error) {
+    console.error("❌ Error deleting user:", error);
+    throw new functions.https.HttpsError("internal", error.message);
+  }
+});

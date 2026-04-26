@@ -79,23 +79,73 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      appBar: AppBar(
-        title: const Text('Attendance Archive', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-        backgroundColor: AppTheme.secondary,
-        elevation: 0,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: _selectedClassId == null
-                ? _buildNoClassSelected()
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 120,
+            pinned: true,
+            backgroundColor: AppTheme.secondary,
+            foregroundColor: Colors.white,
+            flexibleSpace: FlexibleSpaceBar(
+              title: StreamBuilder<DocumentSnapshot>(
+                stream: _selectedClassId != null 
+                  ? FirebaseFirestore.instance.collection('classes').doc(_selectedClassId).snapshots()
+                  : null,
+                builder: (context, snap) {
+                  final data = snap.data?.data() as Map<String, dynamic>?;
+                  final name = data?['name'] ?? 'Attendance Archive';
+                  return Text(name, style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16));
+                }
+              ),
+              centerTitle: true,
+            ),
+          ),
+          SliverToBoxAdapter(child: _buildHeader()),
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: _selectedClassId == null
+                ? SliverFillRemaining(hasScrollBody: false, child: _buildNoClassSelected())
                 : _isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
                     : _markedDates.isEmpty
-                        ? _buildEmptyState()
-                        : _buildDateList(),
+                        ? SliverFillRemaining(hasScrollBody: false, child: _buildEmptyState())
+                        : SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final date = _markedDates[index];
+                                final isExpanded = _detailsCache.containsKey(date);
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: PremiumCard(
+                                    opacity: 1,
+                                    padding: EdgeInsets.zero,
+                                    child: Theme(
+                                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                                      child: ExpansionTile(
+                                        onExpansionChanged: (expanding) {
+                                          if (expanding) _loadDetails(date);
+                                        },
+                                        leading: Container(
+                                          width: 44, height: 44,
+                                          decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                          child: const Icon(Icons.event_available_rounded, color: AppTheme.secondary, size: 22),
+                                        ),
+                                        title: Text(DateFormat('EEEE, dd MMM yyyy').format(date), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                                        subtitle: Text('Click to view roll-call details', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                        children: [
+                                          if (!isExpanded)
+                                            const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2))
+                                          else
+                                            _buildDetailsList(_detailsCache[date]!),
+                                        ],
+                                      ),
+                                    ),
+                                  ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1),
+                                );
+                              },
+                              childCount: _markedDates.length,
+                            ),
+                          ),
           ),
         ],
       ),
@@ -118,7 +168,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           if (widget.isAdmin)
             _buildClassPicker()
           else
-            Text('Class: $_selectedClassId', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 10),
         ],
       ),
     );

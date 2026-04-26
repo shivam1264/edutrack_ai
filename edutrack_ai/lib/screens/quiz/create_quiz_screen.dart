@@ -10,6 +10,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../utils/config.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../models/class_model.dart';
+import '../../services/class_service.dart';
+import '../../services/ai_service.dart';
 
 class CreateQuizScreen extends StatefulWidget {
   final String classId;
@@ -139,7 +142,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true), 
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               child: const Text('Generate ✨', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
@@ -151,41 +154,36 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
 
     setState(() => _isSaving = true);
     try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/generate-quiz')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'topic': topicCtrl.text.trim(),
-          'subject': _subject,
-          'count': int.tryParse(countCtrl.text) ?? 5,
-          'difficulty': difficulty,
-          'type': type,
-        }),
-      ).timeout(const Duration(seconds: 40));
+      // Use direct AIService for reliability
+      final generated = await AIService().generateQuiz(
+        topic: topicCtrl.text.trim(),
+        subject: _subject,
+        count: int.tryParse(countCtrl.text) ?? 5,
+        difficulty: difficulty,
+        type: type,
+      );
 
-      if (response.statusCode == 200) {
-        final List<dynamic> generated = jsonDecode(response.body);
-        setState(() {
-          for (var q in generated) {
-            final qType = (q['type'] == 'short') ? QuestionType.shortAnswer : QuestionType.mcq;
-            final draft = _QuestionDraft(type: qType);
-            draft.text = q['text'];
-            if (qType == QuestionType.mcq) {
-              for (int i = 0; i < (q['options'] as List).length; i++) {
-                if (i < 4) draft.options[i] = q['options'][i];
+      setState(() {
+        for (var q in generated) {
+          final qType = (q['type'] == 'short') ? QuestionType.shortAnswer : QuestionType.mcq;
+          final draft = _QuestionDraft(type: qType);
+          draft.text = q['text'] ?? '';
+          if (qType == QuestionType.mcq) {
+            final optionsList = q['options'] as List?;
+            if (optionsList != null) {
+              for (int i = 0; i < optionsList.length; i++) {
+                if (i < 4) draft.options[i] = optionsList[i].toString();
               }
-              draft.correctOption = q['correctOption'];
             }
-            draft.marks = (q['marks'] as num).toDouble();
-            _questions.add(draft);
+            draft.correctOption = (q['correctOption'] as num?)?.toInt() ?? 0;
           }
-        });
-        _showSnack('AI successfully generated ${generated.length} questions! ✨');
-      } else {
-        _showSnack('AI Generation failed. Check backend connection.', isError: true);
-      }
+          draft.marks = (q['marks'] as num? ?? 1.0).toDouble();
+          _questions.add(draft);
+        }
+      });
+      _showSnack('AI successfully generated ${generated.length} questions! ✨');
     } catch (e) {
-      _showSnack('Connectivity Error: $e', isError: true);
+      _showSnack('AI Generation failed: $e', isError: true);
     }
     setState(() => _isSaving = false);
   }
@@ -249,7 +247,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           SliverAppBar(
             expandedHeight: 160,
             pinned: true,
-            backgroundColor: AppTheme.accent,
+            backgroundColor: AppTheme.secondary,
             foregroundColor: Colors.white,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
@@ -268,14 +266,25 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Create Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                        Row(
-                          children: [
-                            const Text('Configure academic assessment', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            const SizedBox(width: 8),
-                            Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
-                            const SizedBox(width: 8),
-                            Text('Target: Class ${widget.classId}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, decoration: TextDecoration.underline)),
-                          ],
+                        StreamBuilder<ClassModel>(
+                          stream: ClassService().getClassById(widget.classId),
+                          builder: (context, classSnap) {
+                            final className = classSnap.data?.displayName ?? '';
+                            return Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                const Text('Configure academic assessment', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                if (className.isNotEmpty) ...[
+                                  Container(width: 4, height: 4, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle)),
+                                  Text('Target: $className', 
+                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, decoration: TextDecoration.underline),
+                                  ),
+                                ],
+                              ],
+                            );
+                          }
                         ),
                       ],
                     ),
@@ -316,7 +325,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             controller: _titleCtrl,
                             decoration: const InputDecoration(
                               labelText: 'Quiz Title',
-                              prefixIcon: Icon(Icons.quiz_rounded, color: AppTheme.accent),
+                              prefixIcon: Icon(Icons.quiz_rounded, color: AppTheme.secondary),
                             ),
                             validator: (v) => v?.isEmpty == true ? 'Title required' : null,
                           ),
@@ -326,17 +335,27 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                               Expanded(
                                 child: DropdownButtonFormField<String>(
                                   value: _subject,
-                                  decoration: const InputDecoration(labelText: 'Subject', prefixIcon: Icon(Icons.subject_rounded, color: AppTheme.accent)),
-                                  items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Subject', 
+                                    prefixIcon: Icon(Icons.subject_rounded, color: AppTheme.secondary, size: 20),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                  ),
+                                  items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))).toList(),
                                   onChanged: (v) => setState(() => _subject = v!),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: DropdownButtonFormField<int>(
                                   value: _durationMins,
-                                  decoration: const InputDecoration(labelText: 'Duration', prefixIcon: Icon(Icons.timer_rounded, color: AppTheme.accent)),
-                                  items: [10, 15, 20, 30, 45, 60, 90, 120].map((d) => DropdownMenuItem(value: d, child: Text('$d mins'))).toList(),
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Time', 
+                                    prefixIcon: Icon(Icons.timer_rounded, color: AppTheme.secondary, size: 20),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                  ),
+                                  items: [10, 15, 20, 30, 45, 60, 90, 120].map((d) => DropdownMenuItem(value: d, child: Text('$d m', style: const TextStyle(fontSize: 12)))).toList(),
                                   onChanged: (v) => setState(() => _durationMins = v!),
                                 ),
                               ),
@@ -362,7 +381,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             decoration: BoxDecoration(
                               gradient: AppTheme.meshGradient,
                               borderRadius: BorderRadius.circular(12),
-                              boxShadow: [BoxShadow(color: AppTheme.accent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                              boxShadow: [BoxShadow(color: AppTheme.secondary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
                             ),
                             child: const Row(
                               children: [
@@ -395,8 +414,8 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                             icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
                             label: const Text('Add MCQ'),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppTheme.accent),
-                              foregroundColor: AppTheme.accent,
+                              side: const BorderSide(color: AppTheme.secondary),
+                              foregroundColor: AppTheme.secondary,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
@@ -437,10 +456,10 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             icon: const Icon(Icons.rocket_launch_rounded),
             label: Text(_isSaving ? 'Broadcasting...' : 'Launch Quiz Assessment', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accent,
+              backgroundColor: AppTheme.secondary,
               foregroundColor: Colors.white,
               elevation: 8,
-              shadowColor: AppTheme.accent.withOpacity(0.4),
+              shadowColor: AppTheme.secondary.withOpacity(0.4),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
           ),
@@ -477,7 +496,7 @@ class _TimeSelector extends StatelessWidget {
         decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderLight)),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_rounded, color: AppTheme.accent, size: 16),
+            const Icon(Icons.calendar_today_rounded, color: AppTheme.secondary, size: 16),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,8 +555,8 @@ class _QuestionEditorState extends State<_QuestionEditor> {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: AppTheme.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                child: Text('MISSION ${widget.index + 1}', style: const TextStyle(color: AppTheme.accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text('MISSION ${widget.index + 1}', style: const TextStyle(color: AppTheme.secondary, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
               ),
               const Spacer(),
               SizedBox(
@@ -574,7 +593,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
                       value: i,
                       groupValue: widget.draft.correctOption,
                       onChanged: (v) => setState(() => widget.draft.correctOption = v!),
-                      activeColor: AppTheme.accent,
+                      activeColor: AppTheme.secondary,
                     ),
                     Expanded(
                       child: TextFormField(

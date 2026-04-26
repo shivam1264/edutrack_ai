@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../models/user_model.dart';
 import '../../models/class_model.dart';
@@ -8,7 +10,9 @@ import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AddUserScreen extends StatefulWidget {
-  const AddUserScreen({super.key});
+  final String? fixedRole;
+  final String? fixedClassId;
+  const AddUserScreen({super.key, this.fixedRole, this.fixedClassId});
 
   @override
   State<AddUserScreen> createState() => _AddUserScreenState();
@@ -19,16 +23,24 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final _authService = AuthService();
 
   final _nameController = TextEditingController();
+  final _rollNoController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _schoolIdController = TextEditingController(text: 'SCH001'); // Default
-  String _selectedRole = 'student';
+  late String _selectedRole;
   String? _selectedClassId; // for students
   List<String> _selectedAssignedClasses = []; // for teachers
   List<String> _selectedSubjects = []; // for teachers
   final _parentOfController = TextEditingController();
 
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = widget.fixedRole ?? 'student';
+    _selectedClassId = widget.fixedClassId;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +91,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _buildRoleSection().animate().fadeIn().slideY(begin: 0.1),
+                        if (widget.fixedRole == null)
+                           _buildRoleSection().animate().fadeIn().slideY(begin: 0.1),
                         const SizedBox(height: 24),
                         
                         PremiumCard(
@@ -144,9 +157,21 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                   StreamBuilder<List<ClassModel>>(
                                     stream: ClassService().getClasses(),
                                     builder: (context, snapshot) {
-                                      final classes = snapshot.data ?? [];
+                                      final allAvailableClasses = snapshot.data ?? [];
+                                      final user = context.read<AuthProvider>().user;
+                                      
+                                      // If teacher is adding, filter by their assigned classes
+                                      List<ClassModel> classes;
+                                      if (user?.role == UserRole.teacher) {
+                                        final assignedIds = user?.assignedClasses ?? (user?.classId != null ? [user!.classId!] : []);
+                                        classes = allAvailableClasses.where((c) => assignedIds.contains(c.id)).toList();
+                                      } else {
+                                        classes = allAvailableClasses;
+                                      }
+
                                       return DropdownButtonFormField<String>(
                                         value: _selectedClassId,
+                                        isExpanded: true,
                                         decoration: InputDecoration(
                                           labelText: 'Assign Primary Class',
                                           prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
@@ -164,6 +189,16 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                       );
                                     },
                                   ),
+                                if (_selectedRole == 'student') ...[
+                                  const SizedBox(height: 16),
+                                  _buildTextField(
+                                    controller: _rollNoController,
+                                    label: 'Class Roll Number',
+                                    icon: Icons.numbers_rounded,
+                                    keyboardType: TextInputType.text,
+                                    validator: (v) => v!.isEmpty ? 'Roll number required' : null,
+                                  ),
+                                ],
                                 if (_selectedRole == 'teacher')
                                   StreamBuilder<List<ClassModel>>(
                                     stream: ClassService().getClasses(),
@@ -358,6 +393,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
         parentOf: _selectedRole == 'parent' 
             ? _parentOfController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
             : null,
+        rollNo: _selectedRole == 'student' ? _rollNoController.text.trim() : null,
       );
 
       if (mounted) {

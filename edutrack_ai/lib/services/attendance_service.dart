@@ -20,16 +20,14 @@ class AttendanceService {
     required String markedBy,
     String? subject,
   }) async {
-    // Check for duplicate: same date + class + student + subject
     final dateStart = DateTime(date.year, date.month, date.day);
-    final dateEnd = dateStart.add(const Duration(days: 1));
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
     var query = _firestore
         .collection(_col)
         .where('student_id', isEqualTo: studentId)
         .where('class_id', isEqualTo: classId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(dateStart))
-        .where('date', isLessThan: Timestamp.fromDate(dateEnd));
+        .where('date_string', isEqualTo: dateStr);
 
     if (subject != null) {
       query = query.where('subject', isEqualTo: subject);
@@ -51,13 +49,11 @@ class AttendanceService {
     );
 
     if (existing.docs.isNotEmpty) {
-      // Update existing
       await _firestore
           .collection(_col)
           .doc(model.id)
           .update(model.toMap());
     } else {
-      // Create new
       await _firestore
           .collection(_col)
           .doc(model.id)
@@ -67,23 +63,20 @@ class AttendanceService {
 
   // ─── Batch Mark Attendance ────────────────────────────────────────────────────
   Future<void> batchMarkAttendance({
-    required List<Map<String, dynamic>> records, // {studentId, status}
+    required List<Map<String, dynamic>> records,
     required String classId,
     required DateTime date,
     required String markedBy,
   }) async {
     final dateStart = DateTime(date.year, date.month, date.day);
-    final dateEnd = dateStart.add(const Duration(days: 1));
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    // 1. Fetch all existing attendance for this class/date
     final existingSnap = await _firestore
         .collection(_col)
         .where('class_id', isEqualTo: classId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(dateStart))
-        .where('date', isLessThan: Timestamp.fromDate(dateEnd))
+        .where('date_string', isEqualTo: dateStr)
         .get();
 
-    // Map existing records by studentId for fast lookup
     final Map<String, String> existingIds = {
       for (var doc in existingSnap.docs) doc.data()['student_id'] as String: doc.id
     };
@@ -118,14 +111,12 @@ class AttendanceService {
     required DateTime date,
     String? subject,
   }) async {
-    final dateStart = DateTime(date.year, date.month, date.day);
-    final dateEnd = dateStart.add(const Duration(days: 1));
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
     var query = _firestore
         .collection(_col)
         .where('class_id', isEqualTo: classId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(dateStart))
-        .where('date', isLessThan: Timestamp.fromDate(dateEnd));
+        .where('date_string', isEqualTo: dateStr);
 
     if (subject != null) {
       query = query.where('subject', isEqualTo: subject);
@@ -143,37 +134,36 @@ class AttendanceService {
     required String studentId,
     int? limitDays,
   }) async {
+    // Removed orderBy to bypass composite index requirement
     Query query = _firestore
         .collection(_col)
-        .where('student_id', isEqualTo: studentId)
-        .orderBy('date', descending: true);
+        .where('student_id', isEqualTo: studentId);
 
     if (limitDays != null) {
       final from = DateTime.now().subtract(Duration(days: limitDays));
-      query = query.where('date',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(from));
+      query = query.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(from));
     }
 
     final snap = await query.get();
-    return snap.docs
+    final list = snap.docs
         .map((d) => AttendanceModel.fromMap(d.id, d.data() as Map<String, dynamic>))
         .toList();
+    
+    // Sort in-memory (descending)
+    list.sort((a, b) => b.date.compareTo(a.date));
+    return list;
   }
 
   // ─── Get Attendance Stats ─────────────────────────────────────────────────────
   Future<AttendanceStats> getAttendanceStats(String studentId) async {
     final records = await getStudentAttendanceHistory(studentId: studentId);
     
-    // Overall Stats
     final present = records.where((r) => r.isPresent).length;
     final absent = records.where((r) => r.isAbsent).length;
     final late = records.where((r) => r.isLate).length;
     final total = records.length;
-    final percentage = total > 0
-        ? ((present + (late * 0.5)) / total) * 100
-        : 0.0;
+    final percentage = total > 0 ? ((present + (late * 0.5)) / total) * 100 : 0.0;
 
-    // Subject-wise Stats
     final Map<String, List<AttendanceModel>> subjectGroups = {};
     for (var r in records) {
       final sub = r.subject ?? 'General';
@@ -186,9 +176,7 @@ class AttendanceService {
       final sAbsent = subRecords.where((r) => r.isAbsent).length;
       final sLate = subRecords.where((r) => r.isLate).length;
       final sTotal = subRecords.length;
-      final sPercentage = sTotal > 0
-          ? ((sPresent + (sLate * 0.5)) / sTotal) * 100
-          : 0.0;
+      final sPercentage = sTotal > 0 ? ((sPresent + (sLate * 0.5)) / sTotal) * 100 : 0.0;
           
       subjectStats[sub] = AttendanceStats(
         totalPresent: sPresent,
@@ -206,22 +194,25 @@ class AttendanceService {
       subjectStats: subjectStats,
     );
   }
-    // ─── Get unique dates with marked attendance ──────────────────────────────
+
+  // ─── Get unique dates with marked attendance ──────────────────────────────
   Future<List<DateTime>> getMarkedDates(String classId) async {
+    // Removed orderBy to avoid mandatory composite index requirement
     final snap = await _firestore
         .collection(_col)
         .where('class_id', isEqualTo: classId)
-        .orderBy('date', descending: true)
         .get();
 
     final Set<DateTime> uniqueDates = {};
     for (var doc in snap.docs) {
       final date = (doc.data()['date'] as Timestamp).toDate();
-      // Normalize to start of day
       uniqueDates.add(DateTime(date.year, date.month, date.day));
     }
     
-    return uniqueDates.toList()..sort((a, b) => b.compareTo(a));
+    // Sort in-memory (descending)
+    final list = uniqueDates.toList();
+    list.sort((a, b) => b.compareTo(a));
+    return list;
   }
 
   // ─── Stream attendance for a class/date (real-time) ──────────────────────────
@@ -230,14 +221,12 @@ class AttendanceService {
     required DateTime date,
     String? subject,
   }) {
-    final dateStart = DateTime(date.year, date.month, date.day);
-    final dateEnd = dateStart.add(const Duration(days: 1));
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
     var query = _firestore
         .collection(_col)
         .where('class_id', isEqualTo: classId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(dateStart))
-        .where('date', isLessThan: Timestamp.fromDate(dateEnd));
+        .where('date_string', isEqualTo: dateStr);
 
     if (subject != null) {
       query = query.where('subject', isEqualTo: subject);

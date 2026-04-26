@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/cloudinary_service.dart';
+import '../../models/user_model.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -21,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isUploading = false;
   
   late TextEditingController _nameCtrl;
+  late TextEditingController _rollNoCtrl;
   late TextEditingController _bioCtrl;
   late TextEditingController _phoneCtrl;
 
@@ -29,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     final user = context.read<AuthProvider>().user;
     _nameCtrl = TextEditingController(text: user?.name ?? '');
+    _rollNoCtrl = TextEditingController(text: user?.rollNo ?? '');
     _bioCtrl = TextEditingController(text: user?.toMap()['bio'] ?? '');
     _phoneCtrl = TextEditingController(text: user?.toMap()['phone'] ?? '');
   }
@@ -36,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _rollNoCtrl.dispose();
     _bioCtrl.dispose();
     _phoneCtrl.dispose();
     super.dispose();
@@ -81,6 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final auth = context.read<AuthProvider>();
     await auth.updateProfile({
       'name': _nameCtrl.text.trim(),
+      'roll_no': _rollNoCtrl.text.trim(),
       'bio': _bioCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
     });
@@ -133,6 +138,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.alternate_email_rounded,
                     enabled: false,
                    ),
+                    if (user.role == UserRole.student) ...[
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                       label: 'Roll Number',
+                       controller: _rollNoCtrl,
+                       icon: Icons.numbers_rounded,
+                       enabled: user.rollNo == null || user.rollNo!.isEmpty,
+                       onChanged: (v) => setState(() {}),
+                      ),
+                      if (user.rollNo == null || user.rollNo!.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 16, top: 4),
+                          child: Text('Add your roll number for attendance.', style: TextStyle(color: AppTheme.secondary, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                    ],
                    
                    const SizedBox(height: 32),
                    _buildSectionTitle('PERSONAL INFO'),
@@ -290,16 +310,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool enabled = true,
     int maxLines = 1,
     TextInputType? keyboardType,
+    ValueChanged<String>? onChanged,
   }) {
     return PremiumCard(
       opacity: 1,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: TextFormField(
         controller: controller,
-        initialValue: initialValue,
+        initialValue: controller == null ? initialValue : null,
         enabled: enabled,
         maxLines: maxLines,
         keyboardType: keyboardType,
+        onChanged: onChanged,
         style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
         decoration: InputDecoration(
           icon: Icon(icon, color: AppTheme.primary, size: 20),

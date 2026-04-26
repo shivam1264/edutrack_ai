@@ -8,6 +8,7 @@ import '../../utils/config.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class LessonPlannerScreen extends StatefulWidget {
   final String? classId;
@@ -21,7 +22,7 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
   final _topicCtrl = TextEditingController();
   String _selectedSubject = 'Mathematics';
   String _selectedDuration = '45 minutes';
-  String _selectedGrade = 'Grade 8';
+  String _selectedGrade = '8th standard'; // Matches '8th standard' in the list
   bool _isGenerating = false;
   String? _generatedPlan;
   List<Map<String, dynamic>> _savedPlans = [];
@@ -34,30 +35,58 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
   @override
   void initState() {
     super.initState();
-    // Default the grade if classId is provided
-    if (widget.classId != null) {
-      // Logic to extract grade from class name if needed, 
-      // or just set a default that matches our new standard naming
-      _selectedGrade = widget.classId!; 
-    }
     _loadSavedPlans();
+    
+    // Attempt to resolve grade from classId if available
+    if (widget.classId != null) {
+      FirebaseFirestore.instance.collection('classes').doc(widget.classId).get().then((doc) {
+        if (doc.exists && mounted) {
+          try {
+            final className = doc.data()?['name']?.toString().toLowerCase() ?? '';
+            for (var g in _grades) {
+              if (className.contains(g.split(' ')[0].toLowerCase())) {
+                setState(() => _selectedGrade = g);
+                break;
+              }
+            }
+          } catch (e) {
+            print('Grade resolution error: $e');
+          }
+        }
+      });
+    }
   }
 
   Future<void> _loadSavedPlans() async {
-    final user = context.read<AuthProvider>().user;
-    final snap = await FirebaseFirestore.instance
-        .collection('lesson_plans')
-        .where('teacherId', isEqualTo: user?.uid)
-        .orderBy('createdAt', descending: true)
-        .limit(10)
-        .get();
-    setState(() {
-      _savedPlans = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
-    });
+    try {
+      final user = context.read<AuthProvider>().user;
+      final snap = await FirebaseFirestore.instance
+          .collection('lesson_plans')
+          .where('teacherId', isEqualTo: user?.uid)
+          .get();
+      
+      final list = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      
+      // Sort in-memory to bypass index requirement
+      list.sort((a, b) {
+        final aTime = a['createdAt'] as Timestamp?;
+        final bTime = b['createdAt'] as Timestamp?;
+        return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+      });
+
+      setState(() {
+        _savedPlans = list.take(10).toList();
+      });
+    } catch (e) {
+      print('Load plans error: $e');
+    }
   }
 
   Future<void> _generatePlan() async {
-    if (_topicCtrl.text.trim().isEmpty) return;
+    if (_topicCtrl.text.trim().isEmpty) {
+      _showSnack('Please enter a topic first!', isError: true);
+      return;
+    }
     setState(() { _isGenerating = true; _generatedPlan = null; });
 
     try {
@@ -70,20 +99,47 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
           'duration': _selectedDuration,
           'grade': _selectedGrade,
         }),
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 90));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        setState(() => _generatedPlan = data['plan'] ?? 'Plan generated!');
+        setState(() => _generatedPlan = data['plan'] ?? 'No plan received.');
+        _saveToArchive(data['plan'] ?? '');
       } else {
-        // Fallback offline plan
+        _showSnack('AI Server is warming up. Using offline template.', isError: false);
         setState(() => _generatedPlan = _offlinePlan());
       }
     } catch (e) {
+      _showSnack('Connectivity issue. Using professional template.', isError: false);
       setState(() => _generatedPlan = _offlinePlan());
     }
-
     setState(() => _isGenerating = false);
+  }
+
+  Future<void> _saveToArchive(String plan) async {
+    try {
+      final user = context.read<AuthProvider>().user;
+      await FirebaseFirestore.instance.collection('lesson_plans').add({
+        'teacherId': user?.uid,
+        'subject': _selectedSubject,
+        'topic': _topicCtrl.text.trim(),
+        'grade': _selectedGrade,
+        'duration': _selectedDuration,
+        'plan': plan,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      _loadSavedPlans();
+    } catch (e) {
+      print('Archive Error: $e');
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w700)),
+      backgroundColor: isError ? AppTheme.danger : AppTheme.secondary,
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   String _offlinePlan() {
@@ -92,9 +148,9 @@ Subject: $_selectedSubject | Topic: ${_topicCtrl.text.trim()}
 Grade: $_selectedGrade | Duration: $_selectedDuration
 
 🎯 LEARNING OBJECTIVES
-1. Students will understand the core concept of ${_topicCtrl.text.trim()}
-2. Students will be able to apply the concept in practical scenarios
-3. Students will demonstrate understanding through examples
+1. Understand the core principles of today's topic
+2. Apply concepts through practical examples
+3. Evaluate understanding with peer discussion
 
 ⏱️ LESSON STRUCTURE
 • Introduction (5 min): Review previous lesson, introduce today's topic
@@ -145,9 +201,10 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 160,
+            expandedHeight: 180,
             pinned: true,
             backgroundColor: const Color(0xFF1D4ED8),
+            foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -157,13 +214,27 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
+                  padding: const EdgeInsets.fromLTRB(24, 60, 24, 20),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('AI Lesson Planner', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                      Text('Generate professional lesson plans in seconds', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    children: [
+                      const Text('AI Lesson Planner', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: widget.classId != null 
+                          ? FirebaseFirestore.instance.collection('classes').doc(widget.classId).snapshots()
+                          : null,
+                        builder: (context, snap) {
+                          final data = snap.data?.data() as Map<String, dynamic>?;
+                          final name = data?['name'] ?? 'Professional Lesson Planner';
+                          return Text(
+                            widget.classId != null ? 'Active Class: $name' : 'Generate professional lesson plans', 
+                            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        }
+                      ),
                     ],
                   ),
                 ),
@@ -184,22 +255,34 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _selectedSubject,
-                              decoration: InputDecoration(labelText: 'Subject',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                              items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
+                              isExpanded: true,
+                              value: _subjects.contains(_selectedSubject) ? _selectedSubject : _subjects[0],
+                              decoration: InputDecoration(
+                                labelText: 'Subject',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              ),
+                              items: _subjects.map((s) => DropdownMenuItem(
+                                value: s, 
+                                child: Text(s, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)
+                              )).toList(),
                               onChanged: (v) => setState(() => _selectedSubject = v!),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _selectedGrade,
-                              decoration: InputDecoration(labelText: 'Grade',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                              items: _grades.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                              isExpanded: true,
+                              value: _grades.contains(_selectedGrade) ? _selectedGrade : _grades[7],
+                              decoration: InputDecoration(
+                                labelText: 'Grade',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              ),
+                              items: _grades.map((g) => DropdownMenuItem(
+                                value: g, 
+                                child: Text(g, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)
+                              )).toList(),
                               onChanged: (v) => setState(() => _selectedGrade = v!),
                             ),
                           ),
@@ -217,7 +300,7 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _selectedDuration,
+                        value: _durations.contains(_selectedDuration) ? _selectedDuration : _durations[1],
                         decoration: InputDecoration(labelText: 'Class Duration',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             prefixIcon: const Icon(Icons.timer_rounded)),
@@ -231,7 +314,7 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
                           icon: _isGenerating
                               ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                               : const Icon(Icons.auto_awesome_rounded),
-                          label: Text(_isGenerating ? 'Generating with AI...' : 'Generate Lesson Plan'),
+                          label: Text(_isGenerating ? 'AI is Thinking...' : 'Generate Lesson Plan'),
                           onPressed: _isGenerating ? null : _generatePlan,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1D4ED8),
@@ -241,6 +324,21 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
                           ),
                         ),
                       ),
+                      if (_isGenerating)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.bolt_rounded, color: Colors.orange, size: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                'AI Server is waking up... Please wait 30-40s',
+                                style: TextStyle(color: Colors.grey.shade600, fontSize: 11, fontStyle: FontStyle.italic, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ).animate(onPlay: (controller) => controller.repeat()).shimmer(duration: 2.seconds),
+                        ),
                     ],
                   ),
                 ).animate().fadeIn().scale(),
@@ -256,8 +354,14 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
                           children: [
                             const Icon(Icons.auto_awesome_rounded, color: Color(0xFF1D4ED8)),
                             const SizedBox(width: 8),
-                            const Text('Generated Plan', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.textPrimary)),
-                            const Spacer(),
+                            const Expanded(
+                              child: Text(
+                                'Generated Plan', 
+                                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                             IconButton(
                               icon: const Icon(Icons.save_rounded, color: Color(0xFF059669)),
                               onPressed: _savePlan,
@@ -266,10 +370,18 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
                           ],
                         ),
                         const Divider(height: 20),
-                        Text(_generatedPlan!, style: const TextStyle(height: 1.6, color: AppTheme.textPrimary)),
+                        MarkdownBody(
+                          data: _generatedPlan!,
+                          styleSheet: MarkdownStyleSheet(
+                            h1: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: AppTheme.textPrimary),
+                            h2: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppTheme.textPrimary),
+                            p: const TextStyle(fontSize: 14, height: 1.6, color: AppTheme.textSecondary),
+                            listBullet: const TextStyle(color: Color(0xFF1D4ED8)),
+                          ),
+                        ),
                       ],
                     ),
-                  ).animate().fadeIn().slideY(begin: 0.3),
+                  ).animate().fadeIn().slideY(begin: 0.1),
                 ],
                 if (_savedPlans.isNotEmpty) ...[
                   const SizedBox(height: 24),
@@ -323,7 +435,7 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
               const Divider(height: 20),
               Flexible(
                 child: SingleChildScrollView(
-                  child: Text(plan['plan'] ?? '', style: const TextStyle(height: 1.6)),
+                  child: MarkdownBody(data: plan['plan'] ?? ''),
                 ),
               ),
               const SizedBox(height: 16),

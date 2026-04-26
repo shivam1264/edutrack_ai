@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import '../../models/user_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/gamification_provider.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/premium_card.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -13,230 +12,255 @@ class LeaderboardScreen extends StatefulWidget {
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabCtrl.dispose();
-    super.dispose();
-  }
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  int _selectedTabIndex = 0;
+  final List<String> _tabs = ['Class', 'School', 'All India'];
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    final classId = user?.classId ?? '';
+    final authUser = context.read<AuthProvider>().user;
+    final classId = authUser?.classId ?? '';
+    final currentUserId = authUser?.uid ?? '';
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 180,
-            pinned: true,
-            backgroundColor: const Color(0xFFFF6B35),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      appBar: AppBar(
+        title: const Text('Leaderboard'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: FutureBuilder<List<UserModel>>(
+        future: _selectedTabIndex == 0 
+            ? context.read<GamificationProvider>().getLeaderboard(classId)
+            : context.read<GamificationProvider>().getGlobalLeaderboard(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final users = snapshot.data ?? [];
+          if (users.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.leaderboard_outlined, size: 64, color: Colors.grey.withOpacity(0.3)),
+                  const SizedBox(height: 16),
+                  const Text('No leaderboard data available yet.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                  const Text('Ranks will update as students earn XP!', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
+                ],
+              ),
+            );
+          }
+
+          // Assign ranks (handles ties simply by index for now)
+          final top3 = users.take(3).toList();
+          final rest = users.skip(3).toList();
+
+          UserModel? first = top3.isNotEmpty ? top3[0] : null;
+          UserModel? second = top3.length > 1 ? top3[1] : null;
+          UserModel? third = top3.length > 2 ? top3[2] : null;
+
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              children: [
+                _buildTabs(),
+                const SizedBox(height: 32),
+                SizedBox(
+                  height: 200,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // 2nd Place
+                      if (second != null)
+                        _PodiumItem(
+                          rank: 2,
+                          name: second.uid == currentUserId ? 'You' : second.name.split(' ').first,
+                          xp: '${second.xp} XP',
+                          height: 120,
+                          color: Colors.blueGrey,
+                        ),
+                      // 1st Place
+                      if (first != null)
+                        _PodiumItem(
+                          rank: 1,
+                          name: first.uid == currentUserId ? 'You' : first.name.split(' ').first,
+                          xp: '${first.xp} XP',
+                          height: 160,
+                          color: Colors.amber,
+                        ),
+                      // 3rd Place
+                      if (third != null)
+                        _PodiumItem(
+                          rank: 3,
+                          name: third.uid == currentUserId ? 'You' : third.name.split(' ').first,
+                          xp: '${third.xp} XP',
+                          height: 100,
+                          color: Colors.deepOrangeAccent,
+                        ),
+                    ],
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: -20, right: -20,
-                      child: Icon(Icons.emoji_events_rounded,
-                          color: Colors.white.withOpacity(0.1), size: 180),
-                    ),
-                    const Align(
-                      alignment: Alignment(0, 0.3),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.emoji_events_rounded, color: Colors.white, size: 44),
-                          SizedBox(height: 8),
-                          Text('Leaderboard', style: TextStyle(
-                            color: Colors.white, fontSize: 28,
-                            fontWeight: FontWeight.w900, letterSpacing: 1,
-                          )),
-                          Text('Top Performers', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            bottom: TabBar(
-              controller: _tabCtrl,
-              indicatorColor: Colors.white,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white60,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w800),
-              tabs: const [
-                Tab(text: '🏆 XP Rankings'),
-                Tab(text: '⭐ Quiz Stars'),
+                const SizedBox(height: 32),
+                ...rest.asMap().entries.map((entry) {
+                  final index = entry.key + 4; // Ranks start at 4 for the rest
+                  final user = entry.value;
+                  return _LeaderboardTile(
+                    rank: index,
+                    name: user.uid == currentUserId ? 'You' : user.name,
+                    xp: '${user.xp} XP',
+                    isCurrentUser: user.uid == currentUserId,
+                  );
+                }),
+                const SizedBox(height: 40),
               ],
             ),
-          ),
-          SliverFillRemaining(
-            child: TabBarView(
-              controller: _tabCtrl,
-              children: [
-                _buildXPLeaderboard(classId),
-                _buildQuizLeaderboard(classId),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildXPLeaderboard(String classId) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .where('classId', isEqualTo: classId)
-          .where('role', isEqualTo: 'student')
-          .orderBy('xp', descending: true)
-          .limit(20)
-          .snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final docs = snap.data!.docs;
-        if (docs.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.people_outline_rounded, size: 64, color: Colors.grey),
-                SizedBox(height: 12),
-                Text('No classmates yet!', style: TextStyle(color: Colors.grey)),
-              ],
+  Widget _buildTabs() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: Row(
+        children: List.generate(_tabs.length, (index) {
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTabIndex = index),
+              child: _TabItem(_tabs[index], isSelected: _selectedTabIndex == index),
             ),
           );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          itemBuilder: (context, i) {
-            final d = docs[i].data() as Map<String, dynamic>;
-            return _LeaderCard(rank: i + 1, name: d['name'] ?? 'Student',
-                value: '${d['xp'] ?? 0} XP', subtitle: 'Level ${((d['xp'] ?? 0) / 100).floor() + 1}',
-                isTop3: i < 3).animate().fadeIn(delay: (i * 60).ms).slideX(begin: 0.3);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildQuizLeaderboard(String classId) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('quiz_results')
-          .where('classId', isEqualTo: classId)
-          .orderBy('score', descending: true)
-          .limit(20)
-          .snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-        final docs = snap.data!.docs;
-        if (docs.isEmpty) {
-          return const Center(
-            child: Text('Take quizzes to appear here!', style: TextStyle(color: Colors.grey)),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          itemBuilder: (context, i) {
-            final d = docs[i].data() as Map<String, dynamic>;
-            return _LeaderCard(rank: i + 1, name: d['studentName'] ?? 'Student',
-                value: '${d['score']}%', subtitle: d['quizTitle'] ?? 'Quiz',
-                isTop3: i < 3).animate().fadeIn(delay: (i * 60).ms).slideX(begin: 0.3);
-          },
-        );
-      },
+        }),
+      ),
     );
   }
 }
 
-class _LeaderCard extends StatelessWidget {
+class _TabItem extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+
+  const _TabItem(this.label, {this.isSelected = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.primary : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppTheme.textSecondary,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PodiumItem extends StatelessWidget {
   final int rank;
   final String name;
-  final String value;
-  final String subtitle;
-  final bool isTop3;
+  final String xp;
+  final double height;
+  final Color color;
 
-  const _LeaderCard({
+  const _PodiumItem({
     required this.rank,
     required this.name,
-    required this.value,
-    required this.subtitle,
-    required this.isTop3,
+    required this.xp,
+    required this.height,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final medals = ['🥇', '🥈', '🥉'];
-    final colors = [const Color(0xFFFFD700), const Color(0xFFC0C0C0), const Color(0xFFCD7F32)];
+    return Container(
+      width: 100,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: color.withOpacity(0.2),
+                child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'U', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 24)),
+              ),
+              Positioned(
+                bottom: -8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  child: Text('$rank', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.textPrimary), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(xp, style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+}
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: PremiumCard(
-        opacity: 1,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 42, height: 42,
-              decoration: BoxDecoration(
-                color: isTop3 ? colors[rank - 1].withOpacity(0.15) : AppTheme.bgLight,
-                shape: BoxShape.circle,
-                border: isTop3 ? Border.all(color: colors[rank - 1], width: 2) : null,
-              ),
-              child: Center(
-                child: isTop3
-                    ? Text(medals[rank - 1], style: const TextStyle(fontSize: 20))
-                    : Text('#$rank', style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textSecondary)),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                gradient: isTop3
-                    ? LinearGradient(colors: [colors[rank - 1], colors[rank - 1].withOpacity(0.7)])
-                    : LinearGradient(colors: [AppTheme.primary, AppTheme.primaryLight]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
-            ),
-          ],
-        ),
+class _LeaderboardTile extends StatelessWidget {
+  final int rank;
+  final String name;
+  final String xp;
+  final bool isCurrentUser;
+
+  const _LeaderboardTile({
+    required this.rank,
+    required this.name,
+    required this.xp,
+    this.isCurrentUser = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isCurrentUser ? AppTheme.primaryLight.withOpacity(0.5) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isCurrentUser ? AppTheme.primary.withOpacity(0.5) : AppTheme.borderLight),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: AppTheme.borderLight)),
+            child: Center(child: Text('$rank', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textSecondary))),
+          ),
+          const SizedBox(width: 16),
+          Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary))),
+          Text(xp, style: TextStyle(color: isCurrentUser ? AppTheme.primary : AppTheme.textSecondary, fontSize: 14, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }

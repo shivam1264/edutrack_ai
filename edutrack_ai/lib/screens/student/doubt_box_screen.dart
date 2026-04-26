@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/doubt_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/mock_data_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
-import '../../utils/config.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class DoubtBoxScreen extends StatefulWidget {
   const DoubtBoxScreen({super.key});
@@ -16,341 +15,321 @@ class DoubtBoxScreen extends StatefulWidget {
   State<DoubtBoxScreen> createState() => _DoubtBoxScreenState();
 }
 
-class _DoubtBoxScreenState extends State<DoubtBoxScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabCtrl;
-  final _questionCtrl = TextEditingController();
-  final _subjectCtrl = TextEditingController();
-  String _selectedSubject = 'Mathematics';
+class _DoubtBoxScreenState extends State<DoubtBoxScreen> {
+  int _selectedTabIndex = 1;
+  final List<String> _tabs = ['Ask', 'My Doubts', 'Answered'];
+  final _formKey = GlobalKey<FormState>();
+  final _subjectController = TextEditingController();
+  final _questionController = TextEditingController();
   bool _isSubmitting = false;
-
-  final List<String> _subjects = [
-    'Mathematics', 'Science', 'Physics', 'Chemistry',
-    'Biology', 'English', 'Hindi', 'History', 'Geography', 'Computer Science',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
-  }
 
   @override
   void dispose() {
-    _tabCtrl.dispose();
-    _questionCtrl.dispose();
-    _subjectCtrl.dispose();
+    _subjectController.dispose();
+    _questionController.dispose();
     super.dispose();
-  }
-
-  Future<void> _submitDoubt() async {
-    if (_questionCtrl.text.trim().isEmpty) return;
-    final user = context.read<AuthProvider>().user;
-    setState(() => _isSubmitting = true);
-    try {
-      final docRef = await FirebaseFirestore.instance.collection('doubts').add({
-        'studentId': user?.uid,
-        'studentName': user?.name ?? 'Student',
-        'schoolId': user?.schoolId ?? '',
-        'classId': user?.classId ?? '',
-        'subject': _selectedSubject,
-        'question': _questionCtrl.text.trim(),
-        'status': 'pending',
-        'answer': '✨ Generating Best Answer for you...', // Temporary state
-        'answeredBy': 'EduTrack AI',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      
-      final questionText = _questionCtrl.text.trim();
-      _questionCtrl.clear();
-
-      // Trigger AI Best Answer asynchronously
-      _generateAIBestAnswer(docRef.id, questionText, _selectedSubject, user?.classId ?? 'Grade 10');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('✅ Doubt submitted! Teacher will answer soon.'),
-            backgroundColor: AppTheme.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-        _tabCtrl.animateTo(1);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.danger),
-        );
-      }
-    }
-    if (mounted) setState(() => _isSubmitting = false);
-  }
-
-  Future<void> _generateAIBestAnswer(String docId, String question, String subject, String grade) async {
-    try {
-      final res = await http.post(
-        Uri.parse(Config.endpoint('/generate-best-answer')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'question': question,
-          'subject': subject,
-          'grade': grade,
-        }),
-      ).timeout(const Duration(seconds: 40));
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
-          'answer': data['answer'],
-          'status': 'ai_answered',
-          'isAI': true,
-        });
-      } else {
-        await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
-          'answer': 'Teacher will provide the best answer soon.',
-          'answeredBy': null,
-        });
-      }
-    } catch (e) {
-      await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
-        'answer': 'Teacher will provide the best answer soon.',
-        'answeredBy': null,
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
+    final userId = context.read<AuthProvider>().user?.uid ?? '';
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 160,
-            pinned: true,
-            backgroundColor: const Color(0xFF7C3AED),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF7C3AED), Color(0xFF9F67FA)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: -30, right: -20,
-                      child: Icon(Icons.help_center_rounded,
-                          color: Colors.white.withOpacity(0.1), size: 180),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(24, 60, 24, 16),
+      appBar: AppBar(
+        title: const Text('Doubt Box'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _buildTabs(),
+              ),
+              Expanded(
+                child: _selectedTabIndex == 0
+                    ? _buildAskForm(userId)
+                    : StreamBuilder<List<DoubtModel>>(
+                  stream: MockDataService.instance.streamDoubts(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final doubts = snapshot.data ?? [];
+                    final filteredDoubts = doubts.where((d) {
+                      if (_selectedTabIndex == 1) return d.status == 'Pending'; // My Doubts = Pending only
+                      if (_selectedTabIndex == 2) return d.status == 'Answered';
+                      return true;
+                    }).toList();
+
+                    return SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Doubt Box', style: TextStyle(
-                            color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900,
-                          )),
-                          Text('Ask your teacher anything', style: TextStyle(color: Colors.white70)),
+                          if (filteredDoubts.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Center(child: Text('No doubts found.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold))),
+                            )
+                          else
+                            ...filteredDoubts.map((doubt) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _DoubtCard(
+                                  subject: doubt.subject,
+                                  question: doubt.question,
+                                  date: DateFormat('MMM dd, yyyy').format(doubt.createdAt),
+                                  status: doubt.status,
+                                  icon: _getIconForSubject(doubt.subject),
+                                  color: _getColorForSubject(doubt.subject),
+                                ),
+                              );
+                            }),
+                          const SizedBox(height: 100), // padding for bottom button
                         ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          // Only show floating button when NOT on Ask tab
+          if (_selectedTabIndex != 0)
+            Positioned(
+              bottom: 24,
+              left: 16,
+              right: 16,
+              child: ElevatedButton(
+                onPressed: () => setState(() => _selectedTabIndex = 0),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                child: const Text('+ Ask a Doubt', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAskForm(String userId) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Subject', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _subjectController,
+              decoration: const InputDecoration(hintText: 'e.g. Mathematics, Science...'),
+              validator: (v) => v == null || v.trim().isEmpty ? 'Enter a subject' : null,
+            ),
+            const SizedBox(height: 20),
+            const Text('Your Question', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _questionController,
+              maxLines: 5,
+              decoration: const InputDecoration(hintText: 'Describe your doubt in detail...'),
+              validator: (v) => v == null || v.trim().isEmpty ? 'Enter your question' : null,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : () async {
+                  if (!_formKey.currentState!.validate()) return;
+                  setState(() => _isSubmitting = true);
+                  
+                  try {
+                    final user = context.read<AuthProvider>().user;
+                    await FirebaseFirestore.instance.collection('doubts').add({
+                      'studentId': userId, // Matched with teacher panel
+                      'studentName': user?.name ?? 'Student',
+                      'classId': user?.classId ?? '',
+                      'schoolId': user?.schoolId ?? '',
+                      'subject': _subjectController.text.trim(),
+                      'question': _questionController.text.trim(),
+                      'status': 'pending', // Matched with teacher panel
+                      'createdAt': FieldValue.serverTimestamp(),
+                      'isAI': false,
+                    });
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Doubt submitted to teachers! ✅'), backgroundColor: Colors.green),
+                      );
+                      _subjectController.clear();
+                      _questionController.clear();
+                      setState(() { _isSubmitting = false; _selectedTabIndex = 1; });
+                    }
+                  } catch (e) {
+                    setState(() => _isSubmitting = false);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to submit doubt. Try again.')));
+                    }
+                  }
+                },
+                child: _isSubmitting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Submit Doubt'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabs() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: Row(
+        children: List.generate(_tabs.length, (index) {
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTabIndex = index),
+              child: _TabItem(_tabs[index], isSelected: _selectedTabIndex == index),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  IconData _getIconForSubject(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+      case 'math': return Icons.calculate;
+      case 'science': return Icons.science;
+      case 'english': return Icons.book;
+      case 'history': return Icons.history_edu;
+      case 'computer': return Icons.computer;
+      default: return Icons.help_outline;
+    }
+  }
+
+  Color _getColorForSubject(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+      case 'math': return Colors.blue;
+      case 'science': return Colors.green;
+      case 'english': return Colors.orange;
+      case 'history': return Colors.purple;
+      case 'computer': return Colors.teal;
+      default: return AppTheme.primary;
+    }
+  }
+}
+
+class _TabItem extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+
+  const _TabItem(this.label, {this.isSelected = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.primaryLight : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DoubtCard extends StatelessWidget {
+  final String subject;
+  final String question;
+  final String date;
+  final String status;
+  final IconData icon;
+  final Color color;
+
+  const _DoubtCard({
+    required this.subject,
+    required this.question,
+    required this.date,
+    required this.status,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPending = status == 'Pending';
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
+                    Text(
+                      status,
+                      style: TextStyle(
+                        color: isPending ? Colors.blue : Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-            bottom: TabBar(
-              controller: _tabCtrl,
-              indicatorColor: Colors.white,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white60,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w800),
-              tabs: const [
-                Tab(text: '❓ Ask Doubt'),
-                Tab(text: '📋 My Doubts'),
-              ],
-            ),
-          ),
-          SliverFillRemaining(
-            child: TabBarView(
-              controller: _tabCtrl,
-              children: [
-                _buildAskTab(),
-                _buildMyDoubtsTab(user?.uid ?? ''),
+                const SizedBox(height: 8),
+                Text(question, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                const SizedBox(height: 8),
+                Text(date, style: const TextStyle(color: AppTheme.textHint, fontSize: 12)),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAskTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          PremiumCard(
-            opacity: 1,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Subject', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _selectedSubject,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                  onChanged: (v) => setState(() => _selectedSubject = v!),
-                ),
-                const SizedBox(height: 16),
-                const Text('Your Question', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _questionCtrl,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    hintText: 'Describe your doubt in detail...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitDoubt,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7C3AED),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: _isSubmitting
-                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                        : const Text('Submit Doubt', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                  ),
-                ),
-              ],
-            ),
-          ).animate().fadeIn().scale(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMyDoubtsTab(String uid) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('doubts')
-          .where('studentId', isEqualTo: uid)
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-        final docs = snap.data!.docs;
-        if (docs.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.help_outline_rounded, size: 64, color: Colors.grey),
-                SizedBox(height: 12),
-                Text('No doubts yet!\nAsk your first question.', textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
-          itemBuilder: (context, i) {
-            final d = docs[i].data() as Map<String, dynamic>;
-            final isPending = d['status'] == 'pending';
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: PremiumCard(
-                opacity: 1,
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7C3AED).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(d['subject'] ?? '', style: const TextStyle(
-                              fontSize: 11, color: Color(0xFF7C3AED), fontWeight: FontWeight.w700)),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isPending ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(isPending ? '⏳ Pending' : '✅ Answered', style: TextStyle(
-                              fontSize: 11, color: isPending ? Colors.orange : Colors.green, fontWeight: FontWeight.w700)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(d['question'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                    if (!isPending && d['answer'] != null) ...[
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                        if (d['isAI'] == true)
-                          Row(
-                            children: [
-                              const Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 14),
-                              const SizedBox(width: 6),
-                              Text('BEST ANSWER (AI)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: 1)),
-                            ],
-                          ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
-                        const SizedBox(height: 8),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.school_rounded, color: AppTheme.primary, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(d['answer'] ?? '', style: const TextStyle(color: AppTheme.textSecondary, height: 1.5)),
-                            ),
-                          ],
-                        ),
-                      if (d['answeredBy'] != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text('— ${d['answeredBy']}', style: const TextStyle(
-                              fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w700)),
-                        ),
-                    ],
-                  ],
-                ),
-              ).animate().fadeIn(delay: (i * 80).ms),
-            );
-          },
-        );
-      },
     );
   }
 }

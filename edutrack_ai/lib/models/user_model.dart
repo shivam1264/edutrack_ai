@@ -12,11 +12,13 @@ class UserModel {
   final String? fcmToken;
   final String? avatarUrl;
   final String? classId;       // for students
+  final String? rollNo;        // for students: roll number
   final List<String>? assignedClasses; // for teachers: multiple hubs
   final List<String>? parentOf; // for parents: list of child student_ids
   final List<String>? subjects; // for teachers: list of assigned subjects
   final int xp;                // For gamification
   final int level;             // For gamification
+  final int streak;            // For gamification
   final List<String> badges;   // For gamification
 
   UserModel({
@@ -29,11 +31,13 @@ class UserModel {
     this.fcmToken,
     this.avatarUrl,
     this.classId,
+    this.rollNo,
     this.assignedClasses,
     this.parentOf,
     this.subjects,
     this.xp = 0,
     this.level = 1,
+    this.streak = 0,
     this.badges = const [],
   });
 
@@ -48,11 +52,13 @@ class UserModel {
       fcmToken: map['fcm_token'],
       avatarUrl: map['avatar_url'],
       classId: map['class_id'],
+      rollNo: map['roll_no'],
       assignedClasses: _parseAssignedClasses(map),
       parentOf: _parseParentOf(map['parent_of']),
       subjects: map['subjects'] != null ? List<String>.from(map['subjects']) : null,
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
+      streak: map['streak'] ?? 0,
       badges: List<String>.from(map['badges'] ?? []),
     );
   }
@@ -68,11 +74,13 @@ class UserModel {
       if (fcmToken != null) 'fcm_token': fcmToken,
       if (avatarUrl != null) 'avatar_url': avatarUrl,
       if (classId != null) 'class_id': classId,
+      if (rollNo != null) 'roll_no': rollNo,
       if (assignedClasses != null && assignedClasses!.isNotEmpty) 'assigned_classes': assignedClasses,
       if (parentOf != null && parentOf!.isNotEmpty) 'parent_of': parentOf,
       if (subjects != null && subjects!.isNotEmpty) 'subjects': subjects,
       'xp': xp,
       'level': level,
+      'streak': streak,
       'badges': badges,
     };
   }
@@ -122,6 +130,7 @@ class UserModel {
     String? fcmToken,
     String? avatarUrl,
     String? classId,
+    String? rollNo,
     List<String>? assignedClasses,
     List<String>? parentOf,
     int? xp,
@@ -138,6 +147,7 @@ class UserModel {
       fcmToken: fcmToken ?? this.fcmToken,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       classId: classId ?? this.classId,
+      rollNo: rollNo ?? this.rollNo,
       assignedClasses: assignedClasses ?? this.assignedClasses,
       parentOf: parentOf ?? this.parentOf,
       subjects: subjects ?? this.subjects,
