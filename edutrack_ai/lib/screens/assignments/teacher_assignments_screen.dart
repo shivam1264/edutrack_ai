@@ -93,10 +93,6 @@ class _TeacherAssignmentsScreenState extends State<TeacherAssignmentsScreen> wit
   }
 
   Widget _buildAssignmentCard(AssignmentModel a) {
-    // Mocking submission counts for UI fidelity
-    const total = 28;
-    final submitted = (a.title.length % 15) + 5; 
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -146,12 +142,24 @@ class _TeacherAssignmentsScreenState extends State<TeacherAssignmentsScreen> wit
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.people_outline_rounded, size: 14, color: AppTheme.textHint),
-                  const SizedBox(width: 4),
-                  Text('$submitted/$total Submitted', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-                ],
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('users').where('class_id', isEqualTo: widget.classId).where('role', isEqualTo: 'student').snapshots(),
+                builder: (context, totalSnap) {
+                  final total = totalSnap.data?.docs.length ?? 0;
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('submissions').where('assignment_id', isEqualTo: a.id).snapshots(),
+                    builder: (context, subSnap) {
+                      final submitted = subSnap.data?.docs.length ?? 0;
+                      return Row(
+                        children: [
+                          const Icon(Icons.people_outline_rounded, size: 14, color: AppTheme.textHint),
+                          const SizedBox(width: 4),
+                          Text('$submitted/$total Submitted', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                        ],
+                      );
+                    }
+                  );
+                }
               ),
               TextButton(
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SubmissionListScreen(assignment: a))),
