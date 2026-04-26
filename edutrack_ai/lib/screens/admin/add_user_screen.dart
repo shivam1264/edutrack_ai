@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../providers/auth_provider.dart';
@@ -32,6 +33,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   List<String> _selectedAssignedClasses = []; // for teachers
   List<String> _selectedSubjects = []; // for teachers
   final _parentOfController = TextEditingController();
+  String _searchQuery = ''; // For parent-child link display name
 
   bool _isLoading = false;
 
@@ -152,53 +154,35 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 20),
-                                if (_selectedRole == 'student' || _selectedRole == 'teacher')
-                                if (_selectedRole == 'student')
+                                if (_selectedRole == 'student') ...[
                                   StreamBuilder<List<ClassModel>>(
                                     stream: ClassService().getClasses(),
                                     builder: (context, snapshot) {
-                                      final allAvailableClasses = snapshot.data ?? [];
-                                      final user = context.read<AuthProvider>().user;
-                                      
-                                      // If teacher is adding, filter by their assigned classes
-                                      List<ClassModel> classes;
-                                      if (user?.role == UserRole.teacher) {
-                                        final assignedIds = user?.assignedClasses ?? (user?.classId != null ? [user!.classId!] : []);
-                                        classes = allAvailableClasses.where((c) => assignedIds.contains(c.id)).toList();
-                                      } else {
-                                        classes = allAvailableClasses;
-                                      }
-
+                                      final classes = snapshot.data ?? [];
                                       return DropdownButtonFormField<String>(
                                         value: _selectedClassId,
                                         isExpanded: true,
                                         decoration: InputDecoration(
                                           labelText: 'Assign Primary Class',
                                           prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
-                                          filled: true,
-                                          fillColor: AppTheme.bgLight,
+                                          filled: true, fillColor: AppTheme.bgLight,
                                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                                         ),
-                                        items: classes.map((c) => DropdownMenuItem<String>(
-                                          value: c.id, 
-                                          child: Text(c.displayName)
-                                        )).toList(),
-                                        hint: const Text('Select a standardized class'),
+                                        items: classes.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.displayName))).toList(),
                                         onChanged: (v) => setState(() => _selectedClassId = v),
                                         validator: (v) => v == null ? 'Class assignment required' : null,
                                       );
                                     },
                                   ),
-                                if (_selectedRole == 'student') ...[
                                   const SizedBox(height: 16),
                                   _buildTextField(
                                     controller: _rollNoController,
                                     label: 'Class Roll Number',
                                     icon: Icons.numbers_rounded,
-                                    keyboardType: TextInputType.text,
                                     validator: (v) => v!.isEmpty ? 'Roll number required' : null,
                                   ),
                                 ],
+
                                 if (_selectedRole == 'teacher')
                                   StreamBuilder<List<ClassModel>>(
                                     stream: ClassService().getClasses(),
@@ -207,90 +191,93 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                       return Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Text('ASSIGN MULTIPLE CLASSES', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                          const Text('ASSIGN CLASSES', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10)),
                                           const SizedBox(height: 12),
                                           Wrap(
                                             spacing: 8,
-                                            runSpacing: 8,
                                             children: classes.map((c) {
                                               final isSelected = _selectedAssignedClasses.contains(c.id);
                                               return FilterChip(
-                                                label: Text(c.displayName, style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontSize: 12, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500)),
+                                                label: Text(c.displayName),
                                                 selected: isSelected,
-                                                onSelected: (selected) {
+                                                onSelected: (val) {
                                                   setState(() {
-                                                    if (selected) {
-                                                      _selectedAssignedClasses.add(c.id);
-                                                    } else {
-                                                      _selectedAssignedClasses.remove(c.id);
-                                                    }
+                                                    if (val) _selectedAssignedClasses.add(c.id);
+                                                    else _selectedAssignedClasses.remove(c.id);
                                                   });
                                                 },
-                                                selectedColor: AppTheme.primary,
-                                                checkmarkColor: Colors.white,
-                                                backgroundColor: AppTheme.bgLight,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isSelected ? AppTheme.primary : AppTheme.borderLight)),
                                               );
                                             }).toList(),
                                           ),
-                                          if (_selectedAssignedClasses.isEmpty)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 8.0),
-                                              child: Text('At least one class must be assigned to faculty.', style: TextStyle(color: AppTheme.danger, fontSize: 11)),
-                                            ),
-                                          const SizedBox(height: 24),
-                                          const Text('ASSIGN SUBJECTS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
-                                          const SizedBox(height: 12),
-                                          Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
-                                            children: [
-                                              'Mathematics', 'Science', 'English', 'Hindi', 
-                                              'Social Studies', 'Computer Science', 'Physics', 
-                                              'Chemistry', 'Biology', 'History', 'Geography', 'Economics'
-                                            ].map((s) {
-                                              final isSelected = _selectedSubjects.contains(s);
-                                              return FilterChip(
-                                                label: Text(s, style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontSize: 12, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500)),
-                                                selected: isSelected,
-                                                onSelected: (selected) {
-                                                  setState(() {
-                                                    if (selected) {
-                                                      _selectedSubjects.add(s);
-                                                    } else {
-                                                      _selectedSubjects.remove(s);
-                                                    }
-                                                  });
-                                                },
-                                                selectedColor: AppTheme.secondary,
-                                                checkmarkColor: Colors.white,
-                                                backgroundColor: AppTheme.bgLight,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isSelected ? AppTheme.secondary : AppTheme.borderLight)),
-                                              );
-                                            }).toList(),
-                                          ),
-                                          if (_selectedSubjects.isEmpty)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 8.0),
-                                              child: Text('Please assign at least one subject.', style: TextStyle(color: AppTheme.danger, fontSize: 11)),
-                                            ),
                                         ],
                                       );
                                     },
                                   ),
-                                  if (_selectedRole == 'parent')
+
+                                if (_selectedRole == 'parent')
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        _buildTextField(
-                                          controller: _parentOfController,
-                                          label: "Children's Educational UIDs",
-                                          icon: Icons.child_care_rounded,
-                                          validator: (v) => v!.isEmpty ? 'At least one child link ID required' : null,
+                                        const Text('LINK CHILD ACCOUNT', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                        const SizedBox(height: 12),
+                                        StreamBuilder<List<ClassModel>>(
+                                          stream: ClassService().getClasses(),
+                                          builder: (context, snapshot) {
+                                            final classes = snapshot.data ?? [];
+                                            return DropdownButtonFormField<String>(
+                                              value: _selectedClassId, // Reuse or add new state
+                                              decoration: InputDecoration(
+                                                labelText: 'Student Class',
+                                                prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
+                                                filled: true, fillColor: AppTheme.bgLight,
+                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                                              ),
+                                              items: classes.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.displayName))).toList(),
+                                              onChanged: (v) => setState(() => _selectedClassId = v),
+                                            );
+                                          }
                                         ),
+                                        const SizedBox(height: 12),
+                                        _buildTextField(
+                                          controller: _rollNoController,
+                                          label: "Student Roll Number",
+                                          icon: Icons.numbers_rounded,
+                                          onChanged: (v) async {
+                                            if (v.length >= 1 && _selectedClassId != null) {
+                                              final snap = await FirebaseFirestore.instance.collection('users')
+                                                .where('role', isEqualTo: 'student')
+                                                .where('class_id', isEqualTo: _selectedClassId)
+                                                .where('roll_no', isEqualTo: v)
+                                                .get();
+                                              
+                                              if (snap.docs.isNotEmpty) {
+                                                setState(() {
+                                                  _parentOfController.text = snap.docs.first.id;
+                                                  _searchQuery = snap.docs.first.get('name'); // Reuse searchQuery for display
+                                                });
+                                              } else {
+                                                setState(() {
+                                                  _parentOfController.text = '';
+                                                  _searchQuery = '';
+                                                });
+                                              }
+                                            }
+                                          },
+                                        ),
+                                        if (_searchQuery.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 8.0, left: 4),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
+                                                const SizedBox(width: 4),
+                                                Text('Linked to: $_searchQuery', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                                              ],
+                                            ),
+                                          ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Separate multiple UIDs with commas (e.g., UID1, UID2)',
+                                          'System will automatically fetch UID using Class & Roll No.',
                                           style: TextStyle(color: AppTheme.textHint, fontSize: 10, fontStyle: FontStyle.italic),
                                         ),
                                       ],

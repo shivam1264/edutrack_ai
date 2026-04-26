@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/analytics_provider.dart';
 import '../../../services/attendance_service.dart';
+import '../../../services/analytics_service.dart';
+import '../../../services/class_service.dart';
+import '../../../models/class_model.dart';
 import '../../../widgets/premium_card.dart';
 import '../../../utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -40,11 +44,11 @@ class ParentHomeView extends StatelessWidget {
                 const SizedBox(height: 24),
                 _buildSectionHeader('Quick Access'),
                 const SizedBox(height: 16),
-                _buildQuickAccessGrid(context),
+                _buildQuickAccessGrid(context, childId),
                 const SizedBox(height: 24),
                 _buildSectionHeader('Recent Updates'),
                 const SizedBox(height: 12),
-                _buildUpdatesList(),
+                _buildUpdatesList(childId),
                 const SizedBox(height: 100),
               ]),
             ),
@@ -79,7 +83,7 @@ class ParentHomeView extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Text('Hello, Parent', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text('Hello, ${user?.name.split(' ').first ?? 'Parent'}', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                         const SizedBox(width: 8),
                         const Text('👋', style: TextStyle(fontSize: 20)),
                       ],
@@ -106,7 +110,7 @@ class ParentHomeView extends StatelessWidget {
         final data = snapshot.data?.data() as Map<String, dynamic>?;
         final name = data?['name'] ?? 'Select Child';
         final rollNo = data?['roll_no'] ?? 'N/A';
-        final className = data?['class_id'] ?? 'N/A';
+        final classId = data?['class_id'];
 
         return PremiumCard(
           padding: const EdgeInsets.all(16),
@@ -123,7 +127,16 @@ class ParentHomeView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                    Text('Grade $className • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                    if (classId != null) 
+                      StreamBuilder<ClassModel>(
+                        stream: ClassService().getClassById(classId),
+                        builder: (context, classSnap) {
+                          final className = classSnap.data?.displayName ?? 'Loading...';
+                          return Text('Grade $className • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 13));
+                        }
+                      )
+                    else
+                      Text('Grade N/A • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 13)),
                     const Text('EduTrack Primary Hub', style: TextStyle(color: Colors.grey, fontSize: 11)),
                   ],
                 ),
@@ -193,47 +206,62 @@ class ParentHomeView extends StatelessWidget {
   }
 
   Widget _buildStatsGlance(String? childId) {
-    return FutureBuilder(
-      future: childId != null ? AttendanceService().getAttendanceStats(childId) : null,
-      builder: (context, snapshot) {
-        final attendanceVal = snapshot.hasData ? "${snapshot.data!.percentage.toInt()}%" : "85%";
+    return Consumer<AnalyticsProvider>(
+      builder: (context, analytics, _) {
+        final data = analytics.studentAnalytics;
+        final avgScore = data != null ? "${(data['avg_score'] as double).toInt()}%" : "N/A";
         
-        final stats = [
-          {'label': 'Attendance', 'val': attendanceVal, 'sub': 'Present', 'icon': Icons.calendar_today_rounded, 'color': Colors.blue},
-          {'label': 'Avg Score', 'val': '85%', 'sub': 'Good', 'icon': Icons.star_rounded, 'color': Colors.amber},
-          {'label': 'Class Rank', 'val': '8 / 32', 'sub': 'Top 25%', 'icon': Icons.emoji_events_rounded, 'color': Colors.purple},
-        ];
+        return FutureBuilder<Map<String, dynamic>?>(
+          future: childId != null ? AnalyticsService.instance.getStudentRank(childId, data?['class_id'] ?? '') : null,
+          builder: (context, rankSnap) {
+            final rankData = rankSnap.data;
+            final rankStr = rankData != null ? "${rankData['rank']} / ${rankData['total']}" : "N/A";
 
-        return Row(
-          children: stats.map((s) => Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: PremiumCard(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Icon(s['icon'] as IconData, color: s['color'] as Color, size: 20),
-                    const SizedBox(height: 8),
-                    Text(s['val'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-                    Text(s['label'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-                    Text(s['sub'] as String, style: TextStyle(fontSize: 9, color: s['color'] as Color, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-          )).toList(),
+            return FutureBuilder(
+              future: childId != null ? AttendanceService().getAttendanceStats(childId) : null,
+              builder: (context, attendanceSnap) {
+                final attendanceVal = attendanceSnap.hasData ? "${attendanceSnap.data!.percentage.toInt()}%" : "N/A";
+                
+                final stats = [
+                  {'label': 'Attendance', 'val': attendanceVal, 'sub': 'Present', 'icon': Icons.calendar_today_rounded, 'color': Colors.blue},
+                  {'label': 'Avg Score', 'val': avgScore, 'sub': 'Academic', 'icon': Icons.star_rounded, 'color': Colors.amber},
+                  {'label': 'Class Rank', 'val': rankStr, 'sub': 'Performance', 'icon': Icons.emoji_events_rounded, 'color': Colors.purple},
+                ];
+
+                return Row(
+                  children: stats.map((s) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: PremiumCard(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            Icon(s['icon'] as IconData, color: s['color'] as Color, size: 20),
+                            const SizedBox(height: 8),
+                            Text(s['val'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                            Text(s['label'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                            Text(s['sub'] as String, style: TextStyle(fontSize: 9, color: s['color'] as Color, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )).toList(),
+                );
+              }
+            );
+          }
         );
       }
     );
   }
 
-  Widget _buildQuickAccessGrid(BuildContext context) {
+  Widget _buildQuickAccessGrid(BuildContext context, String? childId) {
     final tools = [
-      {'label': 'Wellness', 'icon': Icons.favorite_rounded, 'color': Colors.teal, 'screen': const ParentWellnessScreen()},
-      {'label': 'Academics', 'icon': Icons.school_rounded, 'color': Colors.indigo, 'screen': const ParentAcademicsScreen()},
-      {'label': 'Assignments', 'icon': Icons.assignment_rounded, 'color': Colors.orange, 'screen': const ParentAssignmentsScreen()},
-      {'label': 'Attendance', 'icon': Icons.event_available_rounded, 'color': Colors.blue, 'screen': const ParentAttendanceScreen()},
-      {'label': 'AI Insights', 'icon': Icons.auto_awesome_rounded, 'color': Colors.purple, 'screen': const ParentWellnessScreen()},
+      {'label': 'Wellness', 'icon': Icons.favorite_rounded, 'color': Colors.teal, 'screen': ParentWellnessScreen(studentId: childId)},
+      {'label': 'Academics', 'icon': Icons.school_rounded, 'color': Colors.indigo, 'screen': ParentAcademicsScreen(studentId: childId)},
+      {'label': 'Assignments', 'icon': Icons.assignment_rounded, 'color': Colors.orange, 'screen': ParentAttendanceScreen(studentId: childId)},
+      {'label': 'Attendance', 'icon': Icons.event_available_rounded, 'color': Colors.blue, 'screen': ParentAttendanceScreen(studentId: childId)},
+      {'label': 'AI Insights', 'icon': Icons.auto_awesome_rounded, 'color': Colors.purple, 'screen': ParentWellnessScreen(studentId: childId)},
     ];
 
     return SizedBox(
@@ -260,35 +288,80 @@ class ParentHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildUpdatesList() {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: 2,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) => PremiumCard(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.campaign_rounded, color: Colors.orange, size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('School Notice', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text('Annual Sports Day on April 30.', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                ],
-              ),
-            ),
-            const Text('2h ago', style: TextStyle(color: Colors.grey, fontSize: 10)),
-          ],
-        ),
-      ),
+  Widget _buildUpdatesList(String? childId) {
+    return FutureBuilder<DocumentSnapshot>(
+      future: childId != null ? FirebaseFirestore.instance.collection('users').doc(childId).get() : null,
+      builder: (context, studentSnap) {
+        final classId = (studentSnap.data?.data() as Map<String, dynamic>?)?['class_id'];
+        
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('announcements')
+              .where('class_id', isEqualTo: classId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Text('No recent updates.', style: TextStyle(color: Colors.grey, fontSize: 12)));
+            }
+
+            // Sort locally to avoid needing a composite index
+            final docs = snapshot.data!.docs.toList();
+            docs.sort((a, b) {
+              final aTime = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+              final bTime = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+              return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+            });
+
+            final recentDocs = docs.take(5).toList();
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: recentDocs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) {
+                final doc = recentDocs[i];
+                final data = doc.data() as Map<String, dynamic>;
+                final title = data['title'] ?? 'Announcement';
+                final content = data['content'] ?? '';
+                final timestamp = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+                final timeAgo = _getTimeAgo(timestamp);
+
+                return PremiumCard(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.campaign_rounded, color: Colors.orange, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(content, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                    ],
+                  ),
+                );
+              }
+            );
+          }
+        );
+      }
     );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inDays > 0) return '${difference.inDays}d ago';
+    if (difference.inHours > 0) return '${difference.inHours}h ago';
+    if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
+    return 'Just now';
   }
 }

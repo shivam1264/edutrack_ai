@@ -9,9 +9,15 @@ import '../../widgets/premium_card.dart';
 import '../../utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-class ParentAttendanceScreen extends StatelessWidget {
-  const ParentAttendanceScreen({super.key});
+class ParentAttendanceScreen extends StatefulWidget {
+  final String? studentId;
+  const ParentAttendanceScreen({super.key, this.studentId});
 
+  @override
+  State<ParentAttendanceScreen> createState() => _ParentAttendanceScreenState();
+}
+
+class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,7 +59,9 @@ class ParentAttendanceScreen extends StatelessWidget {
 
   Widget _buildOverviewTab(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : 'STU001';
+    final childId = widget.studentId ?? ((user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '');
+
+    if (childId.isEmpty) return const Center(child: Text('No student linked'));
 
     return FutureBuilder<AttendanceStats>(
       future: AttendanceService().getAttendanceStats(childId),

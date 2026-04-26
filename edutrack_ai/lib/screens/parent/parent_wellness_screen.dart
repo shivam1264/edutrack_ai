@@ -5,7 +5,8 @@ import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ParentWellnessScreen extends StatelessWidget {
-  const ParentWellnessScreen({super.key});
+  final String? studentId;
+  const ParentWellnessScreen({super.key, this.studentId});
 
   @override
   Widget build(BuildContext context) {
