@@ -107,7 +107,8 @@ class CloudinaryService {
   String _getResourceType(String mimeType) {
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
-    return 'raw'; // pdf, doc, etc.
+    if (mimeType == 'application/pdf') return 'image'; // Cloudinary handles PDFs as 'image' type documents
+    return 'raw'; // doc, ppt, etc.
   }
 }
 
