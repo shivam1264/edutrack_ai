@@ -32,22 +32,52 @@ def log_request_info():
     if request.is_json:
         print(f"    Payload: {request.get_json()}")
 
-# ─── Gemini Setup (FREE API) ──────────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    print(f"✅ Gemini configured with key: {GEMINI_API_KEY[:8]}...")
-else:
-    print("❌ ERROR: GEMINI_API_KEY not found in environment!")
+# ─── Groq Setup (NEW HIGH-SPEED AI) ───────────────────────────────────────────
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+GROQ_TEXT_MODEL = "llama-3.1-70b-versatile"
+GROQ_VISION_MODEL = "llama-3.2-11b-vision-preview"
 
-gemini_model = None
-if GEMINI_API_KEY:
+def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None):
+    if not GROQ_API_KEY:
+        return "AI Error: API Key missing."
+    
     try:
-        # Using gemini-flash-latest (sometimes more available than Pro in free tier)
-        gemini_model = genai.GenerativeModel('gemini-flash-latest')
-        print("✅ Gemini Model Linked: gemini-flash-latest")
+        model = GROQ_VISION_MODEL if image_data else GROQ_TEXT_MODEL
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        content_parts = [{"type": "text", "text": prompt}]
+        if image_data:
+            # image_data is expected as base64 string
+            content_parts.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}
+            })
+
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": content_parts}
+            ],
+            "temperature": 0.5,
+            "max_tokens": 2048
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=25)
+        response.raise_for_status()
+        return response.json()['choices'][0]['message']['content']
     except Exception as e:
-        print(f"❌ Error linking model: {e}")
+        print(f"❌ Groq Error: {e}")
+        return f"AI Error: {str(e)}"
+
+if GROQ_API_KEY:
+    print(f"✅ Groq configured with key: {GROQ_API_KEY[:8]}...")
+else:
+    print("❌ ERROR: GROQ_API_KEY not found in environment!")
 
 # ─── Simple in-memory rate limiter ────────────────────────────────────────────
 _rate_store = defaultdict(list)
@@ -66,22 +96,21 @@ def check_rate_limit(student_id: str) -> bool:
 # ─── Health check + Gemini Test ─────────────────────────────────────────────
 @app.route('/health', methods=['GET'])
 def health():
-    ai_status = 'ok' if gemini_model else 'missing_key'
+    ai_status = 'ok' if GROQ_API_KEY else 'missing_key'
     return jsonify({
         'status': 'ok',
         'ai_status': ai_status,
+        'engine': 'groq-llama3',
         'timestamp': datetime.utcnow().isoformat()
     })
 
 @app.route('/test-ai', methods=['GET'])
 def test_ai():
-    print("\n[TEST] Manual Gemini connection test...")
-    if not gemini_model:
-        return jsonify({'error': 'Gemini model not initialized'}), 500
+    print("\n[TEST] Manual Groq connection test...")
     try:
-        response = gemini_model.generate_content("Say 'AI is working!'")
-        print(f"    [AI Response] {response.text}")
-        return jsonify({'status': 'linked', 'ai_response': response.text})
+        response_text = generate_with_groq("Say 'Groq AI is working!'")
+        print(f"    [AI Response] {response_text}")
+        return jsonify({'status': 'linked', 'ai_response': response_text, 'model': GROQ_MODEL})
     except Exception as e:
         print(f"    [AI Error] {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -137,10 +166,10 @@ def generate_smart_schedule():
     )
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
         return jsonify({
-            'schedule': response.text,
-            'generated_by': 'gemini'
+            'schedule': response_text,
+            'generated_by': 'groq-llama3'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -183,22 +212,16 @@ def homework_help():
             "If the student asks a question, guide them step-by-step."
         )
 
-        content_payload = [f"{system_instruction}\n\nStudent Question: {question}"]
-        
-        if image_data:
-            try:
-                # Decode base64 to image
-                img_bytes = base64.b64decode(image_data)
-                img = Image.open(io.BytesIO(img_bytes))
-                content_payload.append(img)
-            except Exception as img_err:
-                print(f"    [IMG ERROR] {img_err}")
-
-        response = gemini_model.generate_content(content_payload)
+    try:
+        response_text = generate_with_groq(
+            f"Student Question: {question}", 
+            system_instruction=system_instruction,
+            image_data=image_data
+        )
         print(f"    [AI Response] Success")
         return jsonify({
-            'answer': response.text,
-            'generated_by': 'gemini'
+            'answer': response_text,
+            'generated_by': 'groq-llama3'
         })
     except Exception as e:
         print(f"    [AI Error] {str(e)}")
@@ -234,8 +257,8 @@ def generate_study_plan():
             f"Upcoming deadlines: {upcoming_deadlines if upcoming_deadlines else 'None immediately'}. "
             f"Provide a structured, encouraging plan in Markdown."
         )
-        response = gemini_model.generate_content(prompt)
-        return jsonify({'plan': response.text})
+        response_text = generate_with_groq(prompt)
+        return jsonify({'plan': response_text})
     except Exception as e:
         return jsonify({'plan': f"Error: {str(e)}"})
 
@@ -264,9 +287,9 @@ def generate_quiz():
     )
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
         # Strip potential markdown code blocks
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        clean_json = response_text.replace('```json', '').replace('```', '').strip()
         return jsonify(json.loads(clean_json))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -318,8 +341,8 @@ def generate_flashcards():
     )
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\nContent:\n{content}")
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        response_text = generate_with_groq(f"Content:\n{content}", system_instruction=system_instruction)
+        clean_json = response_text.replace('```json', '').replace('```', '').strip()
         flashcards = json.loads(clean_json)
         return jsonify({'flashcards': flashcards})
     except Exception as e:
@@ -372,8 +395,8 @@ def generate_mindmap():
     )
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\nContent:\n{content}")
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        response_text = generate_with_groq(f"Content:\n{content}", system_instruction=system_instruction)
+        clean_json = response_text.replace('```json', '').replace('```', '').strip()
         mindmap_data = json.loads(clean_json)
         return jsonify({'mindmap': mindmap_data})
     except Exception as e:
@@ -396,8 +419,8 @@ def check_originality():
     )
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\nContent: {content}")
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        response_text = generate_with_groq(f"Content: {content}", system_instruction=system_instruction)
+        clean_json = response_text.replace('```json', '').replace('```', '').strip()
         return jsonify(json.loads(clean_json))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -420,8 +443,8 @@ def detect_burnout():
     prompt = f"Student: {student_name}, Study Hours: {study_hours}/day, Active Late Night: {late_night_activity}, Grades Dropping: {drop_in_scores}."
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
+        clean_json = response_text.replace('```json', '').replace('```', '').strip()
         return jsonify(json.loads(clean_json))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -467,8 +490,12 @@ def ai_viva():
     contents_to_generate.append(formatted_prompt)
     
     try:
-        response = gemini_model.generate_content(contents_to_generate)
-        reply_text = response.text.strip()
+        response_text = generate_with_groq(
+            formatted_prompt, 
+            system_instruction=system_instruction,
+            image_data=audio_b64 if audio_b64 else None # Groq doesn't support raw audio yet, but we'll try vision if it was an image-based question
+        )
+        reply_text = response_text.strip()
         
         resp_data = {'reply': reply_text}
         
@@ -502,10 +529,10 @@ def parent_report():
     prompt = f"Student: {student_name}. Data: {stats}. Write a 100-word summary."
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
-        return jsonify({'report': response.text})
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
+        return jsonify({'report': response_text})
     except Exception as e:
-        return jsonify({'report': f"Report generation failed: Check API Quota."})
+        return jsonify({'report': f"Report generation failed: {str(e)}"})
 
 # ─── Unified Wellness (Optimization) ───────────────────────────────────────
 @app.route('/get-unified-wellness', methods=['POST'])
@@ -524,9 +551,9 @@ def get_unified_wellness():
     prompt = f"Student: {student_name}. Stats Data: {stats}. Perform analysis."
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\n{prompt}")
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
         # Clean potential markdown
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        clean_json = response_text.replace('```json', '').replace('```', '').strip()
         result = json.loads(clean_json)
         return jsonify(result)
     except Exception as e:
@@ -554,8 +581,8 @@ def parent_chat():
     )
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\nParent Question: {query}")
-        return jsonify({'answer': response.text})
+        response_text = generate_with_groq(f"Parent Question: {query}", system_instruction=system_instruction)
+        return jsonify({'answer': response_text})
     except Exception as e:
         return jsonify({'answer': f"Connectivity issue: {str(e)}"})
 
@@ -575,12 +602,12 @@ def analyze_leave_doc():
     )
     
     try:
-        # Decode base64 to image
-        img_bytes = base64.b64decode(image_data)
-        img = Image.open(io.BytesIO(img_bytes))
-        
-        response = gemini_model.generate_content([system_instruction, img])
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        response_text = generate_with_groq(
+            "Extract leave information from this document image.", 
+            system_instruction=system_instruction,
+            image_data=image_data
+        )
+        clean_json = response_text.replace('```json', '').replace('```', '').strip()
         return jsonify(json.loads(clean_json))
     except Exception as e:
         print(f"    [LEAVE AI ERROR] {str(e)}")
@@ -616,8 +643,8 @@ Include these sections:
 
 Format clearly with emojis for each section. Keep it practical and engaging."""
 
-        response = gemini_model.generate_content(prompt)
-        return jsonify({'plan': response.text, 'subject': subject, 'topic': topic})
+        response_text = generate_with_groq(prompt)
+        return jsonify({'plan': response_text, 'subject': subject, 'topic': topic})
     except Exception as e:
         print(f"    [LESSON PLAN ERROR] {str(e)}")
         # Return offline template
@@ -686,8 +713,8 @@ Format clearly:
 
 Keep it warm, professional, and visually appealing with emojis. Do not output markdown codeblocks around the text."""
 
-        response = gemini_model.generate_content(prompt)
-        return jsonify({'report': response.text, 'student': student_name, 'month': month})
+        response_text = generate_with_groq(prompt)
+        return jsonify({'report': response_text, 'student': student_name, 'month': month})
     except Exception as e:
         print(f"    [MONTHLY REPORT ERROR] {str(e)}")
         fallback = f"""📄 MONTHLY PROGRESS REPORT: {student_name} ({month})
@@ -734,10 +761,10 @@ def generate_best_answer():
     )
     
     try:
-        response = gemini_model.generate_content(f"{system_instruction}\n\nQuestion: {question}")
+        response_text = generate_with_groq(f"Question: {question}", system_instruction=system_instruction)
         return jsonify({
-            'answer': response.text.strip(),
-            'model': 'gemini-high-intent'
+            'answer': response_text.strip(),
+            'model': 'groq-llama3-high-intent'
         })
     except Exception as e:
         print(f"    [BEST-ANSWER ERROR] {str(e)}")

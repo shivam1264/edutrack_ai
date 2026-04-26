@@ -7,7 +7,8 @@ class AIService {
   AIService._internal();
 
   // API Keys
-  static const String _groqKey = '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';
+  static const String _groqKey = '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'; 
+  // IMPORTANT: For production, move this to a secure backend or encrypted local storage.
   
   static const List<String> _geminiKeys = [
     'AIzaSyCrZqo2GTpHxTHmNdE6OspuJPLIOHsGwaA',
