@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../../../providers/analytics_provider.dart';
 import '../../../utils/app_theme.dart';
 import '../../../widgets/premium_card.dart';
+import '../../../services/analytics_service.dart';
 
 class TeacherReportsView extends StatelessWidget {
-  const TeacherReportsView({super.key});
+  final String? selectedClassId;
+  const TeacherReportsView({super.key, this.selectedClassId});
 
   @override
   Widget build(BuildContext context) {
@@ -118,45 +121,42 @@ class TeacherReportsView extends StatelessWidget {
           const SizedBox(height: 24),
           SizedBox(
             height: 180,
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                        if (value.toInt() < months.length) {
-                          return Text(months[value.toInt()], style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary));
-                        }
-                        return const SizedBox.shrink();
-                      },
+            child: FutureBuilder<List<double>>(
+              future: AnalyticsService.instance.getClassPerformanceTrend(selectedClassId ?? ''),
+              builder: (context, snapshot) {
+                final trend = snapshot.data ?? [60, 55, 65, 75, 72, 80, 82]; // Fallback visuals
+                return LineChart(
+                  LineChartData(
+                    gridData: const FlGridData(show: false),
+                    titlesData: FlTitlesData(
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            final now = DateTime.now();
+                            final date = now.subtract(Duration(days: 6 - value.toInt()));
+                            return Text(DateFormat('dd').format(date), style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary));
+                          },
+                        ),
+                      ),
+                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
-                  ),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: [
-                      const FlSpot(0, 60),
-                      const FlSpot(1, 55),
-                      const FlSpot(2, 65),
-                      const FlSpot(3, 75),
-                      const FlSpot(4, 72),
-                      const FlSpot(5, 80),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: trend.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                        isCurved: true,
+                        color: AppTheme.secondary,
+                        barWidth: 3,
+                        dotData: const FlDotData(show: true),
+                        belowBarData: BarAreaData(show: true, color: AppTheme.secondary.withOpacity(0.1)),
+                      ),
                     ],
-                    isCurved: true,
-                    color: AppTheme.secondary,
-                    barWidth: 3,
-                    dotData: const FlDotData(show: true),
-                    belowBarData: BarAreaData(show: true, color: AppTheme.secondary.withOpacity(0.1)),
                   ),
-                ],
-              ),
+                );
+              }
             ),
           ),
         ],

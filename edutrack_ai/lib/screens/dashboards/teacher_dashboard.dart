@@ -55,7 +55,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           TeacherHomeView(selectedClassId: _selectedClassId, currentClassName: currentClassName),
           TeacherClassroomView(selectedClassId: _selectedClassId, currentClassName: currentClassName),
           TeacherStudentsView(selectedClassId: _selectedClassId),
-          const TeacherReportsView(),
+          TeacherReportsView(selectedClassId: _selectedClassId),
           const TeacherMoreView(),
         ];
 

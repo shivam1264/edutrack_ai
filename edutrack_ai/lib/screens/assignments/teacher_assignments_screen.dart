@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../models/assignment_model.dart';
 import '../../services/assignment_service.dart';
 import '../../utils/app_theme.dart';
@@ -127,7 +128,7 @@ class _TeacherAssignmentsScreenState extends State<TeacherAssignmentsScreen> wit
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Due: ${a.dueDate.day}/${a.dueDate.month}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
+                  Text('Due: ${DateFormat('dd MMM').format(a.dueDate)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

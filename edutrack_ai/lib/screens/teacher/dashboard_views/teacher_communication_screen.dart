@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../utils/app_theme.dart';
 import '../doubt_answer_screen.dart';
 import '../leave_approval_screen.dart';
@@ -27,34 +28,52 @@ class TeacherCommunicationScreen extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 24),
-          _buildCommAction(
-            context,
-            'Announcements',
-            'Send updates to students',
-            Icons.campaign_rounded,
-            const Color(0xFF3B82F6),
-            5,
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAnnouncementsScreen(classId: classId))),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('announcements').where('class_id', isEqualTo: classId).snapshots(),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.docs.length ?? 0;
+              return _buildCommAction(
+                context,
+                'Announcements',
+                'Send updates to students',
+                Icons.campaign_rounded,
+                const Color(0xFF3B82F6),
+                count,
+                () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAnnouncementsScreen(classId: classId))),
+              );
+            }
           ),
           const SizedBox(height: 16),
-          _buildCommAction(
-            context,
-            'Student Doubts',
-            'View and respond to doubts',
-            Icons.help_center_rounded,
-            const Color(0xFF8B5CF6),
-            12,
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DoubtAnswerScreen())),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('doubts').where('class_id', isEqualTo: classId).where('status', isEqualTo: 'pending').snapshots(),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.docs.length ?? 0;
+              return _buildCommAction(
+                context,
+                'Student Doubts',
+                'View and respond to doubts',
+                Icons.help_center_rounded,
+                const Color(0xFF8B5CF6),
+                count,
+                () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DoubtAnswerScreen())),
+              );
+            }
           ),
           const SizedBox(height: 16),
-          _buildCommAction(
-            context,
-            'Leave Requests',
-            'Manage leave approvals',
-            Icons.calendar_today_rounded,
-            const Color(0xFF10B981),
-            3,
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => LeaveApprovalScreen(classId: classId))),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('leave_requests').where('class_id', isEqualTo: classId).where('status', isEqualTo: 'pending').snapshots(),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.docs.length ?? 0;
+              return _buildCommAction(
+                context,
+                'Leave Requests',
+                'Manage leave approvals',
+                Icons.calendar_today_rounded,
+                const Color(0xFF10B981),
+                count,
+                () => Navigator.push(context, MaterialPageRoute(builder: (_) => LeaveApprovalScreen(classId: classId))),
+              );
+            }
           ),
         ],
       ),
