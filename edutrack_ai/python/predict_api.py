@@ -34,7 +34,7 @@ def log_request_info():
 
 # ─── Groq Setup (NEW HIGH-SPEED AI) ───────────────────────────────────────────
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
-GROQ_TEXT_MODEL = "llama-3.1-70b-versatile"
+GROQ_TEXT_MODEL = "llama-3.3-70b-versatile"
 GROQ_VISION_MODEL = "llama-3.2-11b-vision-preview"
 
 def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None):

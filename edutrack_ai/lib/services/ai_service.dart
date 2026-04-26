@@ -107,7 +107,7 @@ Generate 5 to 10 flashcards maximum. Keep answers concise.
         'Authorization': 'Bearer $_groqKey',
       },
       body: jsonEncode({
-        "model": "llama-3.1-70b-versatile",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
           {"role": "system", "content": system},
           {"role": "user", "content": user}
