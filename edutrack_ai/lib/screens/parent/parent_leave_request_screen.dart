@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/leave_service.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/premium_card.dart';
 import 'package:intl/intl.dart';
 
@@ -98,13 +99,24 @@ class _ParentLeaveRequestScreenState extends State<ParentLeaveRequestScreen> {
     setState(() => _isLoading = true);
     try {
       final user = context.read<AuthProvider>().user;
-      // For now we assume first child. In real case, parent switches child.
-      final studentId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : 'STU001';
+      final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '';
+
+      if (childId.isEmpty) {
+        throw 'No student linked to this parent account';
+      }
+
+      // Fetch child's classId
+      final studentSnap = await FirebaseFirestore.instance.collection('users').doc(childId).get();
+      final classId = (studentSnap.data() as Map<String, dynamic>?)?['class_id'] ?? '';
+
+      if (classId.isEmpty) {
+        throw 'Student is not assigned to any class';
+      }
       
       await LeaveService().submitLeaveRequest(
-        studentId: studentId,
+        studentId: childId,
         parentId: user?.uid ?? '',
-        classId: 'CLASS001', // Should come from child model
+        classId: classId,
         startDate: _fromDate!,
         endDate: _toDate!,
         reason: _reasonCtrl.text.trim(),

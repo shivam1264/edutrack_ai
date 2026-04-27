@@ -25,10 +25,14 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
       final user = context.read<AuthProvider>().user;
       await FirebaseFirestore.instance.collection('announcements').add({
         'class_id': widget.classId,
-        'message': _msgCtrl.text.trim(),
+        'title': 'Class Announcement',
+        'content': _msgCtrl.text.trim(),
         'teacher_id': user?.uid,
         'teacher_name': user?.name ?? 'Teacher',
-        'created_at': FieldValue.serverTimestamp(),
+        'type': 'announcement',
+        'category': 'Class',
+        'priority': 'Medium',
+        'createdAt': FieldValue.serverTimestamp(),
       });
       
       _msgCtrl.clear();
@@ -69,8 +73,8 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
                 // In-memory sorting to avoid composite index requirements
                 final sortedDocs = docs.toList();
                 sortedDocs.sort((a, b) {
-                  final aTime = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-                  final bTime = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+                  final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                  final bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
                   return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
                 });
 
@@ -94,7 +98,7 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Text(d['message'] ?? '', style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
+                          Text(d['content'] ?? '', style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
                         ],
                       ),
                     );

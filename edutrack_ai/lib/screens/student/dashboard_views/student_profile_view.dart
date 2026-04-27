@@ -85,10 +85,13 @@ class StudentProfileView extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.white,
-                    child: Text(
-                      user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'S',
-                      style: const TextStyle(color: AppTheme.primary, fontSize: 36, fontWeight: FontWeight.w900),
-                    ),
+                    backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                    child: user?.avatarUrl == null
+                      ? Text(
+                          user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'S',
+                          style: const TextStyle(color: AppTheme.primary, fontSize: 36, fontWeight: FontWeight.w900),
+                        )
+                      : null,
                   ),
                 ),
                 const SizedBox(width: 20),

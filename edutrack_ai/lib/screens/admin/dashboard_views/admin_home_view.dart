@@ -95,11 +95,11 @@ class AdminHomeView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.history_toggle_off_rounded, size: 20, color: AppTheme.textHint),
-                    SizedBox(width: 8),
-                    Text('Administrative Logs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                    const Icon(Icons.history_toggle_off_rounded, size: 20, color: Color(0xFF94A3B8)),
+                    const SizedBox(width: 8),
+                    Text('Administrative Logs', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -114,37 +114,63 @@ class AdminHomeView extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context, user) {
     return SliverAppBar(
-      expandedHeight: 140,
+      expandedHeight: 180,
       pinned: true,
       backgroundColor: const Color(0xFF0F172A),
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft, end: Alignment.bottomRight,
-              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+                ),
+              ),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Admin Dashboard', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                Text('Welcome back, ${user?.name ?? "Principal"}', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
-              ],
+            Positioned(
+              top: -20, right: -20,
+              child: Icon(Icons.shield_rounded, color: const Color(0xFF6366F1).withOpacity(0.05), size: 220),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('SCHOOL ADMINISTRATOR', style: TextStyle(color: Color(0xFF6366F1), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                  const SizedBox(height: 2),
+                  const Text('Elite Dashboard', style: TextStyle(color: Color(0xFF0F172A), fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1)),
+                  const SizedBox(height: 4),
+                  const Text('Real-time system oversight and metrics', style: TextStyle(color: Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-          onPressed: () {},
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.05), shape: BoxShape.circle),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0F172A),
+                backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                child: user?.avatarUrl == null 
+                  ? const Icon(Icons.person_outline, color: Color(0xFF0F172A), size: 20)
+                  : null,
+              ),
+            ),
+          ),
         ),
-        const SizedBox(width: 8),
       ],
     );
   }
@@ -154,62 +180,57 @@ class AdminHomeView extends StatelessWidget {
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AIRiskReportScreen())),
       child: PremiumCard(
         opacity: 1,
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [Colors.redAccent.withOpacity(0.1), Colors.orange.withOpacity(0.05)],
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFF43F5E)]),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
             ),
-          ),
-          padding: const EdgeInsets.all(4),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(Icons.gpp_maybe_rounded, color: Colors.redAccent),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('AI BEHAVIORAL SENTINEL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: Color(0xFFEF4444))),
+                  const SizedBox(height: 2),
+                  Text('Analyzing behavioral patterns for 424 students...', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                ],
               ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('AI RISK SENTINEL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: Colors.redAccent)),
-                    Text('Analyzing behavioral patterns...', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
+          ],
         ),
       ),
-    ).animate().fadeIn().slideY(begin: 0.1);
+    ).animate(onPlay: (controller) => controller.repeat(reverse: true)).shimmer(duration: 2.seconds, color: Colors.white.withOpacity(0.1));
   }
 
   Widget _buildAdminActions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Text('Administrative Hub', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Text('Administrative Center', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -0.5)),
         ),
-        const SizedBox(height: 12),
         SizedBox(
-          height: 110,
+          height: 120,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             physics: const BouncingScrollPhysics(),
             children: [
-              _ActionTile(label: 'Add Student', icon: Icons.person_add_rounded, color: Colors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddStudentScreen()))),
-              _ActionTile(label: 'Add Teacher', icon: Icons.school_rounded, color: Colors.purple, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddTeacherScreen()))),
-              _ActionTile(label: 'Add Parent', icon: Icons.family_restroom_rounded, color: Colors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddParentScreen()))),
-              _ActionTile(label: 'Add Admin', icon: Icons.admin_panel_settings_rounded, color: Colors.indigo, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddAdminScreen()))),
-              _ActionTile(label: 'Manage Unit', icon: Icons.hub_rounded, color: Colors.amber, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagementScreen()))),
-              _ActionTile(label: 'Broadcast', icon: Icons.send_rounded, color: Colors.orange, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementScreen()))),
+              _ActionTile(label: 'Add Student', icon: Icons.person_add_rounded, color: const Color(0xFF3B82F6), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddStudentScreen()))),
+              _ActionTile(label: 'Add Teacher', icon: Icons.school_rounded, color: const Color(0xFF8B5CF6), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddTeacherScreen()))),
+              _ActionTile(label: 'Add Parent', icon: Icons.family_restroom_rounded, color: const Color(0xFF10B981), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddParentScreen()))),
+              _ActionTile(label: 'Add Admin', icon: Icons.admin_panel_settings_rounded, color: const Color(0xFF6366F1), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddAdminScreen()))),
+              _ActionTile(label: 'Units', icon: Icons.hub_rounded, color: const Color(0xFFF59E0B), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagementScreen()))),
+              _ActionTile(label: 'Broadcast', icon: Icons.campaign_rounded, color: const Color(0xFFF43F5E), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementScreen()))),
             ],
           ),
         ),
@@ -237,12 +258,12 @@ class AdminHomeView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(data['title'] ?? 'System Broadcast', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                          Text(data['content'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                          Text(data['title'] ?? 'System Broadcast', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A))),
+                          Text(data['content'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
                         ],
                       ),
                     ),
-                    const Text('Recently', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                    const Text('Recently', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
                   ],
                 ),
               ),
@@ -310,23 +331,26 @@ class _ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.only(right: 20),
       child: Column(
         children: [
           GestureDetector(
             onTap: onTap,
             child: Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: color.withOpacity(0.1)),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(color: color.withOpacity(0.15), blurRadius: 15, offset: const Offset(0, 6)),
+                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                ],
               ),
-              child: Icon(icon, color: color, size: 26),
+              child: Icon(icon, color: color, size: 28),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          const SizedBox(height: 10),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1E293B), letterSpacing: -0.2)),
         ],
       ),
     );

@@ -203,6 +203,85 @@ class AnalyticsService {
     return total > 0 ? (present / total) * 100 : 0.0;
   }
 
+  // ─── Get Global Attendance (Today) ───────────────────────────────────────────
+  Future<double> getGlobalAttendance() async {
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final attendSnap = await _db.collection('attendance')
+        .where('date_string', isEqualTo: todayStr)
+        .get();
+
+    if (attendSnap.docs.isEmpty) return 0.0;
+
+    int present = 0;
+    int total = attendSnap.docs.length;
+    
+    for (var doc in attendSnap.docs) {
+      final data = doc.data();
+      final status = data['status']?.toString().toLowerCase();
+      if (status == 'present' || status == 'late') {
+        present++;
+      }
+    }
+
+    return total > 0 ? (present / total) * 100 : 0.0;
+  }
+
+  // ─── Get Global Enrollment Trend (Last 7 Days) ─────────────────────────────
+  Future<List<Map<String, dynamic>>> getGlobalEnrollmentTrend() async {
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    
+    // Fetch all students to avoid composite index requirements for this hackathon
+    // In production, you'd create an index for (role, created_at)
+    final studentsSnap = await _db.collection('users')
+        .where('role', isEqualTo: 'student')
+        .get();
+
+    final Map<String, int> dailyCounts = {};
+    for (int i = 0; i < 7; i++) {
+      final date = now.subtract(Duration(days: 6 - i));
+      dailyCounts[DateFormat('d MMM').format(date)] = 0;
+    }
+
+    for (var doc in studentsSnap.docs) {
+      final data = doc.data();
+      final Timestamp? ts = data['created_at'];
+      if (ts == null) continue;
+      
+      final date = ts.toDate();
+      if (date.isAfter(sevenDaysAgo)) {
+        final dateStr = DateFormat('d MMM').format(date);
+        if (dailyCounts.containsKey(dateStr)) {
+          dailyCounts[dateStr] = dailyCounts[dateStr]! + 1;
+        }
+      }
+    }
+
+    return dailyCounts.entries.map((e) => {'date': e.key, 'count': e.value}).toList();
+  }
+
+  // ─── Get Top Performing Classes ─────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getTopPerformingClasses({int limit = 4}) async {
+    final classesSnap = await _db.collection('classes').get();
+    final List<Map<String, dynamic>> results = [];
+
+    for (var doc in classesSnap.docs) {
+      final classId = doc.id;
+      final className = doc.data()['standard'] ?? 'Class';
+      final section = doc.data()['section'] ?? '';
+      
+      final analytics = await getClassAnalytics(classId);
+      results.add({
+        'id': classId,
+        'name': section.isNotEmpty ? '$className - $section' : className,
+        'average_score': analytics['class_avg'] ?? 0.0,
+      });
+    }
+
+    results.sort((a, b) => (b['average_score'] as double).compareTo(a['average_score'] as double));
+    return results.take(limit).toList();
+  }
+
   // ─── Get Class Performance Trend (Last 7 Days) ──────────────────────────────
   Future<List<double>> getClassPerformanceTrend(String classId) async {
     final resultsSnap = await _db.collection('quiz_results')
@@ -294,5 +373,45 @@ class AnalyticsService {
       print('Unified Wellness Error: $e');
     }
     return null;
+  }
+  // ─── Get Weekly Attendance Trend (Last 5 Weekdays) ─────────────────────────
+  Future<List<double>> getWeeklyAttendanceTrend({String? classId}) async {
+    final now = DateTime.now();
+    final List<double> weeklyData = [];
+    
+    // Get last 5 days (excluding weekends)
+    List<DateTime> days = [];
+    DateTime current = now;
+    while (days.length < 5) {
+      if (current.weekday != DateTime.saturday && current.weekday != DateTime.sunday) {
+        days.add(current);
+      }
+      current = current.subtract(const Duration(days: 1));
+    }
+    days = days.reversed.toList();
+
+    for (var date in days) {
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+      Query query = _db.collection('attendance').where('date_string', isEqualTo: dateStr);
+      if (classId != null) {
+        query = query.where('class_id', isEqualTo: classId);
+      }
+      
+      final snap = await query.get();
+      if (snap.docs.isEmpty) {
+        weeklyData.add(0.0);
+        continue;
+      }
+
+      int present = snap.docs.where((d) {
+        final status = d.data() as Map<String, dynamic>;
+        final s = status['status']?.toString().toLowerCase();
+        return s == 'present' || s == 'late';
+      }).length;
+      
+      weeklyData.add((present / snap.docs.length) * 100);
+    }
+
+    return weeklyData;
   }
 }

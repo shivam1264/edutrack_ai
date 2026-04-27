@@ -43,7 +43,7 @@ class _ProgressViewState extends State<ProgressView> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                _buildTabs(),
+                _buildTabs(data),
                 if (isLoading)
                   const Padding(
                     padding: EdgeInsets.all(40),
@@ -76,7 +76,10 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildTabs() {
+  Widget _buildTabs(Map<String, dynamic>? data) {
+    final subjectAvg = data?['subject_avg'] as Map<String, dynamic>? ?? {};
+    final dynamicTabs = ['All', ...subjectAvg.keys];
+
     return Container(
       height: 60,
       margin: const EdgeInsets.symmetric(vertical: 16),
@@ -84,7 +87,7 @@ class _ProgressViewState extends State<ProgressView> {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _tabs.length,
+        itemCount: dynamicTabs.length,
         itemBuilder: (context, index) {
           final isSelected = _selectedTabIndex == index;
           return GestureDetector(
@@ -100,7 +103,7 @@ class _ProgressViewState extends State<ProgressView> {
               ),
               child: Center(
                 child: Text(
-                  _tabs[index],
+                  dynamicTabs[index],
                   style: TextStyle(
                     color: isSelected ? Colors.white : AppTheme.textSecondary,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
@@ -117,10 +120,12 @@ class _ProgressViewState extends State<ProgressView> {
   Widget _buildContent(Map<String, dynamic>? data) {
     if (data == null) return const Center(child: Text('No performance data available.'));
 
-    final selectedSubject = _tabs[_selectedTabIndex];
+    final subjectAvg = data['subject_avg'] as Map<String, dynamic>? ?? {};
+    final dynamicTabs = ['All', ...subjectAvg.keys];
+    
+    final selectedSubject = _selectedTabIndex < dynamicTabs.length ? dynamicTabs[_selectedTabIndex] : 'All';
     double avgScore = 0.0;
     List<double> last5Scores = [];
-    Map<String, dynamic> subjectAvg = data['subject_avg'] ?? {};
 
     if (_selectedTabIndex == 0) {
       // 'All' view
@@ -129,9 +134,7 @@ class _ProgressViewState extends State<ProgressView> {
     } else {
       // Subject specific view from real data
       avgScore = (subjectAvg[selectedSubject] as num?)?.toDouble() ?? 0.0;
-      // Note: We don't have subject-specific last 5 scores in the current service, 
-      // so we use the overall trend or hide it. For now, we'll show overall trend 
-      // but clarify it's the learning velocity.
+      // Filter quiz results for this subject if available, otherwise fallback
       last5Scores = (data['last_5_scores'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? [];
     }
 

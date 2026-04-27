@@ -4,6 +4,7 @@ import '../../../services/auth_service.dart';
 import '../../../utils/app_theme.dart';
 import '../../../services/class_service.dart';
 import '../../../models/class_model.dart';
+import '../../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
@@ -19,7 +20,7 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   final _nameCtrl = TextEditingController();
   final _rollNoCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController(text: 'student123'); // Default password
+  final _passwordCtrl = TextEditingController(); // Blank by default
   final _phoneCtrl = TextEditingController();
   String? _selectedClassId;
   DateTime? _selectedDOB;
@@ -29,55 +30,96 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Add Student', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 100, height: 100,
-                      decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
-                      child: const Icon(Icons.camera_alt_rounded, color: Colors.grey, size: 40),
+      backgroundColor: AppTheme.bgLight,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 180,
+            pinned: true,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF0F172A),
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFF0F9FF), Color(0xFFE0F2FE), Color(0xFFBAE6FD)],
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    top: -20, right: -20,
+                    child: Icon(Icons.school_rounded, color: const Color(0xFF3B82F6).withOpacity(0.1), size: 220),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Student Admission', style: TextStyle(color: Color(0xFF0F172A), fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                        SizedBox(height: 4),
+                        Text('Onboard a new student to the academic system', style: TextStyle(color: Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 32),
-              _buildLabel('Full Name'),
-              _buildField(_nameCtrl, 'Enter full name', Icons.person_outline_rounded),
-              const SizedBox(height: 20),
-              _buildLabel('Email Address'),
-              _buildField(_emailCtrl, 'Enter student email', Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 20),
-              _buildLabel('Login Password'),
-              _buildField(_passwordCtrl, 'Set access password', Icons.lock_outline_rounded, isPassword: true),
-              const SizedBox(height: 20),
-              _buildLabel('Class'),
-              _buildClassDropdown(),
-              const SizedBox(height: 20),
-              _buildLabel('Roll Number'),
-              _buildField(_rollNoCtrl, 'Enter roll number', Icons.numbers_rounded, keyboardType: TextInputType.number),
-              const SizedBox(height: 20),
-              _buildLabel('Contact Number (Parent)'),
-              _buildField(_phoneCtrl, 'Enter contact number', Icons.phone_android_rounded, keyboardType: TextInputType.phone),
-              const SizedBox(height: 40),
-              _buildSubmitButton(),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
-        ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      PremiumCard(
+                        opacity: 1,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.badge_rounded, size: 14, color: AppTheme.textHint),
+                                SizedBox(width: 8),
+                                Text('ACADEMIC PROFILE', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            _buildField(_nameCtrl, 'Full Name', Icons.person_rounded),
+                            const SizedBox(height: 16),
+                            _buildField(_emailCtrl, 'Personal Email Address', Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress),
+                            const SizedBox(height: 16),
+                            _buildField(_passwordCtrl, 'Initial Access Password', Icons.lock_outline_rounded, isPassword: true),
+                            const SizedBox(height: 16),
+                            _buildClassDropdown(),
+                            const SizedBox(height: 16),
+                            _buildField(_rollNoCtrl, 'Class Roll Number', Icons.numbers_rounded, keyboardType: TextInputType.text),
+                            const SizedBox(height: 16),
+                            _buildField(_phoneCtrl, 'Parent Contact Number', Icons.phone_android_rounded, keyboardType: TextInputType.phone),
+                          ],
+                        ),
+                      ).animate().fadeIn().slideY(begin: 0.1),
+                      const SizedBox(height: 40),
+                      _buildSubmitButton(),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -95,13 +137,13 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
       keyboardType: keyboardType,
       obscureText: isPassword,
       decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-        prefixIcon: Icon(icon, color: Colors.grey, size: 20),
-        filled: true, fillColor: Colors.grey[50],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0F172A))),
+        labelText: hint,
+        prefixIcon: Icon(icon, color: const Color(0xFF2563EB), size: 20),
+        filled: true, fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       validator: (v) => v!.isEmpty ? 'Field required' : null,
     );
@@ -114,11 +156,14 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
         final classes = snapshot.data ?? [];
         return DropdownButtonFormField<String>(
           value: _selectedClassId,
+          isExpanded: true,
           decoration: InputDecoration(
-            hintText: 'Select class',
-            prefixIcon: const Icon(Icons.hub_rounded, color: Colors.grey, size: 20),
-            filled: true, fillColor: Colors.grey[50],
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
+            labelText: 'Assigned Academic Unit',
+            prefixIcon: const Icon(Icons.hub_rounded, color: Color(0xFF2563EB), size: 20),
+            filled: true, fillColor: const Color(0xFFF8FAFC),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
           ),
           items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.displayName))).toList(),
           onChanged: (v) => setState(() => _selectedClassId = v),

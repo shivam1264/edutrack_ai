@@ -26,18 +26,25 @@ class SchoolAnalyticsScreen extends StatelessWidget {
               SliverAppBar(
                 expandedHeight: 160,
                 pinned: true,
-                backgroundColor: AppTheme.primary,
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0F172A),
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
-                    decoration: const BoxDecoration(gradient: AppTheme.meshGradient),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF), Color(0xFFC7D2FE)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Text('School Analytics', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                          Text('Real-time institutional performance hub', style: TextStyle(color: Colors.white70)),
+                          Text('School Analytics', style: TextStyle(color: Color(0xFF0F172A), fontSize: 26, fontWeight: FontWeight.w900)),
+                          Text('Real-time institutional performance hub', style: TextStyle(color: Color(0xFF475569))),
                         ],
                       ),
                     ),

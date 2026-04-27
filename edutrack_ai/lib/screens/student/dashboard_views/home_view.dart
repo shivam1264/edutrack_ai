@@ -60,11 +60,13 @@ class HomeView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  _buildSectionHeader('Your Mastery', () {}),
+                  _buildSectionHeader('Your Mastery', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgressView()));
+                  }),
                   const SizedBox(height: 16),
                   _buildLearningDNA(context),
                   const SizedBox(height: 32),
-                  _buildSectionHeader('Pending Tasks', () {
+                  _buildSectionHeader('Pending Missions', () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentAssignmentsScreen()));
                   }),
                   const SizedBox(height: 16),
@@ -139,10 +141,13 @@ class HomeView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                  child: const CircleAvatar(
+                  child: CircleAvatar(
                     radius: 24,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.person_outline, color: AppTheme.primary),
+                    backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                    child: user?.avatarUrl == null
+                        ? const Icon(Icons.person_outline, color: AppTheme.primary)
+                        : null,
                   ),
                 ),
               ],
@@ -212,7 +217,7 @@ class HomeView extends StatelessWidget {
         if (!snapshot.hasData) return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
         
         final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Text("You're all caught up! 🎉", style: TextStyle(color: AppTheme.textSecondary));
+        if (docs.isEmpty) return const Text("You're all caught up! 🎉", style: TextStyle(color: Color(0xFF64748B)));
 
         return Column(
           children: docs.map((doc) {
@@ -233,7 +238,7 @@ class HomeView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(data['title'] ?? 'Assignment', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text(data['title'] ?? 'Assignment', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
                           Text(data['subject'] ?? 'Subject', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                         ],
                       ),
@@ -262,6 +267,10 @@ class HomeView extends StatelessWidget {
   }
 
   Widget _buildLearningDNA(BuildContext context) {
+    final analytics = context.watch<AnalyticsProvider>();
+    final data = analytics.studentAnalytics;
+    final avg = (data?['avg_score'] as num?)?.toDouble() ?? 0.0;
+    
     return PremiumCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -274,7 +283,7 @@ class HomeView extends StatelessWidget {
                   children: [
                     Text('AI Performance Analysis', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     SizedBox(height: 4),
-                    Text('Based on your activity in Class 9 Science.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    Text('Dynamic report based on your latest activities.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                   ],
                 ),
               ),
@@ -286,17 +295,17 @@ class HomeView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Overall Mastery', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              Text('75%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppTheme.primary)),
+              Text('${avg.toStringAsFixed(0)}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppTheme.primary)),
             ],
           ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: const LinearProgressIndicator(
-              value: 0.75,
+            child: LinearProgressIndicator(
+              value: avg / 100,
               minHeight: 10,
               backgroundColor: AppTheme.bgLight,
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
             ),
           ),
         ],

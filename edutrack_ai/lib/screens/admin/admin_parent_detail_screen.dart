@@ -24,7 +24,7 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
         final childrenIds = List<String>.from(data['parent_of'] ?? []);
 
         return Scaffold(
-          backgroundColor: AppTheme.bgLight,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -33,11 +33,11 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
                 padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const Text('Linked Students', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                    Text('Linked Students', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                     const SizedBox(height: 16),
                     _buildChildrenList(childrenIds),
                     const SizedBox(height: 32),
-                    const Text('Communication & Security', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                    Text('Communication & Security', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                     const SizedBox(height: 16),
                     _buildInfoTile('Email Address', data['email'] ?? 'N/A', Icons.email_outlined),
                     _buildInfoTile('Emergency Contact', data['phone'] ?? 'Not Provided', Icons.phone_android_rounded),
@@ -64,7 +64,8 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
     return SliverAppBar(
       expandedHeight: 180,
       pinned: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.white,
+      foregroundColor: const Color(0xFF0F172A),
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -73,7 +74,7 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5), Color(0xFFA7F3D0)],
                 ),
               ),
             ),
@@ -83,8 +84,8 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
                 children: [
                   CircleAvatar(
                     radius: 36,
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    child: Text(data['name']?[0].toUpperCase() ?? 'P', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                    backgroundColor: const Color(0xFF10B981).withOpacity(0.05),
+                    child: Text(data['name']?[0].toUpperCase() ?? 'P', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 28, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 20),
                   Expanded(
@@ -92,8 +93,8 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(data['name'] ?? 'Parent/Guardian', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                        Text('Verified Guardian • ${data['status']?.toUpperCase() ?? "ACTIVE"}', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
+                        Text(data['name'] ?? 'Parent/Guardian', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 22, fontWeight: FontWeight.bold)),
+                        Text('Verified Guardian • ${data['status']?.toUpperCase() ?? "ACTIVE"}', style: const TextStyle(color: Color(0xFF475569), fontSize: 13)),
                       ],
                     ),
                   ),
@@ -152,7 +153,7 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A))),
               ],
             ),
           ],

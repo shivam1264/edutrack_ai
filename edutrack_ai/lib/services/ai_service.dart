@@ -54,6 +54,25 @@ Generate 5 to 10 flashcards maximum. Keep answers concise.
     return await _exhaustAllOptions(systemInstruction, "Content:\n$content");
   }
 
+  Future<String> chat(String message, {String context = 'parent', String? studentId}) async {
+    final systemInstruction = """
+You are an AI Education Assistant for EduTrack AI. 
+Current Role: $context
+${studentId != null ? "Assisting with Student ID: $studentId" : ""}
+Provide helpful, professional, and encouraging academic advice or performance insights.
+Keep responses concise (max 3-4 sentences).
+""";
+
+    try {
+      if (_groqKey.isNotEmpty) {
+        try { return await _requestPlainGroq(systemInstruction, message); } catch (_) {}
+      }
+      return await _requestPlainGemini(systemInstruction, message);
+    } catch (e) {
+      return "I'm processing your request. Please ask specifically about grades, attendance, or study tips.";
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _exhaustAllOptions(String system, String user) async {
     // 1. Try Groq (Llama-3) first if key is provided
     if (_groqKey.isNotEmpty) {
@@ -162,5 +181,50 @@ Generate 5 to 10 flashcards maximum. Keep answers concise.
     } else {
       throw Exception('HTTP ${response.statusCode}');
     }
+  }
+
+  Future<String> _requestPlainGemini(String system, String user) async {
+    final key = _geminiKeys[0];
+    const model = 'gemini-1.5-flash';
+    final url = 'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key';
+    
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "contents": [{"role": "user", "parts": [{"text": "$system\n\n$user"}]}],
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 500}
+      }),
+    ).timeout(const Duration(seconds: 20));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['candidates'][0]['content']['parts'][0]['text'];
+    }
+    throw Exception('Gemini Error');
+  }
+
+  Future<String> _requestPlainGroq(String system, String user) async {
+    final response = await http.post(
+      Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_groqKey',
+      },
+      body: jsonEncode({
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+          {"role": "system", "content": system},
+          {"role": "user", "content": user}
+        ],
+        "temperature": 0.5,
+      }),
+    ).timeout(const Duration(seconds: 20));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['choices'][0]['message']['content'];
+    }
+    throw Exception('Groq Error');
   }
 }

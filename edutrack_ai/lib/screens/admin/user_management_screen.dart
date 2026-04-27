@@ -37,52 +37,85 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('Access Control Hub', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
+        title: const Text('Access Control Hub', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5, color: Color(0xFF0F172A))),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF0F172A),
         elevation: 0,
         actions: [
-          PopupMenuButton<String>(
+          IconButton(
             icon: const Icon(Icons.filter_list_rounded),
-            onSelected: (val) => setState(() => _statusFilter = val),
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'all', child: Text('Show All Status')),
-              const PopupMenuItem(value: 'active', child: Text('Active Only')),
-              const PopupMenuItem(value: 'inactive', child: Text('Inactive Only')),
-            ],
+            onPressed: () {
+               showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+                builder: (context) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(height: 24),
+                    const Text('FILTER BY STATUS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.2, color: Color(0xFF64748B))),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: const Icon(Icons.all_inclusive_rounded, color: AppTheme.primary),
+                      title: const Text('Show All Status', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                      onTap: () { setState(() => _statusFilter = 'all'); Navigator.pop(context); },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.check_circle_rounded, color: Colors.green),
+                      title: const Text('Active Users Only', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                      onTap: () { setState(() => _statusFilter = 'active'); Navigator.pop(context); },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.pause_circle_rounded, color: Colors.orange),
+                      title: const Text('Inactive Users Only', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                      onTap: () { setState(() => _statusFilter = 'inactive'); Navigator.pop(context); },
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              );
+            },
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.blueAccent,
-          indicatorWeight: 4,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          indicatorColor: AppTheme.primary,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.label,
+          dividerColor: Colors.transparent,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          labelColor: const Color(0xFF0F172A),
+          unselectedLabelColor: const Color(0xFF64748B),
           tabs: const [
-            Tab(text: 'STUDENTS', icon: Icon(Icons.people_alt_rounded, size: 20)),
-            Tab(text: 'TEACHERS', icon: Icon(Icons.school_rounded, size: 20)),
-            Tab(text: 'PARENTS', icon: Icon(Icons.family_restroom_rounded, size: 20)),
+            Tab(text: 'STUDENTS'),
+            Tab(text: 'TEACHERS'),
+            Tab(text: 'PARENTS'),
           ],
         ),
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+            ),
             child: TextField(
               controller: _searchController,
+              style: const TextStyle(color: Color(0xFF0F172A)),
               onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search by name or ID...',
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.blueAccent),
+                hintStyle: TextStyle(color: const Color(0xFF0F172A).withOpacity(0.5)),
+                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF0F172A)),
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
             ),
@@ -126,9 +159,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.person_off_rounded, size: 64, color: Colors.grey.withOpacity(0.3)),
+                Icon(Icons.person_off_rounded, size: 64, color: const Color(0xFF64748B).withOpacity(0.3)),
                 const SizedBox(height: 16),
-                Text('No ${role}s matching filters', style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                const Text('No users matching filters', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
               ],
             ),
           );
@@ -145,41 +178,79 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
             return PremiumCard(
               opacity: 1,
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
                 onTap: () => _navigateToDetail(doc.id, data, role),
-                leading: CircleAvatar(
-                  backgroundColor: _getRoleColor(role).withOpacity(0.1),
-                  child: Text(data['name']?[0].toUpperCase() ?? '?', style: TextStyle(color: _getRoleColor(role), fontWeight: FontWeight.bold)),
-                ),
-                title: Row(
-                  children: [
-                    Text(data['name'] ?? 'Unknown User', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 8, height: 8,
-                      decoration: BoxDecoration(color: isActive ? Colors.green : Colors.grey, shape: BoxShape.circle),
+                leading: Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _getRoleColor(role).withOpacity(0.8),
+                        _getRoleColor(role),
+                      ],
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(color: _getRoleColor(role).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      data['name']?[0].toUpperCase() ?? '?', 
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)
+                    ),
+                  ),
                 ),
-                subtitle: Text('${isActive ? "Active" : "Suspended"} • ${data['email'] ?? "No Email"}', style: const TextStyle(fontSize: 12)),
+                title: Text(data['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0F172A))),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isActive ? "ACTIVE" : "SUSPENDED",
+                          style: TextStyle(color: isActive ? Colors.green : Colors.red, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 0.5),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Text(doc.id, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), overflow: TextOverflow.ellipsis)),
+                      ),
+                    ],
+                  ),
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_rounded, color: Colors.blueAccent, size: 20),
-                      onPressed: () => _editUserDialog(doc.id, data, role),
-                      tooltip: 'Quick Edit',
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                      child: IconButton(
+                        icon: const Icon(Icons.edit_rounded, color: Colors.blue, size: 18),
+                        onPressed: () => _editUserDialog(doc.id, data, role),
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.danger, size: 20),
-                      onPressed: () => _confirmDelete(doc.id, data['name'] ?? 'User'),
-                      tooltip: 'Permanent Delete',
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                      child: IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                        onPressed: () => _confirmDelete(doc.id, data['name'] ?? 'User'),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1);
+            ).animate().fadeIn(delay: (index * 50).ms).slideY(begin: 0.1);
           },
         );
       },
@@ -209,7 +280,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('Modify ${role.toUpperCase()} Details', style: const TextStyle(fontWeight: FontWeight.w900)),
+          title: Text('Modify ${role.toUpperCase()} Details', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -227,7 +298,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                 
                 if (role == 'teacher') ...[
                   const SizedBox(height: 24),
-                  const Text('MODIFY SUBJECTS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                  const Text('MODIFY SUBJECTS', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF64748B), fontSize: 10, letterSpacing: 1.2)),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 6, runSpacing: 6,
@@ -256,11 +327,42 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                           return FilterChip(
                             label: Text(c.displayName, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : AppTheme.textPrimary)),
                             selected: isSelected,
-                            onSelected: (val) => setLocalState(() => val ? selectedClasses.add(c.id) : selectedClasses.remove(c.id)),
+                            onSelected: (val) {
+                              setLocalState(() {
+                                if (role == 'student') {
+                                  // Students usually belong to one class
+                                  selectedClasses.clear();
+                                  if (val) selectedClasses.add(c.id);
+                                } else {
+                                  val ? selectedClasses.add(c.id) : selectedClasses.remove(c.id);
+                                }
+                              });
+                            },
                             selectedColor: AppTheme.primary,
                             checkmarkColor: Colors.white,
                           );
                         }).toList(),
+                      );
+                    },
+                  ),
+                ],
+                if (role == 'student') ...[
+                  const SizedBox(height: 24),
+                  const Text('ASSIGN ACADEMIC CLASS', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                  const SizedBox(height: 12),
+                  StreamBuilder<List<ClassModel>>(
+                    stream: ClassService().getClasses(),
+                    builder: (context, snapshot) {
+                      final classes = snapshot.data ?? [];
+                      return DropdownButtonFormField<String>(
+                        value: selectedClasses.isNotEmpty ? selectedClasses.first : null,
+                        decoration: InputDecoration(
+                          hintText: 'Select Class',
+                          filled: true, fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)
+                        ),
+                        items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.displayName))).toList(),
+                        onChanged: (v) => setLocalState(() => selectedClasses = v != null ? [v] : []),
                       );
                     },
                   ),
@@ -279,6 +381,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                 if (role == 'teacher') {
                   updateData['subjects'] = selectedSubjects;
                   updateData['assigned_classes'] = selectedClasses;
+                } else if (role == 'student') {
+                  updateData['class_id'] = selectedClasses.isNotEmpty ? selectedClasses.first : null;
                 }
                 
                 await FirebaseFirestore.instance.collection('users').doc(uid).update(updateData);

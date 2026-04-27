@@ -29,7 +29,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> with SingleTi
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('Students', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text('Students', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
@@ -149,8 +149,8 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> with SingleTi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(data['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                  Text('Class ${data['class_id'] ?? "N/A"} • Roll No. ${data['roll_no'] ?? "N/A"}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(data['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A))),
+                  Text('Class ${data['class_id'] ?? "N/A"} • Roll No. ${data['roll_no'] ?? "N/A"}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
                 ],
               ),
             ),

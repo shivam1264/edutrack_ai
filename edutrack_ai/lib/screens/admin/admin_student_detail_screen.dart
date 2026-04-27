@@ -23,27 +23,21 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
         final data = snapshot.data?.data() as Map<String, dynamic>? ?? widget.studentData;
         
         return Scaffold(
-          backgroundColor: AppTheme.bgLight,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: DefaultTabController(
             length: 4,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildAppBar(context, data),
-                SliverToBoxAdapter(
-                  child: _buildTabBar(),
-                ),
-                SliverFillRemaining(
-                  child: TabBarView(
-                    children: [
-                      _buildOverviewTab(data),
-                      _buildAttendanceTab(),
-                      _buildPerformanceTab(),
-                      _buildDetailsTab(data),
-                    ],
-                  ),
-                ),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                _buildAppBar(context, data, innerBoxIsScrolled),
               ],
+              body: TabBarView(
+                children: [
+                  _buildOverviewTab(data),
+                  _buildAttendanceTab(),
+                  _buildPerformanceTab(),
+                  _buildDetailsTab(data),
+                ],
+              ),
             ),
           ),
           floatingActionButton: FloatingActionButton.extended(
@@ -57,12 +51,14 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context, Map<String, dynamic> data) {
+  Widget _buildAppBar(BuildContext context, Map<String, dynamic> data, bool innerBoxIsScrolled) {
     return SliverAppBar(
-      expandedHeight: 220,
+      expandedHeight: 250,
       pinned: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.white,
+      foregroundColor: const Color(0xFF0F172A),
       elevation: 0,
+      forceElevated: innerBoxIsScrolled,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -71,18 +67,18 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0), Color(0xFFCBD5E1)],
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 60, 24, 20),
+              padding: const EdgeInsets.fromLTRB(24, 60, 24, 60),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundColor: Colors.white.withOpacity(0.1),
-                    child: Text(data['name']?[0].toUpperCase() ?? 'S', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    child: Text(data['name']?[0].toUpperCase() ?? 'S', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 32, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 20),
                   Expanded(
@@ -90,14 +86,14 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(data['name'] ?? 'Unknown Student', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                        Text('Class ${data['class_id'] ?? "N/A"} • Roll No. ${data['roll_no'] ?? "N/A"}', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
-                        Text('UID: ${widget.studentId.substring(0, 8).toUpperCase()}', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+                        Text(data['name'] ?? 'Unknown Student', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 22, fontWeight: FontWeight.bold)),
+                        Text('Class ${data['class_id'] ?? "N/A"} • Roll No. ${data['roll_no'] ?? "N/A"}', style: const TextStyle(color: Color(0xFF475569), fontSize: 13)),
+                        Text('UID: ${widget.studentId.substring(0, 8).toUpperCase()}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.green.withOpacity(0.3))),
-                          child: Text(data['status']?.toUpperCase() ?? 'ACTIVE', style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                          child: Text(data['status']?.toUpperCase() ?? 'ACTIVE', style: const TextStyle(color: Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
@@ -108,19 +104,38 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
           ],
         ),
       ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(48),
+        child: Container(
+          color: Colors.white,
+          child: TabBar(
+            labelColor: const Color(0xFF0F172A),
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: const Color(0xFF0F172A),
+            indicatorWeight: 3,
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            tabs: const [
+              Tab(text: 'Overview'),
+              Tab(text: 'Attendance'),
+              Tab(text: 'Results'),
+              Tab(text: 'Profile'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildTabBar() {
     return Container(
       color: Colors.white,
-      child: const TabBar(
-        labelColor: Color(0xFF0F172A),
+      child: TabBar(
+        labelColor: const Color(0xFF0F172A),
         unselectedLabelColor: Colors.grey,
-        indicatorColor: Color(0xFF0F172A),
+        indicatorColor: const Color(0xFF0F172A),
         indicatorWeight: 3,
-        labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-        tabs: [
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        tabs: const [
           Tab(text: 'Overview'),
           Tab(text: 'Attendance'),
           Tab(text: 'Results'),
@@ -131,70 +146,102 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
   }
 
   Widget _buildOverviewTab(Map<String, dynamic> data) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('attendance').where('studentId', isEqualTo: widget.studentId).snapshots(),
-      builder: (context, snapshot) {
-        final total = snapshot.data?.docs.length ?? 0;
-        final present = snapshot.data?.docs.where((d) => (d.data() as Map)['status'] == 'present').length ?? 0;
-        final rate = total > 0 ? (present / total * 100).toStringAsFixed(1) : '0.0';
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('attendance').where('student_id', isEqualTo: widget.studentId).snapshots(),
+          builder: (context, snapshot) {
+            final attendDocs = snapshot.data?.docs ?? [];
+            final total = attendDocs.length;
+            final present = attendDocs.where((d) => (d.data() as Map)['status'] == 'present').length;
+            final rate = total > 0 ? (present / total * 100).toStringAsFixed(1) : '0.0';
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _StatCard(label: 'Attendance', value: '$rate%', color: Colors.blue),
-                  const SizedBox(width: 12),
-                  _StatCard(label: 'Avg Score', value: '84%', color: Colors.green),
-                  const SizedBox(width: 12),
-                  _StatCard(label: 'Rank', value: '#12', color: Colors.orange),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Text('Academic Performance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 16),
-              _buildPerformanceBars(),
-              const SizedBox(height: 32),
-              PremiumCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.auto_awesome, color: Colors.purple, size: 16),
-                        SizedBox(width: 8),
-                        Text('AI Behavioral Insight', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.purple, fontSize: 12)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text('${data['name']} shows high engagement in technical subjects. Attendance consistency is improving. Recommended to focus on language-based assignments.', 
-                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('quiz_results').where('student_id', isEqualTo: widget.studentId).snapshots(),
+              builder: (context, quizSnapshot) {
+                final quizDocs = quizSnapshot.data?.docs ?? [];
+                double totalQuizScore = 0;
+                int quizCount = 0;
+                Map<String, List<double>> subjectScores = {};
+
+                for (var doc in quizDocs) {
+                  final d = doc.data() as Map<String, dynamic>;
+                  final score = (d['score'] as num?)?.toDouble() ?? 0;
+                  final total = (d['total'] as num?)?.toDouble() ?? 1;
+                  final percentage = (score / total) * 100;
+                  totalQuizScore += percentage;
+                  quizCount++;
+
+                  final sub = d['subject'] ?? 'General';
+                  subjectScores.putIfAbsent(sub, () => []).add(percentage);
+                }
+
+                final avgScore = quizCount > 0 ? (totalQuizScore / quizCount).toStringAsFixed(1) : '0.0';
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _StatCard(label: 'Attendance', value: '$rate%', color: Colors.blue),
+                          const SizedBox(width: 12),
+                          _StatCard(label: 'Avg Score', value: '$avgScore%', color: Colors.green),
+                          const SizedBox(width: 12),
+                          _StatCard(label: 'Rank', value: data['rank']?.toString() ?? 'N/A', color: Colors.orange),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Academic Performance', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                      const SizedBox(height: 16),
+                      _buildPerformanceBars(subjectScores),
+                      const SizedBox(height: 32),
+                      PremiumCard(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.auto_awesome, color: Colors.purple, size: 16),
+                                SizedBox(width: 8),
+                                Text('AI Behavioral Insight', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.purple, fontSize: 12)),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text('${data['name']} shows high engagement in technical subjects. Attendance consistency is improving. Recommended to focus on language-based assignments.', 
+                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
-      },
-    );
   }
 
   Widget _buildAttendanceTab() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('attendance').where('studentId', isEqualTo: widget.studentId).orderBy('date', descending: true).snapshots(),
+      stream: FirebaseFirestore.instance.collection('attendance').where('student_id', isEqualTo: widget.studentId).snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final docs = snapshot.data!.docs;
+        var docs = snapshot.data!.docs;
         if (docs.isEmpty) return const Center(child: Text('No attendance history found.'));
+
+        // Sort in-memory to avoid composite index requirement
+        final sortedDocs = docs.toList()..sort((a, b) {
+          final aDate = (a.data() as Map)['date'] as Timestamp?;
+          final bDate = (b.data() as Map)['date'] as Timestamp?;
+          return (bDate ?? Timestamp.now()).compareTo(aDate ?? Timestamp.now());
+        });
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: docs.length,
+          itemCount: sortedDocs.length,
           itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
+            final data = sortedDocs[index].data() as Map<String, dynamic>;
             final isPresent = data['status'] == 'present';
             return Card(
               elevation: 0, color: Colors.white,
@@ -203,7 +250,7 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
               child: ListTile(
                 leading: Icon(isPresent ? Icons.check_circle_rounded : Icons.cancel_rounded, color: isPresent ? Colors.green : Colors.red),
                 title: Text(data['date'] ?? 'Unknown Date', style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Marked by ${data['markedBy'] ?? "System"}'),
+                subtitle: Text('Marked by ${data['marked_by'] ?? "System"}'),
                 trailing: Text(isPresent ? 'PRESENT' : 'ABSENT', style: TextStyle(color: isPresent ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 10)),
               ),
             );
@@ -215,7 +262,7 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
 
   Widget _buildPerformanceTab() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('exam_results').where('studentId', isEqualTo: widget.studentId).snapshots(),
+      stream: FirebaseFirestore.instance.collection('quiz_results').where('student_id', isEqualTo: widget.studentId).snapshots(),
       builder: (context, snapshot) {
         final results = snapshot.data?.docs ?? [];
         if (results.isEmpty) {
@@ -233,7 +280,11 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1), 
+                      borderRadius: BorderRadius.circular(12), 
+                      border: Border.all(color: const Color(0xFFE2E8F0))
+                    ),
                     child: const Icon(Icons.assignment_rounded, color: Colors.blue),
                   ),
                   const SizedBox(width: 16),
@@ -241,7 +292,7 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(res['examName'] ?? 'Unit Test', style: const TextStyle(fontWeight: FontWeight.w800)),
+                        Text(res['examName'] ?? 'Unit Test', style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                         Text(res['subject'] ?? 'General', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
@@ -262,7 +313,7 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('PERSONAL INFORMATION', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 11, letterSpacing: 1.2)),
+          const Text('PERSONAL INFORMATION', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF64748B), fontSize: 11, letterSpacing: 1.2)),
           const SizedBox(height: 20),
           _buildInfoRow('Full Name', data['name'] ?? 'N/A', Icons.person_outline_rounded),
           _buildInfoRow('Email Address', data['email'] ?? 'N/A', Icons.email_outlined),
@@ -351,31 +402,30 @@ class _AdminStudentDetailScreenState extends State<AdminStudentDetailScreen> {
     );
   }
 
-  Widget _buildPerformanceBars() {
-    final scores = [
-      {'sub': 'Mathematics', 'val': 88},
-      {'sub': 'Science', 'val': 72},
-      {'sub': 'English', 'val': 90},
-      {'sub': 'Computer', 'val': 95},
-    ];
+  Widget _buildPerformanceBars(Map<String, List<double>> subjectScores) {
+    if (subjectScores.isEmpty) {
+      return const Text('No quiz data available for breakdown.', style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic));
+    }
+
+    final subjectAvg = subjectScores.map((k, v) => MapEntry(k, v.reduce((a, b) => a + b) / v.length));
 
     return Column(
-      children: scores.map((s) => Padding(
+      children: subjectAvg.entries.map((s) => Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(s['sub'] as String, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF1E293B))),
-                Text('${s['val']}%', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.blue)),
+                Text(s.key, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF1E293B))),
+                Text('${s.value.toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.blue)),
               ],
             ),
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
-                value: (s['val'] as int) / 100,
+                value: s.value / 100,
                 backgroundColor: Colors.grey[200],
                 valueColor: const AlwaysStoppedAnimation(Color(0xFF2563EB)),
                 minHeight: 8,

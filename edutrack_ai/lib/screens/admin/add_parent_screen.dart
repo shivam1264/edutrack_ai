@@ -4,6 +4,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/class_service.dart';
 import '../../../models/class_model.dart';
 import '../../../utils/app_theme.dart';
+import '../../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AddParentScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _AddParentScreenState extends State<AddParentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController(text: 'parent123'); // Default
+  final _passwordCtrl = TextEditingController(); // Blank by default
   final _rollNoCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   
@@ -32,183 +33,220 @@ class _AddParentScreenState extends State<AddParentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Add Parent/Guardian', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 100, height: 100,
-                  decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
-                  child: const Icon(Icons.family_restroom_rounded, color: Colors.green, size: 40),
-                ),
-              ),
-              const SizedBox(height: 32),
-              _buildLabel('Guardian Full Name'),
-              _buildField(_nameCtrl, 'Enter full name', Icons.person_outline_rounded),
-              const SizedBox(height: 20),
-              _buildLabel('Email Address (Login ID)'),
-              _buildField(_emailCtrl, 'Enter guardian email', Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 20),
-              _buildLabel('Login Password'),
-              _buildField(_passwordCtrl, 'Set access password', Icons.lock_outline_rounded, isPassword: true),
-              const SizedBox(height: 24),
-              
-              // --- Multiple Child Linking Section ---
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.hub_rounded, size: 16, color: Colors.green),
-                        SizedBox(width: 8),
-                        Text('LINK CHILDREN', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.green, fontSize: 12, letterSpacing: 1.1)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Display Linked Children
-                    if (_linkedStudents.isNotEmpty) ...[
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _linkedStudents.map((student) => Chip(
-                          label: Text(student['name']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          avatar: const Icon(Icons.child_care_rounded, size: 16, color: Colors.green),
-                          deleteIcon: const Icon(Icons.cancel, size: 16, color: Colors.red),
-                          onDeleted: () => setState(() => _linkedStudents.remove(student)),
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: Colors.green[100]!),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        )).toList(),
+      backgroundColor: AppTheme.bgLight,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 180,
+            pinned: true,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF0F172A),
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5), Color(0xFFA7F3D0)],
                       ),
-                      const SizedBox(height: 16),
-                      const Divider(height: 1),
-                      const SizedBox(height: 16),
-                    ],
-
-                    _buildLabel('Search Student by Class'),
-                    StreamBuilder<List<ClassModel>>(
-                      stream: ClassService().getClasses(),
-                      builder: (context, snapshot) {
-                        final classes = snapshot.data ?? [];
-                        return DropdownButtonFormField<String>(
-                          value: _selectedClassId,
-                          decoration: _inputDecoration('Select Class', Icons.class_outlined),
-                          items: classes.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.displayName))).toList(),
-                          onChanged: (v) => setState(() {
-                            _selectedClassId = v;
-                            _foundStudentName = '';
-                            _foundStudentId = '';
-                            _rollNoCtrl.clear();
-                          }),
-                        );
-                      }
                     ),
-                    const SizedBox(height: 16),
-                    _buildLabel('Search by Roll Number'),
-                    Row(
+                  ),
+                  Positioned(
+                    top: -20, right: -20,
+                    child: Icon(Icons.family_restroom_rounded, color: const Color(0xFF10B981).withOpacity(0.1), size: 220),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _rollNoCtrl,
-                            decoration: _inputDecoration('Enter roll number', Icons.numbers_rounded),
-                            onChanged: (v) async {
-                              if (v.isNotEmpty && _selectedClassId != null) {
-                                final snap = await FirebaseFirestore.instance.collection('users')
-                                  .where('role', isEqualTo: 'student')
-                                  .where('class_id', isEqualTo: _selectedClassId)
-                                  .where('roll_no', isEqualTo: v)
-                                  .get();
-                                
-                                if (snap.docs.isNotEmpty) {
-                                  setState(() {
-                                    _foundStudentId = snap.docs.first.id;
-                                    _foundStudentName = snap.docs.first.get('name');
-                                  });
-                                } else {
-                                  setState(() {
-                                    _foundStudentId = '';
-                                    _foundStudentName = '';
-                                  });
-                                }
-                              }
-                            },
-                          ),
-                        ),
-                        if (_foundStudentName.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          IconButton.filled(
-                            onPressed: () {
-                              if (!_linkedStudents.any((s) => s['id'] == _foundStudentId)) {
-                                setState(() {
-                                  _linkedStudents.add({'id': _foundStudentId, 'name': _foundStudentName});
-                                  _foundStudentName = '';
-                                  _foundStudentId = '';
-                                  _rollNoCtrl.clear();
-                                });
-                              }
-                            },
-                            icon: const Icon(Icons.add_rounded),
-                            style: IconButton.styleFrom(backgroundColor: Colors.green),
-                          ),
-                        ],
+                        Text('Parental Onboarding', style: TextStyle(color: Color(0xFF0F172A), fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                        SizedBox(height: 4),
+                        Text('Onboard parents and guardians to the ecosystem', style: TextStyle(color: Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.w500)),
                       ],
                     ),
-                    if (_foundStudentName.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, left: 4),
-                        child: Text('Found: $_foundStudentName', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
-                      ).animate().fadeIn(),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              _buildLabel('Contact Number'),
-              _buildField(_phoneCtrl, 'Enter contact number', Icons.phone_android_rounded, keyboardType: TextInputType.phone),
-              const SizedBox(height: 40),
-              _buildSubmitButton(),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
-        ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      PremiumCard(
+                        opacity: 1,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.person_pin_rounded, size: 14, color: AppTheme.textHint),
+                                SizedBox(width: 8),
+                                Text('PERSONAL INFORMATION', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            _buildField(_nameCtrl, 'Guardian Full Name', Icons.person_rounded),
+                            const SizedBox(height: 16),
+                            _buildField(_emailCtrl, 'Email Address (Login ID)', Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress),
+                            const SizedBox(height: 16),
+                            _buildField(_passwordCtrl, 'Login Password', Icons.lock_outline_rounded, isPassword: true),
+                            const SizedBox(height: 16),
+                            _buildField(_phoneCtrl, 'Contact Number', Icons.phone_android_rounded, keyboardType: TextInputType.phone),
+                          ],
+                        ),
+                      ).animate().fadeIn().slideY(begin: 0.1),
+                      const SizedBox(height: 24),
+              
+                      PremiumCard(
+                        opacity: 1,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.hub_rounded, size: 14, color: Color(0xFF10B981)),
+                                SizedBox(width: 8),
+                                Text('LINK CHILDREN', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF10B981), fontSize: 10, letterSpacing: 1.2)),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            
+                            // Display Linked Children
+                            if (_linkedStudents.isNotEmpty) ...[
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _linkedStudents.map((student) => Chip(
+                                  label: Text(student['name']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  avatar: const Icon(Icons.child_care_rounded, size: 16, color: Colors.white),
+                                  deleteIcon: const Icon(Icons.cancel, size: 16, color: Colors.white70),
+                                  onDeleted: () => setState(() => _linkedStudents.remove(student)),
+                                  backgroundColor: const Color(0xFF10B981),
+                                  side: BorderSide.none,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                )).toList(),
+                              ),
+                              const SizedBox(height: 20),
+                              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                              const SizedBox(height: 20),
+                            ],
+
+                            StreamBuilder<List<ClassModel>>(
+                              stream: ClassService().getClasses(),
+                              builder: (context, snapshot) {
+                                final classes = snapshot.data ?? [];
+                                return DropdownButtonFormField<String>(
+                                  value: _selectedClassId,
+                                  isExpanded: true,
+                                  decoration: _inputDecoration('Search Student by Class', Icons.class_outlined),
+                                  items: classes.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.displayName))).toList(),
+                                  onChanged: (v) => setState(() {
+                                    _selectedClassId = v;
+                                    _foundStudentName = '';
+                                    _foundStudentId = '';
+                                    _rollNoCtrl.clear();
+                                  }),
+                                );
+                              }
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _rollNoCtrl,
+                                    decoration: _inputDecoration('Search by Roll Number', Icons.numbers_rounded),
+                                    keyboardType: TextInputType.text,
+                                    onChanged: (v) async {
+                                      if (v.isNotEmpty && _selectedClassId != null) {
+                                        final snap = await FirebaseFirestore.instance.collection('users')
+                                          .where('role', isEqualTo: 'student')
+                                          .where('class_id', isEqualTo: _selectedClassId)
+                                          .where('roll_no', isEqualTo: v)
+                                          .get();
+                                        
+                                        if (snap.docs.isNotEmpty) {
+                                          setState(() {
+                                            _foundStudentId = snap.docs.first.id;
+                                            _foundStudentName = snap.docs.first.get('name');
+                                          });
+                                        } else {
+                                          setState(() {
+                                            _foundStudentId = '';
+                                            _foundStudentName = '';
+                                          });
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ),
+                                if (_foundStudentName.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton.filled(
+                                    onPressed: () {
+                                      if (!_linkedStudents.any((s) => s['id'] == _foundStudentId)) {
+                                        setState(() {
+                                          _linkedStudents.add({'id': _foundStudentId, 'name': _foundStudentName});
+                                          _foundStudentName = '';
+                                          _foundStudentId = '';
+                                          _rollNoCtrl.clear();
+                                        });
+                                      }
+                                    },
+                                    icon: const Icon(Icons.add_rounded),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: const Color(0xFF10B981),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (_foundStudentName.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8, left: 4),
+                                child: Text('Found: $_foundStudentName', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13)),
+                              ).animate().fadeIn(),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 48),
+                      _buildSubmitButton(),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   InputDecoration _inputDecoration(String hint, IconData icon) {
     return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-      prefixIcon: Icon(icon, color: Colors.grey, size: 20),
-      filled: true, fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.green)),
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 4),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.black87)),
+      labelText: hint,
+      prefixIcon: Icon(icon, color: const Color(0xFF10B981), size: 20),
+      filled: true, fillColor: const Color(0xFFF8FAFC),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5)),
     );
   }
 

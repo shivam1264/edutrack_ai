@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../parent_leave_request_screen.dart';
 import '../parent_chat_screen.dart';
+import '../parent_ai_chat_screen.dart';
+import '../parent_fee_screen.dart';
 import '../parent_reports_screen.dart';
+import '../parent_assignments_screen.dart';
 
 class ParentInsightsView extends StatelessWidget {
   const ParentInsightsView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '';
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -33,11 +41,11 @@ class ParentInsightsView extends StatelessWidget {
               crossAxisSpacing: 16,
               childAspectRatio: 0.85,
               children: [
-                _actionItem(context, 'Chat with AI', Icons.psychology_rounded, Colors.blue, () {}),
-                _actionItem(context, 'HW Assist', Icons.edit_note_rounded, Colors.green, () {}),
+                _actionItem(context, 'Chat with AI', Icons.psychology_rounded, Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentAIChatScreen(studentId: childId)))),
+                _actionItem(context, 'HW Assist', Icons.edit_note_rounded, Colors.green, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentAssignmentsScreen()))),
                 _actionItem(context, 'Report', Icons.analytics_rounded, Colors.indigo, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentReportsScreen()))),
                 _actionItem(context, 'Leave Request', Icons.event_busy_rounded, Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentLeaveRequestScreen()))),
-                _actionItem(context, 'Fee Payment', Icons.payments_rounded, Colors.teal, () {}),
+                _actionItem(context, 'Fee Payment', Icons.payments_rounded, Colors.teal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentFeeScreen()))),
                 _actionItem(context, 'Teacher Chat', Icons.forum_rounded, Colors.purple, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentChatScreen()))),
               ],
             ),
@@ -59,7 +67,7 @@ class ParentInsightsView extends StatelessWidget {
                         const Text('Our AI assistant is here to help you 24/7.', style: TextStyle(color: Colors.white70, fontSize: 13)),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentAIChatScreen(studentId: childId))),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF6366F1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                           child: const Text('Chat Now', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),

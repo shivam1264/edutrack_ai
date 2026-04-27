@@ -9,6 +9,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import '../../services/attendance_service.dart';
+import '../../services/analytics_service.dart';
+import '../../models/attendance_model.dart';
 
 class MonthlyReportScreen extends StatefulWidget {
   final String? studentId;
@@ -58,14 +61,21 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
 
     try {
       final monthStr = DateFormat('MMMM yyyy').format(_selectedDate);
+      final studentId = _studentData!['uid'] ?? '';
+      final attendanceStats = await AttendanceService().getAttendanceStats(studentId);
+      final attendanceStr = '${attendanceStats.percentage.toInt()}%';
+      
+      final analytics = await AnalyticsService.instance.getStudentAnalytics(studentId);
+      final avgScoreStr = '${(analytics['avg_score'] as double).toInt()}%';
+
       final res = await http.post(
         Uri.parse(Config.endpoint('/generate-monthly-report')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'studentName': _studentData!['name'] ?? 'Student',
-          'attendance': '92%', 
-          'avgScore': '84%',   
-          'behavior': 'Exceptional', 
+          'attendance': attendanceStr, 
+          'avgScore': avgScoreStr,   
+          'behavior': 'Good', 
           'month': monthStr,
         }),
       ).timeout(const Duration(seconds: 40));
@@ -74,33 +84,44 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         final data = jsonDecode(res.body);
         setState(() => _generatedReport = data['report'] ?? 'Intelligence report generated successfully.');
       } else {
-        setState(() => _generatedReport = _offlineReport());
+        final report = await _getOfflineReportData();
+        setState(() => _generatedReport = report);
       }
     } catch (e) {
-      setState(() => _generatedReport = _offlineReport());
+      final report = await _getOfflineReportData();
+      setState(() => _generatedReport = report);
     }
 
     setState(() => _isGenerating = false);
   }
 
-  String _offlineReport() {
+  Future<String> _getOfflineReportData() async {
+    final studentId = _studentData!['uid'] ?? '';
+    final analytics = await AnalyticsService.instance.getStudentAnalytics(studentId);
+    final attendanceStats = await AttendanceService().getAttendanceStats(studentId);
+    
+    final avgScore = (analytics['avg_score'] as num? ?? 0).toInt();
+    final attendance = attendanceStats.percentage.toInt();
+    final level = analytics['performance_level'] ?? 'Good';
+    final insight = analytics['performance_insight'] ?? 'The student has demonstrated stable performance.';
+
     return '''📊 ACADEMIC SUMMARY: ${_studentData?['name'] ?? 'Student'}
     
 ✨ PERFORMANCE INSIGHTS
-Overall Grade: A- (84%)
-The student has demonstrated strong analytical skills and consistent participation.
+Overall Status: $level ($avgScore%)
+$insight
 
 📅 CONSISTENCY PROTOCOLS
-Attendance: 92%
-Excellent consistency in attending technical sessions.
+Attendance: $attendance%
+Consistency rating is based on session participation logs.
 
 💡 STRATEGIC ADVISORY
-Strengths: Advanced problem solving.
-Growth Area: Collaborative projects engagement.
+Maintained the current study rhythm. Performance is tracked via continuous assessment cycles.
 
 👨‍👩‍👦 GUARDIAN RECOMMENDATIONS
-Maintain the current study rhythm. Encourage deeper exploration of AI modules.''';
+Encourage deeper exploration of core subjects to maintain growth potential.''';
   }
+
 
   @override
   Widget build(BuildContext context) {

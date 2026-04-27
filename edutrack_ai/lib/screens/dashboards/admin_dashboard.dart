@@ -43,24 +43,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
           elevation: 0,
           height: 64,
           indicatorColor: const Color(0xFF0F172A).withOpacity(0.08),
+          labelTextStyle: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A));
+            }
+            return const TextStyle(fontSize: 12, color: Color(0xFF64748B));
+          }),
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined, color: Colors.grey),
+              icon: Icon(Icons.dashboard_outlined, color: Color(0xFF94A3B8)),
               selectedIcon: Icon(Icons.dashboard_rounded, color: Color(0xFF0F172A)),
               label: 'Dashboard',
             ),
             NavigationDestination(
-              icon: Icon(Icons.analytics_outlined, color: Colors.grey),
+              icon: Icon(Icons.analytics_outlined, color: Color(0xFF94A3B8)),
               selectedIcon: Icon(Icons.analytics_rounded, color: Color(0xFF0F172A)),
               label: 'Analytics',
             ),
             NavigationDestination(
-              icon: Icon(Icons.notifications_none_rounded, color: Colors.grey),
+              icon: Icon(Icons.notifications_none_rounded, color: Color(0xFF94A3B8)),
               selectedIcon: Icon(Icons.notifications_active_rounded, color: Color(0xFF0F172A)),
               label: 'Alerts',
             ),
             NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded, color: Colors.grey),
+              icon: Icon(Icons.person_outline_rounded, color: Color(0xFF94A3B8)),
               selectedIcon: Icon(Icons.person_rounded, color: Color(0xFF0F172A)),
               label: 'Profile',
             ),

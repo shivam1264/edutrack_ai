@@ -54,26 +54,44 @@ class _AddUserScreenState extends State<AddUserScreen> {
           SliverAppBar(
             expandedHeight: 180,
             pinned: true,
-            backgroundColor: AppTheme.danger,
-            foregroundColor: Colors.white,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF0F172A),
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(decoration: const BoxDecoration(gradient: AppTheme.meshGradient)),
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF), Color(0xFFC7D2FE)],
+                      ),
+                    ),
+                  ),
                   Positioned(
                     top: -20, right: -20,
-                    child: Icon(Icons.person_add_alt_1_rounded, color: Colors.white.withOpacity(0.1), size: 200),
+                    child: Icon(Icons.person_add_alt_1_rounded, color: const Color(0xFF6366F1).withOpacity(0.1), size: 220),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black.withOpacity(0.4)],
+                      ),
+                    ),
                   ),
                   const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    padding: EdgeInsets.fromLTRB(24, 0, 24, 28),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Register Class Member', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                        Text('Onboard new students, teachers, or parents', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                        Text('Member Onboarding', style: TextStyle(color: Color(0xFF0F172A), fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                        SizedBox(height: 4),
+                        Text('Initialize new accounts for the school ecosystem', style: TextStyle(color: Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ),
@@ -179,7 +197,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                     controller: _rollNoController,
                                     label: 'Class Roll Number',
                                     icon: Icons.numbers_rounded,
-                                    validator: (v) => v!.isEmpty ? 'Roll number required' : null,
+                                    keyboardType: TextInputType.text,
                                   ),
                                 ],
 
@@ -191,24 +209,33 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                       return Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Text('ASSIGN CLASSES', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10)),
+                                          Text('ASSIGN CLASSES', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF64748B), fontSize: 10)),
                                           const SizedBox(height: 12),
-                                          Wrap(
-                                            spacing: 8,
-                                            children: classes.map((c) {
-                                              final isSelected = _selectedAssignedClasses.contains(c.id);
-                                              return FilterChip(
-                                                label: Text(c.displayName),
-                                                selected: isSelected,
-                                                onSelected: (val) {
-                                                  setState(() {
-                                                    if (val) _selectedAssignedClasses.add(c.id);
-                                                    else _selectedAssignedClasses.remove(c.id);
-                                                  });
-                                                },
-                                              );
-                                            }).toList(),
-                                          ),
+                                            Wrap(
+                                              spacing: 8,
+                                              children: classes.map((c) {
+                                                final isSelected = _selectedAssignedClasses.contains(c.id);
+                                                return FilterChip(
+                                                  label: Text(c.displayName, style: TextStyle(
+                                                    color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600
+                                                  )),
+                                                  selected: isSelected,
+                                                  selectedColor: AppTheme.primary,
+                                                  backgroundColor: const Color(0xFFF1F5F9),
+                                                  checkmarkColor: Colors.white,
+                                                  side: BorderSide(color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0)),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                  onSelected: (val) {
+                                                    setState(() {
+                                                      if (val) _selectedAssignedClasses.add(c.id);
+                                                      else _selectedAssignedClasses.remove(c.id);
+                                                    });
+                                                  },
+                                                );
+                                              }).toList(),
+                                            ),
                                         ],
                                       );
                                     },
@@ -218,7 +245,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Text('LINK CHILD ACCOUNT', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                                        Text('LINK CHILD ACCOUNT', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF64748B), fontSize: 10, letterSpacing: 1.2)),
                                         const SizedBox(height: 12),
                                         StreamBuilder<List<ClassModel>>(
                                           stream: ClassService().getClasses(),
@@ -242,6 +269,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                           controller: _rollNoController,
                                           label: "Student Roll Number",
                                           icon: Icons.numbers_rounded,
+                                          keyboardType: TextInputType.text,
                                           onChanged: (v) async {
                                             if (v.length >= 1 && _selectedClassId != null) {
                                               final snap = await FirebaseFirestore.instance.collection('users')
@@ -424,14 +452,23 @@ class _RoleCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.primary : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? AppTheme.primary : AppTheme.borderLight),
-          boxShadow: isSelected ? [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))] : [],
+          border: Border.all(color: isSelected ? AppTheme.primary : const Color(0xFFE2E8F0), width: 1.5),
+          boxShadow: isSelected 
+              ? [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 6))] 
+              : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? Colors.white : AppTheme.textSecondary, size: 18),
-            const SizedBox(width: 10),
-            Text(title, style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, fontSize: 13)),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withOpacity(0.2) : AppTheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: isSelected ? Colors.white : AppTheme.primary, size: 16),
+            ),
+            const SizedBox(width: 12),
+            Text(title, style: TextStyle(color: isSelected ? Colors.white : const Color(0xFF1E293B), fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700, fontSize: 13)),
           ],
         ),
       ),

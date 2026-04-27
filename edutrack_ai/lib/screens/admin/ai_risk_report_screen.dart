@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../services/class_service.dart';
+import '../../models/class_model.dart';
 
 class AIRiskReportScreen extends StatelessWidget {
   const AIRiskReportScreen({super.key});
@@ -120,7 +122,12 @@ class AIRiskReportScreen extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
-                                      Text('Class: $classId', style: const TextStyle(fontSize: 12, color: AppTheme.textHint)),
+                                      StreamBuilder<ClassModel>(
+                                        stream: ClassService().getClassById(classId),
+                                        builder: (context, classSnap) {
+                                          return Text('Class: ${classSnap.data?.displayName ?? "Loading..."}', style: const TextStyle(fontSize: 12, color: AppTheme.textHint));
+                                        }
+                                      ),
                                     ],
                                   ),
                                 ),

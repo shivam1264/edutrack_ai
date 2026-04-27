@@ -6,7 +6,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 class ParentWellnessScreen extends StatelessWidget {
   final String? studentId;
-  const ParentWellnessScreen({super.key, this.studentId});
+  final bool isEmbedded;
+  const ParentWellnessScreen({super.key, this.studentId, this.isEmbedded = false});
 
   @override
   Widget build(BuildContext context) {
@@ -17,40 +18,51 @@ class ParentWellnessScreen extends StatelessWidget {
       {'title': 'Balance Screen Time', 'sub': 'Monitor recreational usage.', 'icon': Icons.timer_rounded, 'color': Colors.orange},
     ];
 
+    final body = SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildBurnoutAlert(riskLevel),
+          const SizedBox(height: 32),
+          const Text('AI Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          const SizedBox(height: 16),
+          ...insights.map((ins) => _insightTile(
+            ins['title'] ?? 'Insight',
+            ins['sub'] ?? '',
+            Icons.auto_awesome_rounded,
+            riskLevel == 'High' ? Colors.red : Colors.green,
+          )),
+          const SizedBox(height: 32),
+          const Text('Personalized Recommendations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          const SizedBox(height: 16),
+          ...(aiData?['recommendations'] as List? ?? [
+            {'title': 'Read 20 mins daily', 'sub': 'Improve focus & comprehension', 'icon': Icons.menu_book_rounded},
+            {'title': 'Practice Math', 'sub': '15 mins of daily practice', 'icon': Icons.calculate_rounded},
+          ]).map((rec) => _recommendationTile(
+            rec['title'] ?? 'Action',
+            rec['sub'] ?? '',
+            Icons.auto_awesome_rounded,
+          )),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+
+    if (isEmbedded) return body;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Wellness & AI Insights', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text('Wellness & AI Insights', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildBurnoutAlert(riskLevel),
-            const SizedBox(height: 32),
-            const Text('AI Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 16),
-            ...insights.map((ins) => _insightTile(
-              ins['title'] ?? 'Insight',
-              ins['sub'] ?? '',
-              Icons.auto_awesome_rounded,
-              riskLevel == 'High' ? Colors.red : Colors.green,
-            )),
-            const SizedBox(height: 32),
-            const Text('Recommended Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 16),
-            _recommendationTile('Read 20 mins daily', 'Improve focus & comprehension', Icons.menu_book_rounded),
-            _recommendationTile('Practice Math', '15 mins of daily practice', Icons.calculate_rounded),
-            const SizedBox(height: 100),
-          ],
-        ),
-      ),
+      body: body,
     );
   }
+
 
   Widget _buildBurnoutAlert(String level) {
     final color = level == 'High' ? Colors.red : (level == 'Medium' ? Colors.orange : Colors.green);

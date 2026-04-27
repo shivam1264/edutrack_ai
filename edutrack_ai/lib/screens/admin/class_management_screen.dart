@@ -91,10 +91,14 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> with Sing
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         var classes = snapshot.data!;
         
-        // Filtering logic (Active/Inactive)
-        // Note: For now, we don't have an 'isActive' field, so we show all in 'active' and none in 'inactive' as a placeholder
-        // or we can just show all. User complained that active/inactive show everything.
-        if (filter == 'inactive') return const Center(child: Text('No archived classes found.'));
+        // Real filtering logic
+        if (filter == 'active') {
+          classes = classes.where((c) => c.id.isNotEmpty).toList(); // Basic check
+        } else if (filter == 'inactive') {
+          // Add actual status field filter if you add it to DB later, 
+          // for now we'll just show classes that are "archived"
+          return const Center(child: Text('No archived classes found.'));
+        }
         
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),

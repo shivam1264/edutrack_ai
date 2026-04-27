@@ -11,6 +11,7 @@ class UserModel {
   final DateTime createdAt;
   final String? fcmToken;
   final String? avatarUrl;
+  final String? phone;
   final String? classId;       // for students
   final String? rollNo;        // for students: roll number
   final List<String>? assignedClasses; // for teachers: multiple hubs
@@ -30,6 +31,7 @@ class UserModel {
     required this.createdAt,
     this.fcmToken,
     this.avatarUrl,
+    this.phone,
     this.classId,
     this.rollNo,
     this.assignedClasses,
@@ -51,6 +53,7 @@ class UserModel {
       createdAt: (map['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       fcmToken: map['fcm_token'],
       avatarUrl: map['avatar_url'],
+      phone: map['phone'],
       classId: map['class_id'],
       rollNo: map['roll_no'],
       assignedClasses: _parseAssignedClasses(map),
@@ -73,6 +76,7 @@ class UserModel {
       'created_at': Timestamp.fromDate(createdAt),
       if (fcmToken != null) 'fcm_token': fcmToken,
       if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (phone != null) 'phone': phone,
       if (classId != null) 'class_id': classId,
       if (rollNo != null) 'roll_no': rollNo,
       if (assignedClasses != null && assignedClasses!.isNotEmpty) 'assigned_classes': assignedClasses,
@@ -129,6 +133,7 @@ class UserModel {
     DateTime? createdAt,
     String? fcmToken,
     String? avatarUrl,
+    String? phone,
     String? classId,
     String? rollNo,
     List<String>? assignedClasses,
@@ -146,6 +151,7 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       fcmToken: fcmToken ?? this.fcmToken,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      phone: phone ?? this.phone,
       classId: classId ?? this.classId,
       rollNo: rollNo ?? this.rollNo,
       assignedClasses: assignedClasses ?? this.assignedClasses,

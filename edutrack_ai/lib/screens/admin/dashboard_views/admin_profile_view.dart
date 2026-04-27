@@ -9,6 +9,7 @@ import '../system_settings_screen.dart';
 import '../reports_screen.dart';
 import '../school_analytics_screen.dart';
 import '../timetable_manager_screen.dart';
+import '../data_management_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AdminProfileView extends StatelessWidget {
@@ -41,7 +42,7 @@ class AdminProfileView extends StatelessWidget {
                 const SizedBox(height: 24),
                 _buildSectionTitle('System & Reports'),
                 _buildListTile(context, Icons.analytics_rounded, 'School Reports', const ReportsScreen()),
-                _buildListTile(context, Icons.storage_rounded, 'Data Management', const SystemSettingsScreen()),
+                _buildListTile(context, Icons.storage_rounded, 'Data Management', const DataManagementScreen()),
                 
                 const SizedBox(height: 32),
                 _buildLogoutTile(context),
@@ -71,7 +72,10 @@ class AdminProfileView extends StatelessWidget {
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: Colors.white.withOpacity(0.1),
-                  child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 40),
+                  backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                  child: user?.avatarUrl == null 
+                    ? const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 40)
+                    : null,
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -104,7 +108,7 @@ class AdminProfileView extends StatelessWidget {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 12),
-      child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.grey)),
+      child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Color(0xFF94A3B8))),
     );
   }
 
@@ -114,7 +118,7 @@ class AdminProfileView extends StatelessWidget {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderLight)),
       child: ListTile(
         leading: Icon(icon, color: const Color(0xFF0F172A), size: 20),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Color(0xFF0F172A))),
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => destination)),
       ),

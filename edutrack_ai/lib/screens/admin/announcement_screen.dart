@@ -126,9 +126,13 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
               value: _selectedClassId,
               isExpanded: true,
               items: classes.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final standard = data['standard'] ?? '';
+                final section = data['section'] ?? '';
+                final name = '$standard - $section';
                 return DropdownMenuItem(
                   value: doc.id,
-                  child: Text(doc['name'] ?? doc.id),
+                  child: Text(name),
                 );
               }).toList(),
               onChanged: (val) => setState(() => _selectedClassId = val),
@@ -148,15 +152,16 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     setState(() => _isSending = true);
 
     try {
-      // Create notification document in Firestore
-      // Cloud Function or Notification Service will pick this up to send FCM
-      await FirebaseFirestore.instance.collection('notifications').add({
+      // Create announcement document in Firestore
+      await FirebaseFirestore.instance.collection('announcements').add({
         'title': _titleController.text,
-        'message': _messageController.text,
+        'content': _messageController.text,
         'type': 'announcement',
+        'category': _target == 'all' ? 'School-wide' : (_target == 'teachers' ? 'Faculty' : 'Class'),
+        'priority': 'Medium',
         'target': _target,
         if (_target == 'class') 'class_id': _selectedClassId,
-        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
         'sender_id': 'admin',
       });
 

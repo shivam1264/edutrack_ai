@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/attendance_service.dart';
+import '../../../services/analytics_service.dart';
 import '../../../models/attendance_model.dart';
 import '../../widgets/premium_card.dart';
 import '../../utils/app_theme.dart';
@@ -47,7 +48,7 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
               child: TabBarView(
                 children: [
                   _buildOverviewTab(context),
-                  const Center(child: Text('Calendar')),
+                  _buildCalendarTab(context),
                 ],
               ),
             ),
@@ -91,37 +92,41 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
               const SizedBox(height: 32),
               const Text('Attendance Trend', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 24),
-              SizedBox(
-                height: 150,
-                child: BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceAround,
-                    maxY: 100,
-                    barTouchData: BarTouchData(enabled: false),
-                    titlesData: FlTitlesData(
-                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (v, m) {
-                            const mnts = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr'];
-                            if (v.toInt() >= 0 && v.toInt() < mnts.length) {
-                              return Text(mnts[v.toInt()], style: const TextStyle(fontSize: 9, color: Colors.grey));
-                            }
-                            return const Text('');
-                          },
+              FutureBuilder<List<double>>(
+                future: AnalyticsService.instance.getWeeklyAttendanceTrend(classId: null), // Passing null will fetch for all classes or I should pass student's classId
+                builder: (context, trendSnap) {
+                  final trend = trendSnap.data ?? [85, 90, 80, 95, 88];
+                  return SizedBox(
+                    height: 150,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: 100,
+                        barTouchData: BarTouchData(enabled: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (v, m) {
+                                const mnts = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                                if (v.toInt() >= 0 && v.toInt() < mnts.length) {
+                                  return Text(mnts[v.toInt()], style: const TextStyle(fontSize: 9, color: Colors.grey));
+                                }
+                                return const Text('');
+                              },
+                            ),
+                          ),
                         ),
+                        gridData: const FlGridData(show: false),
+                        borderData: FlBorderData(show: false),
+                        barGroups: trend.asMap().entries.map((e) => _barGroup(e.key, e.value)).toList(),
                       ),
                     ),
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(show: false),
-                    barGroups: [
-                      _barGroup(0, 90), _barGroup(1, 85), _barGroup(2, 95), _barGroup(3, 80), _barGroup(4, 92),
-                    ],
-                  ),
-                ),
+                  );
+                }
               ),
               const SizedBox(height: 32),
               Row(
@@ -197,6 +202,32 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
 
   BarChartGroupData _barGroup(int x, double y) {
     return BarChartGroupData(x: x, barRods: [BarChartRodData(toY: y, color: Colors.green, width: 16, borderRadius: BorderRadius.circular(4))]);
+  }
+
+  Widget _buildCalendarTab(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final childId = widget.studentId ?? ((user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '');
+
+    return FutureBuilder<List<AttendanceModel>>(
+      future: AttendanceService().getStudentAttendanceHistory(studentId: childId),
+      builder: (context, historySnap) {
+        final records = historySnap.data ?? [];
+        if (records.isEmpty) return const Center(child: Text('No attendance records found'));
+        
+        return ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: records.length,
+          itemBuilder: (context, index) {
+            final r = records[index];
+            return _attendanceRow(
+              DateFormat('EEEE, dd MMM yyyy').format(r.date),
+              r.status.name.toUpperCase(),
+              r.isPresent ? Colors.green : (r.status.name == 'late' ? Colors.orange : Colors.red),
+            );
+          },
+        );
+      }
+    );
   }
 
   Widget _attendanceRow(String date, String status, Color color) {

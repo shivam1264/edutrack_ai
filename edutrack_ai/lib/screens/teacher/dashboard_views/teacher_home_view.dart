@@ -45,11 +45,11 @@ class TeacherHomeView extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildTodayOverview(classData, context),
                 const SizedBox(height: 24),
-                _buildClassPerformanceChart(classData),
+                _buildClassPerformanceChart(context, classData),
                 const SizedBox(height: 24),
                 _buildQuickActions(context),
                 const SizedBox(height: 24),
-                _buildRecentActivity(classData),
+                _buildRecentActivity(context, classData),
                 const SizedBox(height: 100), // Bottom padding
               ]),
             ),
@@ -172,22 +172,22 @@ class TeacherHomeView extends StatelessWidget {
                 future: AnalyticsService.instance.getClassAttendance(selectedClassId ?? ''),
                 builder: (context, snapshot) {
                   final attendance = snapshot.data ?? 0.0;
-                  return _buildStatCard('${attendance.toStringAsFixed(0)}%', 'Attendance', Icons.bar_chart_rounded, Colors.green, () {
+                  return _buildStatCard(context, '${attendance.toStringAsFixed(0)}%', 'Attendance', Icons.bar_chart_rounded, Colors.green, () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAttendanceScreen(classId: selectedClassId ?? '', className: currentClassName)));
                   });
                 }
               )
             ),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard('$students', 'Students', Icons.people_outline_rounded, Colors.blue, () {
+            Expanded(child: _buildStatCard(context, '$students', 'Students', Icons.people_outline_rounded, Colors.blue, () {
               // Navigation to students tab or list
             })),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard('$pendingTasks', 'Pending Tasks', Icons.assignment_outlined, Colors.orange, () {
+            Expanded(child: _buildStatCard(context, '$pendingTasks', 'Pending Tasks', Icons.assignment_outlined, Colors.orange, () {
                Navigator.push(context, MaterialPageRoute(builder: (_) => BulkGradeScreen(classId: selectedClassId ?? '')));
             })),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard('$announcements', 'Announcements', Icons.campaign_outlined, Colors.red, () {
+            Expanded(child: _buildStatCard(context, '$announcements', 'Announcements', Icons.campaign_outlined, Colors.red, () {
                Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAnnouncementsScreen(classId: selectedClassId ?? '')));
             })),
           ],
@@ -196,7 +196,7 @@ class TeacherHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String value, String label, IconData icon, Color color, [VoidCallback? onTap]) {
+  Widget _buildStatCard(BuildContext context, String value, String label, IconData icon, Color color, [VoidCallback? onTap]) {
     return GestureDetector(
       onTap: onTap,
       child: PremiumCard(
@@ -219,7 +219,7 @@ class TeacherHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildClassPerformanceChart(Map<String, dynamic>? data) {
+  Widget _buildClassPerformanceChart(BuildContext context, Map<String, dynamic>? data) {
     return PremiumCard(
       opacity: 1,
       padding: const EdgeInsets.all(20),
@@ -229,9 +229,9 @@ class TeacherHomeView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Class Performance',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                child: Text('Class Performance', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -0.5)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -242,7 +242,7 @@ class TeacherHomeView extends StatelessWidget {
                 ),
                 child: const Row(
                   children: [
-                    Text('Last 7 Days', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text('Last 7 Days', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
                     Icon(Icons.keyboard_arrow_down_rounded, size: 16),
                   ],
                 ),
@@ -368,7 +368,7 @@ class TeacherHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentActivity(Map<String, dynamic>? data) {
+  Widget _buildRecentActivity(BuildContext context, Map<String, dynamic>? data) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -397,7 +397,7 @@ class TeacherHomeView extends StatelessWidget {
               return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(fontSize: 10, color: Colors.red)));
             }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('No recent activity', style: TextStyle(color: Colors.grey, fontSize: 12)));
+              return const Center(child: Text('No recent activity', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)));
             }
 
             // Sort in memory to avoid needing a composite index

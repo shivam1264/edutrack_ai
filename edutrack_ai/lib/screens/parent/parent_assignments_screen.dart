@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -52,24 +53,34 @@ class ParentAssignmentsScreen extends StatelessWidget {
   }
 
   Widget _buildAssignmentList(BuildContext context, String status) {
-    // In a real scenario, we'd fetch the child's classId first.
-    // For now we use 'CLASS001' as a placeholder or fetch from first child.
     final user = context.watch<AuthProvider>().user;
-    final classId = 'CLASS001'; // Should be dynamic in production
+    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '';
 
-    return StreamBuilder<List<AssignmentModel>>(
-      stream: AssignmentService().streamAssignmentsByClass(classId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (childId.isEmpty) return const Center(child: Text('No student linked'));
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(childId).get(),
+      builder: (context, studentSnap) {
+        if (!studentSnap.hasData) return const Center(child: CircularProgressIndicator());
         
-        final assignments = snapshot.data ?? [];
-        if (assignments.isEmpty) {
-          return const Center(child: Text('No assignments found'));
-        }
+        final data = studentSnap.data?.data() as Map<String, dynamic>?;
+        final classId = data?['class_id'] ?? '';
 
-        return ListView.separated(
+        if (classId.isEmpty) return const Center(child: Text('Student not assigned to any class'));
+
+        return StreamBuilder<List<AssignmentModel>>(
+          stream: AssignmentService().streamAssignmentsByClass(classId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            final assignments = snapshot.data ?? [];
+            if (assignments.isEmpty) {
+              return const Center(child: Text('No assignments found for this class'));
+            }
+
+            return ListView.separated(
           padding: const EdgeInsets.all(24),
           itemCount: assignments.length,
           separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -99,15 +110,27 @@ class ParentAssignmentsScreen extends StatelessWidget {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                    child: const Text('Pending', style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
+                    decoration: BoxDecoration(
+                      color: status == 'pending' ? Colors.orange.withOpacity(0.1) : (status == 'submitted' ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      status.toUpperCase(), 
+                      style: TextStyle(
+                        color: status == 'pending' ? Colors.orange : (status == 'submitted' ? Colors.blue : Colors.green), 
+                        fontSize: 10, 
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ).animate().fadeIn(delay: (i * 100).ms).slideX(begin: 0.1);
           },
+            );
+          },
         );
-      }
+      },
     );
   }
 }

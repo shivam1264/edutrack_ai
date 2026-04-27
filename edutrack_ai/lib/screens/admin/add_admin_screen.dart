@@ -14,7 +14,7 @@ class _AddAdminScreenState extends State<AddAdminScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController(text: 'admin123'); // Default
+  final _passwordCtrl = TextEditingController(); // Blank by default
   final _phoneCtrl = TextEditingController();
   bool _isLoading = false;
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/class_service.dart';
 import '../../../models/class_model.dart';
+import '../../../utils/app_theme.dart';
+import '../../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AddTeacherScreen extends StatefulWidget {
@@ -17,7 +19,7 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
   final _qualCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController(text: 'teacher123'); // Default password
+  final _passwordCtrl = TextEditingController(); // Blank by default
   List<String> _selectedSubjects = [];
   List<String> _selectedClasses = [];
   bool _isLoading = false;
@@ -30,78 +32,148 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Add Teacher', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 100, height: 100,
-                  decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle),
-                  child: const Icon(Icons.psychology_rounded, color: Colors.blue, size: 40),
-                ),
+      backgroundColor: AppTheme.bgLight,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 180,
+            pinned: true,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF0F172A),
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFF5F3FF), Color(0xFFEDE9FE), Color(0xFFDDD6FE)],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: -20, right: -20,
+                    child: Icon(Icons.psychology_rounded, color: const Color(0xFF8B5CF6).withOpacity(0.1), size: 220),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Faculty Recruitment', style: TextStyle(color: Color(0xFF0F172A), fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                        SizedBox(height: 4),
+                        Text('Onboard specialized teachers to the faculty pool', style: TextStyle(color: Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 32),
-              _buildLabel('Full Name'),
-              _buildField(_nameCtrl, 'Enter full name', Icons.person_outline_rounded),
-              const SizedBox(height: 20),
-              _buildLabel('Email Address (Login ID)'),
-              _buildField(_emailCtrl, 'Enter official email', Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 20),
-              _buildLabel('Login Password'),
-              _buildField(_passwordCtrl, 'Set access password', Icons.lock_outline_rounded, isPassword: true),
-              const SizedBox(height: 20),
-              
-              _buildLabel('Assign Subjects (Select Multiple)'),
-              Wrap(
-                spacing: 8, runSpacing: 8,
-                children: _subjectsList.map((s) {
-                  final isSelected = _selectedSubjects.contains(s);
-                  return FilterChip(
-                    label: Text(s, style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontSize: 12)),
-                    selected: isSelected,
-                    selectedColor: Colors.blueAccent,
-                    checkmarkColor: Colors.white,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) _selectedSubjects.add(s);
-                        else _selectedSubjects.remove(s);
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-              if (_selectedSubjects.isEmpty) 
-                const Padding(
-                  padding: EdgeInsets.only(top: 8, left: 4),
-                  child: Text('Please select at least one subject', style: TextStyle(color: Colors.red, fontSize: 11)),
-                ),
-                
-              const SizedBox(height: 20),
-              _buildLabel('Assign Classes'),
-              _buildClassSelector(),
-              const SizedBox(height: 20),
-              _buildLabel('Qualification'),
-              _buildField(_qualCtrl, 'Enter qualification', Icons.school_outlined),
-              const SizedBox(height: 20),
-              _buildLabel('Contact Number'),
-              _buildField(_phoneCtrl, 'Enter contact number', Icons.phone_android_rounded, keyboardType: TextInputType.phone),
-              const SizedBox(height: 40),
-              _buildSubmitButton(),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
-        ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      PremiumCard(
+                        opacity: 1,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.school_rounded, size: 14, color: AppTheme.textHint),
+                                SizedBox(width: 8),
+                                Text('PROFESSIONAL PROFILE', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textHint, fontSize: 10, letterSpacing: 1.2)),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            _buildField(_nameCtrl, 'Faculty Full Name', Icons.person_rounded),
+                            const SizedBox(height: 16),
+                            _buildField(_emailCtrl, 'Official Email Address', Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress),
+                            const SizedBox(height: 16),
+                            _buildField(_passwordCtrl, 'Initial Access Password', Icons.lock_outline_rounded, isPassword: true),
+                            const SizedBox(height: 16),
+                            _buildField(_qualCtrl, 'Qualification', Icons.history_edu_rounded),
+                            const SizedBox(height: 16),
+                            _buildField(_phoneCtrl, 'Contact Number', Icons.phone_android_rounded, keyboardType: TextInputType.phone),
+                          ],
+                        ),
+                      ).animate().fadeIn().slideY(begin: 0.1),
+                      const SizedBox(height: 24),
+                      
+                      PremiumCard(
+                        opacity: 1,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.subject_rounded, size: 14, color: Color(0xFF8B5CF6)),
+                                SizedBox(width: 8),
+                                Text('SUBJECT SPECIALIZATION', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF8B5CF6), fontSize: 10, letterSpacing: 1.2)),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 8, runSpacing: 8,
+                              children: _subjectsList.map((s) {
+                                final isSelected = _selectedSubjects.contains(s);
+                                  return FilterChip(
+                                    label: Text(s, style: TextStyle(
+                                      color: isSelected ? Colors.white : const Color(0xFF1E293B), 
+                                      fontSize: 11, 
+                                      fontWeight: FontWeight.w600
+                                    )),
+                                    selected: isSelected,
+                                    selectedColor: const Color(0xFF8B5CF6),
+                                    backgroundColor: const Color(0xFFF1F5F9),
+                                    checkmarkColor: Colors.white,
+                                    side: BorderSide(color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) _selectedSubjects.add(s);
+                                      else _selectedSubjects.remove(s);
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 24),
+                            const Row(
+                              children: [
+                                Icon(Icons.hub_rounded, size: 14, color: Color(0xFF8B5CF6)),
+                                SizedBox(width: 8),
+                                Text('ASSIGNED ACADEMIC UNITS', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF8B5CF6), fontSize: 10, letterSpacing: 1.2)),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildClassSelector(),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 40),
+                      _buildSubmitButton(),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -119,12 +191,13 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
       keyboardType: keyboardType,
       obscureText: isPassword,
       decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-        prefixIcon: Icon(icon, color: Colors.grey, size: 20),
-        filled: true, fillColor: Colors.grey[50],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
+        labelText: hint,
+        prefixIcon: Icon(icon, color: const Color(0xFF8B5CF6), size: 20),
+        filled: true, fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF8B5CF6), width: 1.5)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       validator: (v) => v!.isEmpty ? 'Field required' : null,
     );
@@ -140,10 +213,17 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
           children: classes.map((c) {
             final isSelected = _selectedClasses.contains(c.id);
             return FilterChip(
-              label: Text(c.displayName, style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontSize: 12)),
+              label: Text(c.displayName, style: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFF1E293B), 
+                fontSize: 11, 
+                fontWeight: FontWeight.w600
+              )),
               selected: isSelected,
-              selectedColor: const Color(0xFF0F172A),
+              selectedColor: const Color(0xFF8B5CF6),
+              backgroundColor: const Color(0xFFF1F5F9),
               checkmarkColor: Colors.white,
+              side: BorderSide(color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               onSelected: (selected) {
                 setState(() {
                   if (selected) _selectedClasses.add(c.id);

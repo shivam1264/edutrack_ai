@@ -88,12 +88,21 @@ class ParentHomeView extends StatelessWidget {
                         const Text('👋', style: TextStyle(fontSize: 20)),
                       ],
                     ),
-                    const Text('Welcome to Guardian Portal', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text('Welcome to Guardian Portal', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w500)),
                   ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
-                  onPressed: () {},
+                GestureDetector(
+                  onTap: () {}, // Could navigate to profile
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundImage: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty) 
+                        ? NetworkImage(user!.avatarUrl!) 
+                        : null,
+                    child: (user?.avatarUrl == null || user!.avatarUrl!.isEmpty) 
+                        ? const Icon(Icons.person_rounded, color: Colors.white, size: 20) 
+                        : null,
+                  ),
                 ),
               ],
             ),
@@ -126,18 +135,18 @@ class ParentHomeView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                     if (classId != null) 
                       StreamBuilder<ClassModel>(
                         stream: ClassService().getClassById(classId),
                         builder: (context, classSnap) {
                           final className = classSnap.data?.displayName ?? 'Loading...';
-                          return Text('Grade $className • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 13));
+                          return Text('Grade $className • Roll No. $rollNo', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13));
                         }
                       )
                     else
-                      Text('Grade N/A • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                    const Text('EduTrack Primary Hub', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                      Text('Grade N/A • Roll No. $rollNo', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                    const Text('EduTrack Primary Hub', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
                   ],
                 ),
               ),
@@ -153,47 +162,60 @@ class ParentHomeView extends StatelessWidget {
   }
 
   Widget _buildWellnessCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF059669), Color(0xFF10B981)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-            child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 24),
+    final aiData = context.watch<AnalyticsProvider>().aiPrediction;
+    final riskLevel = aiData?['risk_level'] ?? 'Low';
+    final wellnessMsg = riskLevel == 'Low' ? 'Your child is doing well!' : (riskLevel == 'High' ? 'Attention may be required' : 'Monitor progress closely');
+    final wellnessSub = riskLevel == 'Low' ? 'Keep up the encouragement.' : 'Review recent activity.';
+    final riskColor = riskLevel == 'High' ? Colors.red : (riskLevel == 'Medium' ? Colors.orange : Colors.green);
+
+    final parent = context.read<AuthProvider>().user;
+    final childId = (parent?.parentOf != null && parent!.parentOf!.isNotEmpty) ? parent.parentOf!.first : null;
+
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentWellnessScreen(studentId: childId))),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [riskColor.withOpacity(0.8), riskColor],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: riskColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(wellnessMsg, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(wellnessSub, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
+                ],
+              ),
+            ),
+            Column(
               children: [
-                Text('Your child is doing well!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                Text('Keep up the encouragement.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                Text('Risk Level', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 10)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                  child: Text(riskLevel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                ),
               ],
             ),
-          ),
-          Column(
-            children: [
-              const Text('Risk Level', style: TextStyle(color: Colors.white70, fontSize: 10)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                child: const Text('Low', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     ).animate().fadeIn(delay: 400.ms).scale();
   }
+
 
   Widget _buildSectionHeader(String title) {
     return Row(
@@ -238,8 +260,8 @@ class ParentHomeView extends StatelessWidget {
                           children: [
                             Icon(s['icon'] as IconData, color: s['color'] as Color, size: 20),
                             const SizedBox(height: 8),
-                            Text(s['val'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-                            Text(s['label'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                            Text(s['val'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                            Text(s['label'] as String, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
                             Text(s['sub'] as String, style: TextStyle(fontSize: 9, color: s['color'] as Color, fontWeight: FontWeight.bold)),
                           ],
                         ),
@@ -257,12 +279,12 @@ class ParentHomeView extends StatelessWidget {
 
   Widget _buildQuickAccessGrid(BuildContext context, String? childId) {
     final tools = [
-      {'label': 'Wellness', 'icon': Icons.favorite_rounded, 'color': Colors.teal, 'screen': ParentWellnessScreen(studentId: childId)},
       {'label': 'Academics', 'icon': Icons.school_rounded, 'color': Colors.indigo, 'screen': ParentAcademicsScreen(studentId: childId)},
-      {'label': 'Assignments', 'icon': Icons.assignment_rounded, 'color': Colors.orange, 'screen': ParentAttendanceScreen(studentId: childId)},
       {'label': 'Attendance', 'icon': Icons.event_available_rounded, 'color': Colors.blue, 'screen': ParentAttendanceScreen(studentId: childId)},
+      {'label': 'Assignments', 'icon': Icons.assignment_rounded, 'color': Colors.orange, 'screen': const ParentAssignmentsScreen()},
       {'label': 'AI Insights', 'icon': Icons.auto_awesome_rounded, 'color': Colors.purple, 'screen': ParentWellnessScreen(studentId: childId)},
     ];
+
 
     return SizedBox(
       height: 90,
@@ -300,7 +322,7 @@ class ParentHomeView extends StatelessWidget {
               .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('No recent updates.', style: TextStyle(color: Colors.grey, fontSize: 12)));
+              return const Center(child: Text('No recent updates.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)));
             }
 
             // Sort locally to avoid needing a composite index
@@ -340,12 +362,12 @@ class ParentHomeView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            Text(content, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+                            Text(content, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
                           ],
                         ),
                       ),
-                      Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                      Text(timeAgo, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
                     ],
                   ),
                 );

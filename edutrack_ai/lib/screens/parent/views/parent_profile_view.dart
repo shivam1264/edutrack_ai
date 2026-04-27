@@ -24,11 +24,47 @@ class ParentProfileView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Profile', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+            Center(
+              child: Column(
+                children: [
+                  Stack(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFF97316), width: 2)),
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[100],
+                          backgroundImage: (parent?.avatarUrl != null && parent!.avatarUrl!.isNotEmpty) 
+                              ? NetworkImage(parent!.avatarUrl!) 
+                              : null,
+                          child: (parent?.avatarUrl == null || parent!.avatarUrl!.isEmpty) 
+                              ? const Icon(Icons.person_rounded, size: 50, color: Colors.grey) 
+                              : null,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0, right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(color: Color(0xFFF97316), shape: BoxShape.circle),
+                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(parent?.name ?? 'Guardian', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                  Text(parent?.email ?? 'N/A', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text('Profile Information', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),
             _infoTile('Parent Name', parent?.name ?? 'John Doe'),
             _infoTile('Email', parent?.email ?? 'john.doe@gmail.com'),
-            _infoTile('Phone', '+91 98765 43210'),
+            _infoTile('Phone', parent?.phone ?? 'N/A'),
             const SizedBox(height: 32),
             const Text('Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),

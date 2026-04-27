@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
 import '../../widgets/premium_card.dart';
+import 'monthly_report_screen.dart';
 
 class ParentReportsScreen extends StatelessWidget {
   const ParentReportsScreen({super.key});
@@ -67,11 +68,20 @@ class ParentReportsScreen extends StatelessWidget {
             _highlightTile('Behavior', analytics?['behavior_status'] ?? 'Good', Colors.teal, Icons.psychology_rounded),
             _highlightTile('Participation', analytics?['participation_status'] ?? 'Very Good', Colors.orange, Icons.star_rounded),
             const SizedBox(height: 40),
+            const Text('Subject Performance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 16),
+            ...(analytics?['subject_avg'] as Map<String, dynamic>? ?? {}).entries.map((e) => _highlightTile(
+              e.key, 
+              '${(e.value as num).toInt()}%', 
+              Colors.blueGrey, 
+              Icons.subject_rounded
+            )),
+            const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,
               height: 56,
               child: OutlinedButton(
-                onPressed: () {},
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
                 style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFF97316)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 child: const Text('View Detailed Report', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF97316))),
               ),
