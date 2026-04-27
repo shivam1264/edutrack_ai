@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../parent_leave_request_screen.dart';
 import '../parent_chat_screen.dart';
@@ -16,7 +15,7 @@ class ParentInsightsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '';
+    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : null;
 
     return Scaffold(
       backgroundColor: Colors.white,

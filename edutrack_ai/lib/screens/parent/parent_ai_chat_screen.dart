@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../widgets/premium_card.dart';
 import '../../services/ai_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -13,16 +12,35 @@ class ParentAIChatScreen extends StatefulWidget {
 
 class _ParentAIChatScreenState extends State<ParentAIChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'role': 'assistant',
-      'content': 'Hello! I am your AI Education Assistant. Ask me anything about your child\'s performance or general academic advice.'
-    }
-  ];
+  late final List<Map<String, dynamic>> _messages;
   bool _isLoading = false;
+
+  bool get _hasLinkedChild => widget.studentId != null && widget.studentId!.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _messages = [
+      {
+        'role': 'assistant',
+        'content': _hasLinkedChild
+            ? 'Hello! I am your AI Education Assistant. Ask me about your child\'s attendance, marks, assignments, or progress.'
+            : 'No child is linked with this parent account yet. Please ask the school admin to link a student before using child-specific AI chat.'
+      }
+    ];
+  }
 
   Future<void> _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
+    if (!_hasLinkedChild) {
+      setState(() {
+        _messages.add({
+          'role': 'assistant',
+          'content': 'I need a linked child profile before I can answer child-specific questions.'
+        });
+      });
+      return;
+    }
 
     final userMsg = _controller.text.trim();
     setState(() {

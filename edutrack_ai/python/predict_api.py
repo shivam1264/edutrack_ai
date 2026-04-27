@@ -110,7 +110,7 @@ def test_ai():
     try:
         response_text = generate_with_groq("Say 'Groq AI is working!'")
         print(f"    [AI Response] {response_text}")
-        return jsonify({'status': 'linked', 'ai_response': response_text, 'model': GROQ_MODEL})
+        return jsonify({'status': 'linked', 'ai_response': response_text, 'model': GROQ_TEXT_MODEL})
     except Exception as e:
         print(f"    [AI Error] {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -570,17 +570,31 @@ def get_unified_wellness():
 @app.route('/parent-chat', methods=['POST'])
 def parent_chat():
     data = request.get_json(silent=True) or {}
-    query = data.get('query', '')
+    query = data.get('query', '').strip()
     student_data = data.get('student_data', {})
+
+    if not query:
+        return jsonify({'error': 'query is required'}), 400
+
+    if not isinstance(student_data, dict) or student_data.get('access') != 'granted':
+        return jsonify({
+            'answer': 'I can only answer after the linked child profile is verified. Please contact the school admin if this looks incorrect.'
+        }), 403
     
     system_instruction = (
-        "You are the EduTrack AI Campus Liaison. Answer parent questions about their child's performance. "
-        f"You have access to this real-time data: {student_data}. "
-        "Be helpful, reassuring, and data-driven."
+        "You are the EduTrack AI Parent Assistant. Answer parent questions only from the verified child data provided. "
+        "Do not invent marks, attendance, deadlines, risk levels, teacher feedback, or personal details. "
+        "Do not reveal or compare with any other student. If a detail is missing, say it is not available in EduTrack yet. "
+        "Keep the response parent-friendly, specific, and under 4 sentences."
+    )
+
+    prompt = (
+        f"Verified child data JSON:\n{json.dumps(student_data, ensure_ascii=False)}\n\n"
+        f"Parent question: {query}"
     )
     
     try:
-        response_text = generate_with_groq(f"Parent Question: {query}", system_instruction=system_instruction)
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
         return jsonify({'answer': response_text})
     except Exception as e:
         return jsonify({'answer': f"Connectivity issue: {str(e)}"})
