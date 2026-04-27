@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
@@ -15,6 +14,8 @@ import 'package:edutrack_ai/screens/quiz/create_quiz_screen.dart';
 import 'package:edutrack_ai/screens/teacher/upload_notes_screen.dart';
 import 'package:edutrack_ai/screens/teacher/teacher_announcements_screen.dart';
 import 'package:edutrack_ai/screens/teacher/bulk_grade_screen.dart';
+import 'package:edutrack_ai/screens/assignments/assignment_audit_screen.dart';
+import 'package:edutrack_ai/screens/teacher/dashboard_views/teacher_students_view.dart';
 import 'package:edutrack_ai/services/analytics_service.dart';
 
 class TeacherHomeView extends StatelessWidget {
@@ -180,7 +181,7 @@ class TeacherHomeView extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(child: _buildStatCard(context, '$students', 'Students', Icons.people_outline_rounded, Colors.blue, () {
-              // Navigation to students tab or list
+              Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherStudentsView(selectedClassId: selectedClassId)));
             })),
             const SizedBox(width: 12),
             Expanded(child: _buildStatCard(context, '$pendingTasks', 'Pending Tasks', Icons.assignment_outlined, Colors.orange, () {
@@ -255,7 +256,13 @@ class TeacherHomeView extends StatelessWidget {
             child: FutureBuilder<List<double>>(
               future: AnalyticsService.instance.getClassPerformanceTrend(selectedClassId ?? ''),
               builder: (context, snapshot) {
-                final trend = snapshot.data ?? [70, 72, 68, 75, 74, 80, 82]; // Fallback visuals
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                }
+                final trend = snapshot.data ?? [];
+                if (trend.isEmpty) {
+                  return const Center(child: Text('No performance data yet', style: TextStyle(color: AppTheme.textSecondary)));
+                }
                 return LineChart(
                   LineChartData(
                     gridData: const FlGridData(show: false),
@@ -380,7 +387,7 @@ class TeacherHomeView extends StatelessWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AssignmentAuditScreen(classId: selectedClassId ?? ''))),
               child: const Text('View All', style: TextStyle(fontSize: 12)),
             ),
           ],

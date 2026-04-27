@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../providers/analytics_provider.dart';
-import '../../../widgets/premium_card.dart';
-import '../../../utils/app_theme.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/providers/analytics_provider.dart';
+import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../parent_academics_screen.dart';
-import '../parent_wellness_screen.dart';
-import '../parent_chat_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_academics_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_wellness_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_chat_screen.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_insights_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_updates_view.dart';
 
 class ParentChildView extends StatelessWidget {
   const ParentChildView({super.key});

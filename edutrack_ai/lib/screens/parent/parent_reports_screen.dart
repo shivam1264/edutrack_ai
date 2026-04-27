@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
-import '../../widgets/premium_card.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/attendance_service.dart';
 import 'monthly_report_screen.dart';
 
 class ParentReportsScreen extends StatelessWidget {
@@ -10,8 +11,17 @@ class ParentReportsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final analytics = context.watch<AnalyticsProvider>().studentAnalytics;
-    final grade = analytics?['overall_grade'] ?? 'B+';
-    final insight = analytics?['performance_insight'] ?? "DI is performing well. Keep encouraging!";
+    final user = context.watch<AuthProvider>().user;
+    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : null;
+    final avgScore = (analytics?['avg_score'] as num?)?.toDouble();
+    final grade = avgScore == null ? 'N/A' : '${avgScore.toStringAsFixed(0)}%';
+    final insight = avgScore == null
+        ? 'No academic report data is available yet.'
+        : avgScore >= 75
+            ? 'Academic performance is currently strong. Keep encouraging regular revision.'
+            : avgScore >= 50
+                ? 'Academic performance is moderate. Focused revision can improve the next results.'
+                : 'Academic performance needs attention. Please review assignments and recent quiz scores.';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -21,7 +31,10 @@ class ParentReportsScreen extends StatelessWidget {
         surfaceTintColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyReportScreen())),
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -63,10 +76,16 @@ class ParentReportsScreen extends StatelessWidget {
             const SizedBox(height: 40),
             const Text('Report Highlights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
-            _highlightTile('Academics', analytics?['academic_status'] ?? 'Good', Colors.indigo, Icons.school_rounded),
-            _highlightTile('Attendance', analytics?['attendance_status'] ?? 'Excellent', Colors.green, Icons.calendar_today_rounded),
-            _highlightTile('Behavior', analytics?['behavior_status'] ?? 'Good', Colors.teal, Icons.psychology_rounded),
-            _highlightTile('Participation', analytics?['participation_status'] ?? 'Very Good', Colors.orange, Icons.star_rounded),
+            _highlightTile('Academics', avgScore == null ? 'No data' : '${avgScore.toStringAsFixed(0)}%', Colors.indigo, Icons.school_rounded),
+            FutureBuilder(
+              future: childId == null ? null : AttendanceService().getAttendanceStats(childId),
+              builder: (context, snapshot) {
+                final attendance = snapshot.data?.percentage;
+                return _highlightTile('Attendance', attendance == null ? 'No data' : '${attendance.toStringAsFixed(0)}%', Colors.green, Icons.calendar_today_rounded);
+              },
+            ),
+            _highlightTile('Assignments Submitted', '${analytics?['submitted_count'] ?? 0}', Colors.orange, Icons.assignment_turned_in_rounded),
+            _highlightTile('Assignments Graded', '${analytics?['graded_count'] ?? 0}', Colors.teal, Icons.fact_check_rounded),
             const SizedBox(height: 40),
             const Text('Subject Performance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),

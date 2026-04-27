@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../providers/analytics_provider.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../utils/app_theme.dart';
-import '../../../widgets/premium_card.dart';
+import 'package:edutrack_ai/providers/analytics_provider.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/widgets/premium_card.dart';
 
 class ProgressView extends StatefulWidget {
   const ProgressView({super.key});

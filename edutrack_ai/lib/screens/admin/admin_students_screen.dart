@@ -25,6 +25,13 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> with SingleTi
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -34,7 +41,10 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> with SingleTi
         surfaceTintColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.tune_rounded), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: () => _tabController.animateTo((_tabController.index + 1) % _tabController.length),
+          ),
         ],
       ),
       body: Column(
@@ -115,7 +125,9 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> with SingleTi
         var docs = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final name = (data['name'] ?? '').toString().toLowerCase();
-          return name.contains(_searchQuery);
+          final itemStatus = _statusOf(data);
+          final matchesStatus = status == 'all' || itemStatus == status;
+          return matchesStatus && name.contains(_searchQuery);
         }).toList();
 
         return ListView.builder(
@@ -132,6 +144,8 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> with SingleTi
   }
 
   Widget _buildStudentTile(Map<String, dynamic> data, int index, String studentId) {
+    final status = _statusOf(data);
+    final isActive = status == 'active';
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminStudentDetailScreen(studentData: data, studentId: studentId))),
       child: PremiumCard(
@@ -156,12 +170,18 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> with SingleTi
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: const Text('Active', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(color: (isActive ? Colors.green : Colors.grey).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              child: Text(status.toUpperCase(), style: TextStyle(color: isActive ? Colors.green : Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
       ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1),
     );
+  }
+
+  String _statusOf(Map<String, dynamic> data) {
+    final raw = data['status']?.toString().toLowerCase();
+    if (raw == 'inactive' || raw == 'disabled' || raw == 'archived') return 'inactive';
+    return 'active';
   }
 }

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/doubt_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/mock_data_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 
@@ -55,7 +54,13 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> {
                 child: _selectedTabIndex == 0
                     ? _buildAskForm(userId)
                     : StreamBuilder<List<DoubtModel>>(
-                  stream: MockDataService.instance.streamDoubts(userId),
+                    stream: FirebaseFirestore.instance
+                        .collection('doubts')
+                        .where('studentId', isEqualTo: userId)
+                        .snapshots()
+                        .map((snap) => snap.docs
+                            .map((doc) => DoubtModel.fromMap(doc.id, doc.data()))
+                            .toList()),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -63,8 +68,9 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> {
 
                     final doubts = snapshot.data ?? [];
                     final filteredDoubts = doubts.where((d) {
-                      if (_selectedTabIndex == 1) return d.status == 'Pending'; // My Doubts = Pending only
-                      if (_selectedTabIndex == 2) return d.status == 'Answered';
+                      final status = d.status.toLowerCase();
+                      if (_selectedTabIndex == 1) return status == 'pending' || status == 'ai_answered';
+                      if (_selectedTabIndex == 2) return status == 'answered';
                       return true;
                     }).toList();
 
@@ -87,6 +93,7 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> {
                                   question: doubt.question,
                                   date: DateFormat('MMM dd, yyyy').format(doubt.createdAt),
                                   status: doubt.status,
+                                  answer: doubt.answer,
                                   icon: _getIconForSubject(doubt.subject),
                                   color: _getColorForSubject(doubt.subject),
                                 ),
@@ -274,6 +281,7 @@ class _DoubtCard extends StatelessWidget {
   final String question;
   final String date;
   final String status;
+  final String? answer;
   final IconData icon;
   final Color color;
 
@@ -282,13 +290,20 @@ class _DoubtCard extends StatelessWidget {
     required this.question,
     required this.date,
     required this.status,
+    this.answer,
     required this.icon,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isPending = status == 'Pending';
+    final normalizedStatus = status.toLowerCase();
+    final isPending = normalizedStatus == 'pending' || normalizedStatus == 'ai_answered';
+    final displayStatus = normalizedStatus == 'answered'
+        ? 'Answered'
+        : normalizedStatus == 'ai_answered'
+            ? 'AI Answered'
+            : 'Pending';
     return PremiumCard(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -312,7 +327,7 @@ class _DoubtCard extends StatelessWidget {
                   children: [
                     Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
                     Text(
-                      status,
+                      displayStatus,
                       style: TextStyle(
                         color: isPending ? Colors.blue : Colors.green,
                         fontWeight: FontWeight.bold,
@@ -323,6 +338,12 @@ class _DoubtCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(question, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                if (!isPending && answer != null && answer!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  Text(answer!, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                ],
                 const SizedBox(height: 8),
                 Text(date, style: const TextStyle(color: AppTheme.textHint, fontSize: 12)),
               ],

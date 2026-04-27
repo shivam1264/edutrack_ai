@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/study_plan_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/mock_data_service.dart';
 import '../../utils/app_theme.dart';
 
 class SmartPlannerScreen extends StatefulWidget {
@@ -40,13 +39,19 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
               ),
               Expanded(
                 child: StreamBuilder<List<StudyTaskModel>>(
-                  stream: MockDataService.instance.streamStudyTasks(userId),
+                  stream: FirebaseFirestore.instance
+                      .collection('study_tasks')
+                      .where('userId', isEqualTo: userId)
+                      .snapshots()
+                      .map((snap) => snap.docs
+                          .map((doc) => StudyTaskModel.fromMap(doc.id, doc.data()))
+                          .toList()),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    final tasks = snapshot.data ?? [];
+                    final tasks = _filterTasks(snapshot.data ?? []);
                     final completedCount = tasks.where((t) => t.isCompleted).length;
                     final totalCount = tasks.length;
                     final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
@@ -125,6 +130,27 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
         .collection('study_tasks')
         .doc(task.id)
         .update({'is_completed': !task.isCompleted});
+  }
+
+  List<StudyTaskModel> _filterTasks(List<StudyTaskModel> tasks) {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final tomorrowStart = todayStart.add(const Duration(days: 1));
+    final weekEnd = todayStart.add(const Duration(days: 7));
+    final monthEnd = DateTime(now.year, now.month + 1, now.day);
+
+    final filtered = tasks.where((task) {
+      if (_selectedTabIndex == 0) {
+        return !task.createdAt.isBefore(todayStart) && task.createdAt.isBefore(tomorrowStart);
+      }
+      if (_selectedTabIndex == 1) {
+        return !task.createdAt.isBefore(todayStart) && task.createdAt.isBefore(weekEnd);
+      }
+      return !task.createdAt.isBefore(todayStart) && task.createdAt.isBefore(monthEnd);
+    }).toList();
+
+    filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return filtered;
   }
 
   void _showAddTaskDialog(BuildContext context, String userId) {

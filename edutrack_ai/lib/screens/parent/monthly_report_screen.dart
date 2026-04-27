@@ -11,6 +11,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../../services/attendance_service.dart';
 import '../../services/analytics_service.dart';
+import '../../services/ai_service.dart';
 import '../../models/attendance_model.dart';
 
 class MonthlyReportScreen extends StatefulWidget {
@@ -37,12 +38,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
     final user = context.read<AuthProvider>().user;
     final studentId = widget.studentId ?? user?.parentOf?.first;
     if (studentId == null || studentId.isEmpty) {
-      final snap = await FirebaseFirestore.instance.collection('users')
-          .where('role', isEqualTo: 'student')
-          .limit(1).get();
-      if (snap.docs.isNotEmpty) {
-        setState(() => _studentData = snap.docs.first.data() as Map<String, dynamic>);
-      }
+      setState(() => _studentData = null);
     } else {
       final doc = await FirebaseFirestore.instance.collection('users').doc(studentId).get();
       if (doc.exists) {
@@ -68,25 +64,15 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
       final analytics = await AnalyticsService.instance.getStudentAnalytics(studentId);
       final avgScoreStr = '${(analytics['avg_score'] as double).toInt()}%';
 
-      final res = await http.post(
-        Uri.parse(Config.endpoint('/generate-monthly-report')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'studentName': _studentData!['name'] ?? 'Student',
-          'attendance': attendanceStr, 
-          'avgScore': avgScoreStr,   
-          'behavior': 'Good', 
-          'month': monthStr,
-        }),
-      ).timeout(const Duration(seconds: 40));
+      final report = await AIService().generateMonthlyReport({
+        'studentName': _studentData!['name'] ?? 'Student',
+        'attendance': attendanceStr,
+        'avgScore': avgScoreStr,
+        'behavior': 'Not recorded',
+        'month': monthStr,
+      });
 
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        setState(() => _generatedReport = data['report'] ?? 'Intelligence report generated successfully.');
-      } else {
-        final report = await _getOfflineReportData();
-        setState(() => _generatedReport = report);
-      }
+      setState(() => _generatedReport = report);
     } catch (e) {
       final report = await _getOfflineReportData();
       setState(() => _generatedReport = report);

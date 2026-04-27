@@ -6,6 +6,7 @@ class DoubtModel {
   final String subject;
   final String question;
   final String status; // 'Pending', 'Answered'
+  final String? answer;
   final DateTime createdAt;
 
   DoubtModel({
@@ -14,19 +15,22 @@ class DoubtModel {
     required this.subject,
     required this.question,
     required this.status,
+    this.answer,
     required this.createdAt,
   });
 
   factory DoubtModel.fromMap(String id, Map<String, dynamic> map) {
+    final createdValue = map['createdAt'] ?? map['created_at'];
     return DoubtModel(
       id: id,
       studentId: map['studentId'] ?? map['student_id'] ?? '',
       subject: map['subject'] ?? '',
       question: map['question'] ?? '',
       status: map['status'] ?? 'pending',
-      createdAt: (map['createdAt'] ?? map['created_at']) is Timestamp 
-          ? (map['createdAt'] ?? map['created_at'] as Timestamp).toDate() 
-          : DateTime.tryParse(map['createdAt'] ?? map['created_at'] ?? '') ?? DateTime.now(),
+      answer: map['answer'],
+      createdAt: createdValue is Timestamp
+          ? createdValue.toDate()
+          : DateTime.tryParse(createdValue?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
@@ -36,6 +40,7 @@ class DoubtModel {
       'subject': subject,
       'question': question,
       'status': status,
+      if (answer != null) 'answer': answer,
       'created_at': createdAt.toIso8601String(),
     };
   }

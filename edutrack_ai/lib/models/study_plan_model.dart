@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class StudyTaskModel {
   final String id;
   final String title;
@@ -5,6 +7,7 @@ class StudyTaskModel {
   final String type; // 'Review', 'Practice', 'Assignment'
   final int durationMinutes;
   final bool isCompleted;
+  final DateTime createdAt;
 
   StudyTaskModel({
     required this.id,
@@ -13,9 +16,11 @@ class StudyTaskModel {
     required this.type,
     required this.durationMinutes,
     this.isCompleted = false,
+    required this.createdAt,
   });
 
   factory StudyTaskModel.fromMap(String id, Map<String, dynamic> map) {
+    final createdValue = map['created_at'] ?? map['createdAt'];
     return StudyTaskModel(
       id: id,
       title: map['title'] ?? '',
@@ -23,6 +28,9 @@ class StudyTaskModel {
       type: map['type'] ?? 'Review',
       durationMinutes: map['duration_minutes'] ?? 30,
       isCompleted: map['is_completed'] ?? false,
+      createdAt: createdValue is Timestamp
+          ? createdValue.toDate()
+          : DateTime.tryParse(createdValue?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
@@ -33,6 +41,7 @@ class StudyTaskModel {
       'type': type,
       'duration_minutes': durationMinutes,
       'is_completed': isCompleted,
+      'created_at': Timestamp.fromDate(createdAt),
     };
   }
 
@@ -43,6 +52,7 @@ class StudyTaskModel {
     String? type,
     int? durationMinutes,
     bool? isCompleted,
+    DateTime? createdAt,
   }) {
     return StudyTaskModel(
       id: id ?? this.id,
@@ -51,6 +61,7 @@ class StudyTaskModel {
       type: type ?? this.type,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       isCompleted: isCompleted ?? this.isCompleted,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

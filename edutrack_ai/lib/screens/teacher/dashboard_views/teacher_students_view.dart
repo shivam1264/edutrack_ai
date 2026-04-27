@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../utils/app_theme.dart';
 import '../../../providers/analytics_provider.dart';
 import '../../admin/add_user_screen.dart';
@@ -18,12 +17,21 @@ class TeacherStudentsView extends StatefulWidget {
 class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    super.dispose();
   }
 
   @override
@@ -36,7 +44,7 @@ class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTi
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.search_rounded), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.search_rounded), onPressed: () => _searchFocus.requestFocus()),
           const SizedBox(width: 8),
         ],
       ),
@@ -84,6 +92,7 @@ class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTi
               ),
               child: TextField(
                 controller: _searchCtrl,
+                focusNode: _searchFocus,
                 onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
                 decoration: const InputDecoration(
                   icon: Icon(Icons.search_rounded, color: AppTheme.textHint),
@@ -97,14 +106,21 @@ class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTi
             ),
           ),
           const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderLight),
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              final next = (_tabController.index + 1) % _tabController.length;
+              _tabController.animateTo(next);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderLight),
+              ),
+              child: const Icon(Icons.tune_rounded, color: AppTheme.secondary),
             ),
-            child: const Icon(Icons.tune_rounded, color: AppTheme.secondary),
           ),
         ],
       ),

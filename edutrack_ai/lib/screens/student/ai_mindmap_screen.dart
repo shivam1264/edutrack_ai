@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../utils/config.dart';
 import '../../utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../services/ai_service.dart';
 
 class AIMindMapScreen extends StatefulWidget {
   final String? initialFileUrl;
@@ -33,14 +34,13 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
   Future<void> _generateFromUrl(String url) async {
     _startLoading();
     try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/generate-mindmap')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'file_url': url}),
-      ).timeout(const Duration(seconds: 90));
-      _handleResponse(response.statusCode, response.body);
+      final analysis = await AIService().generateMindMap("Analyze this document: $url");
+      setState(() {
+        _mindMapData = analysis['mindmap'];
+        _isLoading = false;
+      });
     } catch (e) {
-      _showError(msg: e is TimeoutException ? 'Visualizer Hub timeout. Try a shorter text.' : null);
+      _showError(msg: 'Error analyzing document.');
     }
   }
 
@@ -49,14 +49,13 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
     if (content.isEmpty) return;
     _startLoading();
     try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/generate-mindmap')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'content': content}),
-      ).timeout(const Duration(seconds: 90));
-      _handleResponse(response.statusCode, response.body);
+      final analysis = await AIService().generateMindMap(content);
+      setState(() {
+        _mindMapData = analysis['mindmap'];
+        _isLoading = false;
+      });
     } catch (e) {
-      _showError(msg: e is TimeoutException ? 'AI is analyzing deep patterns. Please wait 1 min.' : null);
+      _showError(msg: 'AI Generation failed.');
     }
   }
 

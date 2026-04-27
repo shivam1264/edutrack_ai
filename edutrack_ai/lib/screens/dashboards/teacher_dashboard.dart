@@ -109,28 +109,67 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             index: _currentIndex,
             children: tabs,
           ),
-          bottomNavigationBar: Container(
+           bottomNavigationBar: Container(
             decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
               boxShadow: [
-                 BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
-              ],
+                 BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 32, offset: const Offset(0, -10))
+               ],
             ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.white,
-              selectedItemColor: const Color(0xFF059669),
-              unselectedItemColor: Colors.grey,
-              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-                BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Classroom'),
-                BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Students'),
-                BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Reports'),
-                BottomNavigationBarItem(icon: Icon(Icons.more_horiz_rounded), label: 'More'),
-              ],
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+              child: NavigationBarTheme(
+                data: NavigationBarThemeData(
+                  height: 78,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  indicatorColor: const Color(0xFF059669).withOpacity(0.1),
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF059669));
+                    }
+                    return const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textHint);
+                  }),
+                  iconTheme: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return const IconThemeData(color: Color(0xFF059669), size: 26);
+                    }
+                    return IconThemeData(color: AppTheme.textHint, size: 24);
+                  }),
+                ),
+                child: NavigationBar(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: (index) => setState(() => _currentIndex = index),
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard_rounded, color: Color(0xFF059669)),
+                      label: 'Dashboard',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.school_outlined),
+                      selectedIcon: Icon(Icons.school_rounded, color: Color(0xFF059669)),
+                      label: 'Classroom',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.people_alt_outlined),
+                      selectedIcon: Icon(Icons.people_alt_rounded, color: Color(0xFF059669)),
+                      label: 'Students',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.bar_chart_outlined),
+                      selectedIcon: Icon(Icons.bar_chart_rounded, color: Color(0xFF059669)),
+                      label: 'Reports',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.more_horiz_outlined),
+                      selectedIcon: Icon(Icons.more_horiz_rounded, color: Color(0xFF059669)),
+                      label: 'More',
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         );

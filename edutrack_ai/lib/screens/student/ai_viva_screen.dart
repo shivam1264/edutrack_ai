@@ -104,7 +104,7 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Dr. Gemini (Examiner)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
+                      Text('Dr. Llama (AI Examiner)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
                       Text('Use keyboard mic to answer!', style: TextStyle(color: Colors.black54, fontSize: 13)),
                     ],
                   ),

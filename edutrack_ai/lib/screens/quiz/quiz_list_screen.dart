@@ -168,7 +168,7 @@ class _QuizListScreenState extends State<QuizListScreen> {
                 const Text('Take a quiz and improve your score.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                 const SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => setState(() => _selectedTabIndex = 1),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     foregroundColor: Colors.white,

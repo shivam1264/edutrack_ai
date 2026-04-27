@@ -110,7 +110,10 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Subject Performance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                      TextButton(onPressed: () {}, child: const Text('View all', style: TextStyle(fontSize: 12))),
+                      TextButton(
+                        onPressed: () => DefaultTabController.of(context).animateTo(1),
+                        child: const Text('View all', style: TextStyle(fontSize: 12)),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),

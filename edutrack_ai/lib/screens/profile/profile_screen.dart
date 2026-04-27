@@ -34,7 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         folder: 'edutrack_ai/avatars',
       );
       if (result != null && mounted) {
-        // TODO: Save result.secureUrl to Firestore user document
+        await context.read<AuthProvider>().updateProfile({'avatar_url': result.secureUrl});
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Avatar uploaded! (${result.readableSize})'),
           backgroundColor: AppTheme.secondary,
@@ -55,7 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final user = authProvider.userModel;
+    final user = authProvider.user;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -142,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
+                gradient: AppTheme.studentGradient,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -173,7 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _InfoCard(
                 icon: Icons.child_care_rounded,
                 label: 'Child Student ID',
-                value: user!.parentOf!,
+                value: user!.parentOf!.join(', '),
               ),
             const SizedBox(height: 12),
 

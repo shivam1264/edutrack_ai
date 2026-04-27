@@ -19,7 +19,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   // Real Configuration State
   bool _autoNotifyParents = true;
   double _attendanceThreshold = 75.0;
-  String _aiModel = 'Gemini-1.5-Pro';
+  String _aiModel = 'Llama-3.3-70b';
   String _academicYear = '2024-25';
   bool _enableGamification = true;
 
@@ -37,7 +37,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
         setState(() {
           _autoNotifyParents = data['auto_notify_parents'] ?? true;
           _attendanceThreshold = (data['attendance_threshold'] ?? 75.0).toDouble();
-          _aiModel = data['ai_model'] ?? 'Gemini-1.5-Pro';
+          _aiModel = data['ai_model'] ?? 'Llama-3.3-70b';
           _academicYear = data['academic_year'] ?? '2024-25';
           _enableGamification = data['enable_gamification'] ?? true;
         });
@@ -116,7 +116,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                   color: Colors.purple,
                   title: 'Primary AI Model',
                   value: _aiModel,
-                  items: ['Gemini-1.5-Pro', 'Gemini-1.5-Flash', 'EduTrack-Custom-v2'],
+                  items: ['Llama-3.3-70b', 'Llama-3.1-8b', 'EduTrack-Custom-v2'],
                   onChanged: (val) => setState(() => _aiModel = val!),
                 ),
               ],

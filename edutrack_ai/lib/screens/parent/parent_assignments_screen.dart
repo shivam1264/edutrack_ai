@@ -80,13 +80,39 @@ class ParentAssignmentsScreen extends StatelessWidget {
               return const Center(child: Text('No assignments found for this class'));
             }
 
-            return ListView.separated(
+            return FutureBuilder<QuerySnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('submissions')
+                  .where('student_id', isEqualTo: childId)
+                  .get(),
+              builder: (context, subSnap) {
+                if (!subSnap.hasData) return const Center(child: CircularProgressIndicator());
+
+                final submissions = {
+                  for (final doc in subSnap.data!.docs)
+                    ((doc.data() as Map<String, dynamic>)['assignment_id'] as String? ?? ''):
+                        doc.data() as Map<String, dynamic>
+                };
+
+                final filtered = assignments.where((assignment) {
+                  final submission = submissions[assignment.id];
+                  final realStatus = _assignmentStatus(assignment, submission);
+                  if (status == 'completed') return realStatus == 'graded';
+                  if (status == 'pending') return realStatus == 'pending' || realStatus == 'overdue';
+                  return realStatus == status;
+                }).toList();
+
+                if (filtered.isEmpty) return Center(child: Text('No $status assignments'));
+
+                return ListView.separated(
           padding: const EdgeInsets.all(24),
-          itemCount: assignments.length,
+          itemCount: filtered.length,
           separatorBuilder: (_, __) => const SizedBox(height: 16),
           itemBuilder: (context, i) {
-            final a = assignments[i];
-            final color = i % 2 == 0 ? Colors.indigo : Colors.orange;
+            final a = filtered[i];
+            final submission = submissions[a.id];
+            final realStatus = _assignmentStatus(a, submission);
+            final color = _statusColor(realStatus);
             
             return PremiumCard(
               padding: const EdgeInsets.all(16),
@@ -105,19 +131,21 @@ class ParentAssignmentsScreen extends StatelessWidget {
                         Text(a.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         const SizedBox(height: 4),
                         Text('Due: ${DateFormat('dd MMM, yyyy').format(a.dueDate)}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        if (submission?['marks'] != null)
+                          Text('Marks: ${submission!['marks']}/${a.maxMarks.toInt()}', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: status == 'pending' ? Colors.orange.withOpacity(0.1) : (status == 'submitted' ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1)),
+                      color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      status.toUpperCase(), 
+                      realStatus.toUpperCase(),
                       style: TextStyle(
-                        color: status == 'pending' ? Colors.orange : (status == 'submitted' ? Colors.blue : Colors.green), 
+                        color: color,
                         fontSize: 10, 
                         fontWeight: FontWeight.bold,
                       ),
@@ -127,10 +155,34 @@ class ParentAssignmentsScreen extends StatelessWidget {
               ),
             ).animate().fadeIn(delay: (i * 100).ms).slideX(begin: 0.1);
           },
+                );
+              },
             );
           },
         );
       },
     );
+  }
+
+  String _assignmentStatus(AssignmentModel assignment, Map<String, dynamic>? submission) {
+    if (submission != null) {
+      final status = submission['status']?.toString().toLowerCase();
+      if (status == 'graded') return 'graded';
+      return 'submitted';
+    }
+    return assignment.isOverdue ? 'overdue' : 'pending';
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'graded':
+        return Colors.green;
+      case 'submitted':
+        return Colors.blue;
+      case 'overdue':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
   }
 }

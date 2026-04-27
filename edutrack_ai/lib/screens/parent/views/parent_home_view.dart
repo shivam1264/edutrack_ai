@@ -1,27 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../providers/analytics_provider.dart';
-import '../../../services/attendance_service.dart';
-import '../../../services/analytics_service.dart';
-import '../../../services/class_service.dart';
-import '../../../models/class_model.dart';
-import '../../../widgets/premium_card.dart';
-import '../../../utils/app_theme.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/providers/analytics_provider.dart';
+import 'package:edutrack_ai/services/attendance_service.dart';
+import 'package:edutrack_ai/services/analytics_service.dart';
+import 'package:edutrack_ai/services/class_service.dart';
+import 'package:edutrack_ai/models/class_model.dart';
+import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../parent_wellness_screen.dart';
-import '../parent_academics_screen.dart';
-import '../parent_assignments_screen.dart';
-import '../parent_attendance_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_wellness_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_academics_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_assignments_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_attendance_screen.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_updates_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_insights_view.dart';
 
-class ParentHomeView extends StatelessWidget {
+class ParentHomeView extends StatefulWidget {
   const ParentHomeView({super.key});
+
+  @override
+  State<ParentHomeView> createState() => _ParentHomeViewState();
+}
+
+class _ParentHomeViewState extends State<ParentHomeView> {
+  String? _selectedChildId;
 
   @override
   Widget build(BuildContext context) {
     final parent = context.watch<AuthProvider>().user;
-    final childId = (parent?.parentOf != null && parent!.parentOf!.isNotEmpty) ? parent.parentOf!.first : null;
+    final linkedChildren = parent?.parentOf ?? [];
+    final childId = linkedChildren.contains(_selectedChildId)
+        ? _selectedChildId
+        : (linkedChildren.isNotEmpty ? linkedChildren.first : null);
     
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -36,9 +50,13 @@ class ParentHomeView extends StatelessWidget {
                 const SizedBox(height: 20),
                 _buildChildCard(context, childId),
                 const SizedBox(height: 20),
-                _buildWellnessCard(context),
+                _buildWellnessCard(context, childId),
                 const SizedBox(height: 24),
-                _buildSectionHeader('Today at a Glance'),
+                _buildSectionHeader('Today at a Glance', onTap: () {
+                  if (childId != null) {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => ParentAcademicsScreen(studentId: childId)));
+                  }
+                }),
                 const SizedBox(height: 12),
                 _buildStatsGlance(childId),
                 const SizedBox(height: 24),
@@ -46,7 +64,9 @@ class ParentHomeView extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildQuickAccessGrid(context, childId),
                 const SizedBox(height: 24),
-                _buildSectionHeader('Recent Updates'),
+                _buildSectionHeader('Recent Updates', onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentUpdatesView()));
+                }),
                 const SizedBox(height: 12),
                 _buildUpdatesList(childId),
                 const SizedBox(height: 100),
@@ -92,7 +112,7 @@ class ParentHomeView extends StatelessWidget {
                   ],
                 ),
                 GestureDetector(
-                  onTap: () {}, // Could navigate to profile
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentProfileView())),
                   child: CircleAvatar(
                     radius: 20,
                     backgroundColor: Colors.white.withOpacity(0.2),
@@ -151,7 +171,7 @@ class ParentHomeView extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () => _showChildPicker(context),
                 child: const Text('Switch Child', style: TextStyle(color: Color(0xFFF97316), fontWeight: FontWeight.bold, fontSize: 12)),
               ),
             ],
@@ -161,15 +181,12 @@ class ParentHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildWellnessCard(BuildContext context) {
+  Widget _buildWellnessCard(BuildContext context, String? childId) {
     final aiData = context.watch<AnalyticsProvider>().aiPrediction;
     final riskLevel = aiData?['risk_level'] ?? 'Low';
     final wellnessMsg = riskLevel == 'Low' ? 'Your child is doing well!' : (riskLevel == 'High' ? 'Attention may be required' : 'Monitor progress closely');
     final wellnessSub = riskLevel == 'Low' ? 'Keep up the encouragement.' : 'Review recent activity.';
     final riskColor = riskLevel == 'High' ? Colors.red : (riskLevel == 'Medium' ? Colors.orange : Colors.green);
-
-    final parent = context.read<AuthProvider>().user;
-    final childId = (parent?.parentOf != null && parent!.parentOf!.isNotEmpty) ? parent.parentOf!.first : null;
 
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentWellnessScreen(studentId: childId))),
@@ -217,12 +234,12 @@ class ParentHomeView extends StatelessWidget {
   }
 
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {VoidCallback? onTap}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1E293B))),
-        TextButton(onPressed: () {}, child: const Text('View All', style: TextStyle(fontSize: 12))),
+        if (onTap != null) TextButton(onPressed: onTap, child: const Text('View All', style: TextStyle(fontSize: 12))),
       ],
     );
   }
@@ -385,5 +402,44 @@ class ParentHomeView extends StatelessWidget {
     if (difference.inHours > 0) return '${difference.inHours}h ago';
     if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
     return 'Just now';
+  }
+
+  void _showChildPicker(BuildContext context) {
+    final parent = context.read<AuthProvider>().user;
+    final childIds = parent?.parentOf ?? [];
+    if (childIds.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only one child is linked with this account.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: childIds.map((id) {
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(id).get(),
+              builder: (context, snapshot) {
+                final data = snapshot.data?.data() as Map<String, dynamic>?;
+                final name = data?['name'] ?? 'Student';
+                return ListTile(
+                  leading: const Icon(Icons.person_rounded, color: Color(0xFFF97316)),
+                  title: Text(name),
+                  subtitle: Text(data?['roll_no'] == null ? id : 'Roll No. ${data!['roll_no']}'),
+                  onTap: () {
+                    setState(() => _selectedChildId = id);
+                    context.read<AnalyticsProvider>().loadStudentAnalytics(id);
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
   }
 }

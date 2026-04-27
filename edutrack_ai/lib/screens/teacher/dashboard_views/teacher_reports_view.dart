@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -24,7 +25,14 @@ class TeacherReportsView extends StatelessWidget {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () {
+              final avg = data?['class_avg'] == null ? 'N/A' : '${(data!['class_avg'] as num).toStringAsFixed(1)}%';
+              Clipboard.setData(ClipboardData(text: 'EduTrack class report: average score $avg'));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report summary copied.')));
+            },
+          ),
           const SizedBox(width: 8),
         ],
       ),

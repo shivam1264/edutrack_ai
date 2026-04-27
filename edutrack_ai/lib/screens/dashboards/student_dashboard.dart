@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/analytics_provider.dart';
-import '../../providers/gamification_provider.dart';
-import '../../utils/app_theme.dart';
-import '../student/dashboard_views/home_view.dart';
-import '../student/dashboard_views/missions_view.dart';
-import '../student/dashboard_views/progress_view.dart';
-import '../student/dashboard_views/student_profile_view.dart';
-import '../student/dashboard_views/communication_view.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/providers/analytics_provider.dart';
+import 'package:edutrack_ai/providers/gamification_provider.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/screens/student/dashboard_views/home_view.dart';
+import 'package:edutrack_ai/screens/student/dashboard_views/missions_view.dart';
+import 'package:edutrack_ai/screens/student/dashboard_views/progress_view.dart';
+import 'package:edutrack_ai/screens/student/dashboard_views/student_profile_view.dart';
+import 'package:edutrack_ai/screens/student/dashboard_views/communication_view.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -61,27 +61,28 @@ class _StudentDashboardState extends State<StudentDashboard> {
   Widget _buildBottomNav() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surfaceLight,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 30, offset: const Offset(0, -5)),
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 24, offset: const Offset(0, -8)),
         ],
       ),
       child: NavigationBarTheme(
         data: NavigationBarThemeData(
-          height: 80,
-          backgroundColor: Colors.white,
-          indicatorColor: AppTheme.primary.withOpacity(0.1),
+          height: 76,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          indicatorColor: AppTheme.primary.withOpacity(0.08),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.primary);
+              return TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.primary);
             }
-            return const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textHint);
+            return TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textHint);
           }),
           iconTheme: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(color: AppTheme.primary, size: 28);
+              return const IconThemeData(color: AppTheme.primary, size: 26);
             }
-            return const IconThemeData(color: AppTheme.textHint, size: 24);
+            return IconThemeData(color: AppTheme.textHint, size: 24);
           }),
         ),
         child: NavigationBar(
@@ -90,27 +91,27 @@ class _StudentDashboardState extends State<StudentDashboard> {
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
+              selectedIcon: Icon(Icons.home_rounded, color: AppTheme.primary),
               label: 'Home',
             ),
             NavigationDestination(
               icon: Icon(Icons.rocket_launch_outlined),
-              selectedIcon: Icon(Icons.rocket_launch_rounded),
+              selectedIcon: Icon(Icons.rocket_launch_rounded, color: AppTheme.primary),
               label: 'Missions',
             ),
             NavigationDestination(
               icon: Icon(Icons.chat_bubble_outline_rounded),
-              selectedIcon: Icon(Icons.chat_bubble_rounded),
+              selectedIcon: Icon(Icons.chat_bubble_rounded, color: AppTheme.primary),
               label: 'Chat',
             ),
             NavigationDestination(
               icon: Icon(Icons.bar_chart_outlined),
-              selectedIcon: Icon(Icons.bar_chart_rounded),
+              selectedIcon: Icon(Icons.bar_chart_rounded, color: AppTheme.primary),
               label: 'Progress',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
+              selectedIcon: Icon(Icons.person_rounded, color: AppTheme.primary),
               label: 'Profile',
             ),
           ],

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/analytics_provider.dart';
-import '../parent/views/parent_home_view.dart';
-import '../parent/views/parent_child_view.dart';
-import '../parent/views/parent_insights_view.dart';
-import '../parent/views/parent_updates_view.dart';
-import '../parent/views/parent_profile_view.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/providers/analytics_provider.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_home_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_insights_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_updates_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -47,28 +48,65 @@ class _ParentDashboardState extends State<ParentDashboard> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surfaceLight,
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -4)),
+            BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 32, offset: const Offset(0, -10)),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (idx) => setState(() => _currentIndex = idx),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFFF97316), // Warm Orange
-          unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-          elevation: 0,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home_rounded), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), activeIcon: Icon(Icons.person_rounded), label: 'Child'),
-            BottomNavigationBarItem(icon: Icon(Icons.lightbulb_outline_rounded), activeIcon: Icon(Icons.lightbulb_rounded), label: 'Insights'),
-            BottomNavigationBarItem(icon: Icon(Icons.notifications_none_rounded), activeIcon: Icon(Icons.notifications_rounded), label: 'Updates'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings_rounded), label: 'Profile'),
-          ],
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+          child: NavigationBarTheme(
+            data: NavigationBarThemeData(
+              height: 78,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              indicatorColor: AppTheme.parentLight,
+              labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.parentColor);
+                }
+                return TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textHint);
+              }),
+              iconTheme: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return const IconThemeData(color: AppTheme.parentColor, size: 26);
+                }
+                return IconThemeData(color: AppTheme.textHint, size: 24);
+              }),
+            ),
+            child: NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded, color: AppTheme.parentColor),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline_rounded),
+                  selectedIcon: Icon(Icons.person_rounded, color: AppTheme.parentColor),
+                  label: 'Child',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.lightbulb_outline_rounded),
+                  selectedIcon: Icon(Icons.lightbulb_rounded, color: AppTheme.parentColor),
+                  label: 'Insights',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.notifications_none_rounded),
+                  selectedIcon: Icon(Icons.notifications_rounded, color: AppTheme.parentColor),
+                  label: 'Updates',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.parentColor),
+                  label: 'Profile',
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

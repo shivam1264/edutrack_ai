@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../providers/gamification_provider.dart';
-import '../../../utils/app_theme.dart';
-import '../../../widgets/premium_card.dart';
-import '../../../widgets/brain_dna_visualizer.dart';
-import '../../../models/knowledge_node.dart';
-import '../../../services/mock_data_service.dart';
-import '../../assignments/student_assignments_screen.dart';
-import 'progress_view.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/providers/gamification_provider.dart';
+import 'package:edutrack_ai/providers/analytics_provider.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/widgets/brain_dna_visualizer.dart';
+import 'package:edutrack_ai/models/knowledge_node.dart';
+import 'package:edutrack_ai/services/brain_dna_service.dart';
+import 'package:edutrack_ai/screens/assignments/student_assignments_screen.dart';
+import 'package:edutrack_ai/screens/student/dashboard_views/progress_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -44,7 +45,7 @@ class HomeView extends StatelessWidget {
                   SizedBox(
                     height: 250,
                     child: StreamBuilder<List<KnowledgeNode>>(
-                      stream: MockDataService.instance.streamKnowledgeNodes(userId),
+                      stream: BrainDNAService.instance.getBrainDNA(userId),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());
@@ -164,23 +165,16 @@ class HomeView extends StatelessWidget {
 
     return Row(
       children: [
-        // 1. Avg Score from exam_results
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('exam_results').where('studentId', isEqualTo: userId).snapshots(),
-          builder: (context, snapshot) {
-            final docs = snapshot.data?.docs ?? [];
-            double avg = 0;
-            if (docs.isNotEmpty) {
-              final total = docs.map((d) => (d.data() as Map)['score'] as num).reduce((a, b) => a + b);
-              avg = (total / docs.length);
-            }
-            return _StatCard(label: 'Avg. Score', value: '${avg.toStringAsFixed(0)}%', icon: Icons.track_changes_rounded, color: const Color(0xFF6366F1));
+        Consumer<AnalyticsProvider>(
+          builder: (context, analytics, _) {
+            final avg = (analytics.studentAnalytics?['avg_score'] as num?)?.toDouble();
+            return _StatCard(label: 'Avg. Score', value: avg == null ? 'N/A' : '${avg.toStringAsFixed(0)}%', icon: Icons.track_changes_rounded, color: const Color(0xFF6366F1));
           },
         ),
         const SizedBox(width: 12),
         // 2. Tasks from assignments
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('assignments').where('classId', isEqualTo: classId).snapshots(),
+          stream: FirebaseFirestore.instance.collection('assignments').where('class_id', isEqualTo: classId).snapshots(),
           builder: (context, snapshot) {
             final count = snapshot.data?.docs.length ?? 0;
             return _StatCard(label: 'Tasks', value: '$count', icon: Icons.calendar_today_rounded, color: const Color(0xFF10B981));
@@ -210,7 +204,7 @@ class HomeView extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('assignments')
-          .where('classId', isEqualTo: classId)
+          .where('class_id', isEqualTo: classId)
           .limit(2)
           .snapshots(),
       builder: (context, snapshot) {

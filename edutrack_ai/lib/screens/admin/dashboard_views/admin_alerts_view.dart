@@ -4,6 +4,7 @@ import '../../../utils/app_theme.dart';
 import '../../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../announcement_screen.dart';
+import '../admin_student_detail_screen.dart';
 import 'package:intl/intl.dart';
 
 class AdminAlertsView extends StatelessWidget {
@@ -157,7 +158,14 @@ class AdminAlertsView extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () {}, 
+              onPressed: () async {
+                final studentId = data['student_id']?.toString();
+                if (studentId == null || studentId.isEmpty) return;
+                final doc = await FirebaseFirestore.instance.collection('users').doc(studentId).get();
+                if (context.mounted && doc.exists) {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => AdminStudentDetailScreen(studentData: doc.data()!, studentId: studentId)));
+                }
+              },
               child: const Text('Review', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))
             ),
           ],

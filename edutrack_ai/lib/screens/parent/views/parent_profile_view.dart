@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../widgets/premium_card.dart';
-import '../../../utils/app_theme.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_insights_view.dart';
+import 'package:edutrack_ai/screens/settings/profile_screen.dart';
+import 'package:edutrack_ai/screens/settings/account_settings_screen.dart';
+import 'package:edutrack_ai/screens/settings/app_settings_screen.dart';
+import 'package:edutrack_ai/screens/settings/help_support_screen.dart';
 
 class ParentProfileView extends StatelessWidget {
   const ParentProfileView({super.key});

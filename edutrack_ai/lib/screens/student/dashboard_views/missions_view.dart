@@ -18,6 +18,13 @@ import 'package:edutrack_ai/screens/planner/smart_planner_screen.dart';
 import 'package:edutrack_ai/screens/homework/homework_chat_screen.dart';
 import 'package:edutrack_ai/screens/student/my_batch_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:edutrack_ai/screens/student/dashboard_views/student_profile_view.dart';
+import 'package:edutrack_ai/screens/student/study_preferences_screen.dart';
+import 'package:edutrack_ai/screens/student/notes_library_screen.dart';
+import 'package:edutrack_ai/screens/student/flashcard_generator_screen.dart';
+import 'package:edutrack_ai/screens/student/doubt_box_screen.dart';
+import 'package:edutrack_ai/screens/student/leaderboard_screen.dart';
+import 'package:edutrack_ai/screens/student/timetable_screen.dart';
 
 class MissionsView extends StatefulWidget {
   const MissionsView({super.key});

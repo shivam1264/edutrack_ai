@@ -1,8 +1,6 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import '../../utils/config.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'ai_service.dart';
 
 class AnalyticsService {
   static final AnalyticsService instance = AnalyticsService._internal();
@@ -11,10 +9,11 @@ class AnalyticsService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  static const String _baseUrl = Config.baseUrl;
-
   // ─── Get student overall average ─────────────────────────────────────────────
   Future<Map<String, dynamic>> getStudentAnalytics(String studentId) async {
+    final studentDoc = await _db.collection('users').doc(studentId).get();
+    final studentProfile = studentDoc.data();
+
     // Quiz scores
     final quizSnap = await _db
         .collection('quiz_results')
@@ -84,6 +83,7 @@ class AnalyticsService {
         MapEntry(k, v.reduce((a, b) => a + b) / v.length));
 
     return {
+      'class_id': studentProfile?['class_id'] ?? '',
       'avg_score': avgScore,
       'last_5_scores': scores.take(5).toList(),
       'subject_avg': subjectAvg,
@@ -332,23 +332,17 @@ class AnalyticsService {
     required int studyHoursPerDay,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/generate-study-plan')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'student_id': studentId,
-          'weak_subjects': weakSubjects,
-          'upcoming_deadlines': upcomingDeadlines,
-          'study_hours_per_day': studyHoursPerDay,
-        }),
-      ).timeout(const Duration(seconds: 40));
-      
-      if (response.statusCode == 200) {
-        final dynamic data = jsonDecode(response.body);
-        return Map<String, dynamic>.from(data);
-      }
+      // Switch to Llama via AIService
+      final analysis = await AIService().analyzePerformance({
+        'student_id': studentId,
+        'weak_subjects': weakSubjects,
+        'upcoming_deadlines': upcomingDeadlines,
+        'study_hours_per_day': studyHoursPerDay,
+        'task': 'generate_study_plan'
+      });
+      return analysis;
     } catch (e) {
-      print('AI Study Plan Hub Error: $e');
+      print('AI Study Plan Error: $e');
     }
     return null;
   }
@@ -359,16 +353,13 @@ class AnalyticsService {
     required Map<String, dynamic> stats,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/get-unified-wellness')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'name': name, 'stats': stats}),
-      ).timeout(const Duration(seconds: 40));
-      
-      if (response.statusCode == 200) {
-        final dynamic data = jsonDecode(response.body);
-        return Map<String, dynamic>.from(data);
-      }
+      // Switch to Llama via AIService
+      final analysis = await AIService().analyzePerformance({
+        'name': name,
+        'stats': stats,
+        'task': 'wellness_analysis'
+      });
+      return analysis;
     } catch (e) {
       print('Unified Wellness Error: $e');
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 
@@ -21,7 +22,7 @@ class HelpSupportScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildContactCard(),
+            _buildContactCard(context),
             const SizedBox(height: 32),
             _buildSectionTitle('FREQUENTLY ASKED QUESTIONS'),
             const SizedBox(height: 16),
@@ -31,8 +32,8 @@ class HelpSupportScreen extends StatelessWidget {
             const SizedBox(height: 32),
             _buildSectionTitle('LEGAL'),
             const SizedBox(height: 16),
-            _buildActionTile(Icons.description_outlined, 'Privacy Policy'),
-            _buildActionTile(Icons.gavel_outlined, 'Terms of Service'),
+            _buildActionTile(context, Icons.description_outlined, 'Privacy Policy'),
+            _buildActionTile(context, Icons.gavel_outlined, 'Terms of Service'),
             const SizedBox(height: 48),
             Center(
               child: Text(
@@ -50,7 +51,7 @@ class HelpSupportScreen extends StatelessWidget {
     return Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.5, color: AppTheme.textHint));
   }
 
-  Widget _buildContactCard() {
+  Widget _buildContactCard(BuildContext context) {
     return PremiumCard(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -65,7 +66,7 @@ class HelpSupportScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => launchUrl(Uri.parse('mailto:support@edutrack.ai?subject=EduTrack%20AI%20Support')),
                   icon: const Icon(Icons.email_outlined, size: 18),
                   label: const Text('Email Us'),
                   style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
@@ -74,7 +75,7 @@ class HelpSupportScreen extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _showInfo(context, 'Live chat is not connected yet. Please use email support.'),
                   icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
                   label: const Text('Live Chat'),
                   style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.primary), foregroundColor: AppTheme.primary, padding: const EdgeInsets.symmetric(vertical: 16)),
@@ -105,7 +106,7 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionTile(IconData icon, String title) {
+  Widget _buildActionTile(BuildContext context, IconData icon, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: PremiumCard(
@@ -113,9 +114,13 @@ class HelpSupportScreen extends StatelessWidget {
           leading: Icon(icon, color: AppTheme.textSecondary, size: 20),
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
           trailing: const Icon(Icons.chevron_right, size: 20),
-          onTap: () {},
+          onTap: () => _showInfo(context, '$title will be available after school policy documents are uploaded.'),
         ),
       ),
     );
+  }
+
+  void _showInfo(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 }

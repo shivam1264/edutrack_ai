@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/auth_provider.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../parent_leave_request_screen.dart';
-import '../parent_chat_screen.dart';
-import '../parent_ai_chat_screen.dart';
-import '../parent_fee_screen.dart';
-import '../parent_reports_screen.dart';
-import '../parent_assignments_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_leave_request_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_chat_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_ai_chat_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_fee_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_reports_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_assignments_screen.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_updates_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
+import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
 
 class ParentInsightsView extends StatelessWidget {
   const ParentInsightsView({super.key});

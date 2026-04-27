@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../utils/config.dart';
+import '../../services/ai_service.dart';
 
 class SmartAnalysisScreen extends StatefulWidget {
   final String classId;
@@ -44,24 +45,15 @@ class _SmartAnalysisScreenState extends State<SmartAnalysisScreen> {
           .where('class_id', isEqualTo: widget.classId)
           .get();
 
-      // Send to Backend for AI Processing
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/analyze-class-performance')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'class_id': widget.classId,
-          'student_count': studentsSnap.docs.length,
-          'attendance_records': attendanceSnap.docs.length,
-          'quiz_records': quizSnap.docs.length,
-        }),
-      ).timeout(const Duration(seconds: 90)); // Increased for Render cold start
+      // Send to AIService for Llama-3.3 Analysis
+      final analysis = await AIService().analyzePerformance({
+        'class_id': widget.classId,
+        'student_count': studentsSnap.docs.length,
+        'attendance_records': attendanceSnap.docs.length,
+        'quiz_records': quizSnap.docs.length,
+      });
 
-      if (response.statusCode == 200) {
-        final dynamic data = jsonDecode(response.body);
-        setState(() => _analysisResult = Map<String, dynamic>.from(data));
-      } else {
-        _setFallbackAnalysis();
-      }
+      setState(() => _analysisResult = analysis);
     } catch (e) {
       print('AI Analysis Error: $e');
       _setFallbackAnalysis();

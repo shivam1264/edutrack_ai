@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../utils/app_theme.dart';
-import '../../../widgets/premium_card.dart';
-import '../doubt_box_screen.dart';
-import '../../parent/request_leave_screen.dart';
-import '../../../services/leave_service.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/screens/student/doubt_box_screen.dart';
+import 'package:edutrack_ai/screens/parent/request_leave_screen.dart';
+import 'package:edutrack_ai/services/leave_service.dart';
 
 class CommunicationView extends StatefulWidget {
   const CommunicationView({super.key});

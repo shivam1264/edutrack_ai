@@ -4,6 +4,7 @@ import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'note_editor_screen.dart';
 
 class NoteDetailScreen extends StatelessWidget {
   final NoteModel note;
@@ -109,7 +110,7 @@ class NoteDetailScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: isTeacherNote ? null : FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note))),
         backgroundColor: AppTheme.primary,
         icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
         label: const Text('Edit Personal Note', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

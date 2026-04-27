@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/attendance_service.dart';
-import '../../../services/analytics_service.dart';
 import '../../../models/attendance_model.dart';
 import '../../widgets/premium_card.dart';
 import '../../utils/app_theme.dart';
@@ -67,6 +66,10 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
     return FutureBuilder<AttendanceStats>(
       future: AttendanceService().getAttendanceStats(childId),
       builder: (context, statsSnap) {
+        if (statsSnap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final stats = statsSnap.data;
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -74,16 +77,16 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
             children: [
               Row(
                 children: [
-                  _buildAttendanceCircle(statsSnap.data?.percentage ?? 85),
+                  _buildAttendanceCircle(stats?.percentage),
                   const SizedBox(width: 24),
                   Expanded(
                     child: Row(
                       children: [
-                        _statBox(statsSnap.data?.totalPresent.toString() ?? '19', 'Present', Colors.green),
+                        _statBox(stats?.totalPresent.toString() ?? 'N/A', 'Present', Colors.green),
                         const SizedBox(width: 12),
-                        _statBox(statsSnap.data?.totalAbsent.toString() ?? '1', 'Absent', Colors.red),
+                        _statBox(stats?.totalAbsent.toString() ?? 'N/A', 'Absent', Colors.red),
                         const SizedBox(width: 12),
-                        _statBox(statsSnap.data?.totalLate.toString() ?? '0', 'Late', Colors.orange),
+                        _statBox(stats?.totalLate.toString() ?? 'N/A', 'Late', Colors.orange),
                       ],
                     ),
                   ),
@@ -92,10 +95,16 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
               const SizedBox(height: 32),
               const Text('Attendance Trend', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 24),
-              FutureBuilder<List<double>>(
-                future: AnalyticsService.instance.getWeeklyAttendanceTrend(classId: null), // Passing null will fetch for all classes or I should pass student's classId
+              FutureBuilder<List<AttendanceModel>>(
+                future: AttendanceService().getStudentAttendanceHistory(studentId: childId),
                 builder: (context, trendSnap) {
-                  final trend = trendSnap.data ?? [85, 90, 80, 95, 88];
+                  final trend = _buildStudentTrend(trendSnap.data ?? []);
+                  if (trend.isEmpty) {
+                    return const SizedBox(
+                      height: 80,
+                      child: Center(child: Text('No attendance trend yet', style: TextStyle(color: Colors.grey))),
+                    );
+                  }
                   return SizedBox(
                     height: 150,
                     child: BarChart(
@@ -133,7 +142,10 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Recent Attendance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                  TextButton(onPressed: () {}, child: const Text('View Calendar >', style: TextStyle(fontSize: 12))),
+                  TextButton(
+                    onPressed: () => DefaultTabController.of(context).animateTo(1),
+                    child: const Text('View Calendar >', style: TextStyle(fontSize: 12)),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -160,7 +172,8 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
     );
   }
 
-  Widget _buildAttendanceCircle(double percentage) {
+  Widget _buildAttendanceCircle(double? percentage) {
+    final value = percentage == null ? 0.0 : percentage.clamp(0, 100).toDouble();
     return Container(
       width: 100, height: 100,
       decoration: BoxDecoration(
@@ -173,12 +186,12 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
         children: [
           SizedBox(
             width: 84, height: 84,
-            child: CircularProgressIndicator(value: percentage / 100, strokeWidth: 8, color: Colors.green, backgroundColor: Colors.transparent),
+            child: CircularProgressIndicator(value: value / 100, strokeWidth: 8, color: Colors.green, backgroundColor: Colors.transparent),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${percentage.toInt()}%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              Text(percentage == null ? 'N/A' : '${percentage.toInt()}%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
               const Text('Present', style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
             ],
           ),
@@ -202,6 +215,28 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
 
   BarChartGroupData _barGroup(int x, double y) {
     return BarChartGroupData(x: x, barRods: [BarChartRodData(toY: y, color: Colors.green, width: 16, borderRadius: BorderRadius.circular(4))]);
+  }
+
+  List<double> _buildStudentTrend(List<AttendanceModel> records) {
+    if (records.isEmpty) return [];
+    final now = DateTime.now();
+    final days = <DateTime>[];
+    var cursor = now;
+    while (days.length < 5) {
+      if (cursor.weekday != DateTime.saturday && cursor.weekday != DateTime.sunday) {
+        days.add(DateTime(cursor.year, cursor.month, cursor.day));
+      }
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+
+    return days.reversed.map((day) {
+      final dayRecords = records.where((r) =>
+          r.date.year == day.year && r.date.month == day.month && r.date.day == day.day);
+      if (dayRecords.isEmpty) return 0.0;
+      final presentValue = dayRecords.where((r) => r.isPresent).length +
+          (dayRecords.where((r) => r.isLate).length * 0.5);
+      return (presentValue / dayRecords.length) * 100;
+    }).toList();
   }
 
   Widget _buildCalendarTab(BuildContext context) {

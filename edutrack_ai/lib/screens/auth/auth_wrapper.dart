@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../models/user_model.dart';
-import '../../utils/app_theme.dart';
-import '../auth/loading_screen.dart';
-import '../auth/login_screen.dart';
-import '../dashboards/admin_dashboard.dart';
-import '../dashboards/teacher_dashboard.dart';
-import '../dashboards/student_dashboard.dart';
-import '../dashboards/parent_dashboard.dart';
+import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/models/user_model.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/screens/auth/loading_screen.dart';
+import 'package:edutrack_ai/screens/auth/login_screen.dart';
+import 'package:edutrack_ai/screens/dashboards/admin_dashboard.dart';
+import 'package:edutrack_ai/screens/dashboards/teacher_dashboard.dart';
+import 'package:edutrack_ai/screens/dashboards/student_dashboard.dart';
+import 'package:edutrack_ai/screens/dashboards/parent_dashboard.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});

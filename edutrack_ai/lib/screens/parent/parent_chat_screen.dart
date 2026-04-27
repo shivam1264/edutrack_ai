@@ -50,8 +50,14 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
                 surfaceTintColor: Colors.white,
                 elevation: 0,
                 actions: [
-                  IconButton(icon: const Icon(Icons.videocam_rounded), onPressed: () {}),
-                  IconButton(icon: const Icon(Icons.call_rounded), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(Icons.videocam_rounded),
+                    onPressed: () => _showUnavailable(context, 'Video call'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.call_rounded),
+                    onPressed: () => _showUnavailable(context, 'Voice call'),
+                  ),
                 ],
               ),
               body: Column(
@@ -161,6 +167,12 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showUnavailable(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$feature is not connected for this classroom yet.')),
     );
   }
 }
