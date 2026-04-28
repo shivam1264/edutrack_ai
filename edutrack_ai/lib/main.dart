@@ -13,7 +13,7 @@ import 'providers/gamification_provider.dart';
 import 'providers/language_provider.dart';
 import 'screens/auth/auth_wrapper.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'l10n/app_localizations.dart';
 import 'utils/app_theme.dart';
 
 void main() async {
@@ -56,7 +56,7 @@ class EduTrackApp extends StatelessWidget {
             darkTheme: AppTheme.darkTheme,
             themeMode: ThemeMode.system,
             locale: languageProvider.locale,
-            localizationsDelegates: const [
+            localizationsDelegates: [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,

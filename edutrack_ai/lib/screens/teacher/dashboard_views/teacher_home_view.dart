@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:edutrack_ai/l10n/app_localizations.dart';
 
 import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
@@ -54,7 +54,7 @@ class TeacherHomeView extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildTodayOverview(classData, context),
                 const SizedBox(height: 24),
-                _buildClassPerformanceChart(classData),
+                _buildClassPerformanceChart(classData, context),
                 const SizedBox(height: 24),
                 _buildQuickActions(context),
                 const SizedBox(height: 24),
@@ -171,6 +171,7 @@ class TeacherHomeView extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -337,14 +338,14 @@ class TeacherHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildClassPerformanceChart(Map<String, dynamic>? data) {
+  Widget _buildClassPerformanceChart(Map<String, dynamic>? data, BuildContext ctx) {
     return PremiumCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppLocalizations.of(context)!.classPerformance,
+            AppLocalizations.of(ctx)!.classPerformance,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -440,14 +441,14 @@ class TeacherHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext ctx) {
     final actions = [
       {
         'label': 'Attendance',
         'icon': Icons.how_to_reg_rounded,
         'color': AppTheme.secondary,
         'onTap': () => Navigator.push(
-          context,
+          ctx,
           MaterialPageRoute(
             builder: (_) => TeacherAttendanceScreen(
               classId: selectedClassId ?? '',
@@ -461,7 +462,7 @@ class TeacherHomeView extends StatelessWidget {
         'icon': Icons.assignment_add,
         'color': AppTheme.primary,
         'onTap': () => Navigator.push(
-          context,
+          ctx,
           MaterialPageRoute(
             builder: (_) => CreateAssignmentScreen(
               classId: selectedClassId ?? '',
@@ -474,7 +475,7 @@ class TeacherHomeView extends StatelessWidget {
         'icon': Icons.quiz_outlined,
         'color': AppTheme.warning,
         'onTap': () => Navigator.push(
-          context,
+          ctx,
           MaterialPageRoute(
             builder: (_) => CreateQuizScreen(classId: selectedClassId ?? ''),
           ),
@@ -485,7 +486,7 @@ class TeacherHomeView extends StatelessWidget {
         'icon': Icons.upload_file_rounded,
         'color': AppTheme.info,
         'onTap': () => Navigator.push(
-          context,
+          ctx,
           MaterialPageRoute(
             builder: (_) => UploadNotesScreen(classId: selectedClassId ?? ''),
           ),
@@ -496,7 +497,7 @@ class TeacherHomeView extends StatelessWidget {
         'icon': Icons.inventory_2_rounded,
         'color': AppTheme.accent,
         'onTap': () => Navigator.push(
-          context,
+          ctx,
           MaterialPageRoute(
             builder: (_) => ResourceManagementScreen(
               classId: selectedClassId ?? '',
@@ -510,7 +511,7 @@ class TeacherHomeView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          AppLocalizations.of(context)!.quickActions,
+          AppLocalizations.of(ctx)!.quickActions,
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
@@ -573,7 +574,7 @@ class TeacherHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentActivity(BuildContext context) {
+  Widget _buildRecentActivity(BuildContext ctx) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -584,7 +585,7 @@ class TeacherHomeView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.recentActivity,
+                  AppLocalizations.of(ctx)!.recentActivity,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -603,13 +604,13 @@ class TeacherHomeView extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => Navigator.push(
-                context,
+                ctx,
                 MaterialPageRoute(
                   builder: (_) =>
                       AssignmentAuditScreen(classId: selectedClassId ?? ''),
                 ),
               ),
-              child: Text(AppLocalizations.of(context)!.viewAll),
+              child: Text(AppLocalizations.of(ctx)!.viewAll),
             ),
           ],
         ),

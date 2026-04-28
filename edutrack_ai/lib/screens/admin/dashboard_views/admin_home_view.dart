@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:edutrack_ai/l10n/app_localizations.dart';
 
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_theme.dart';
@@ -28,7 +28,7 @@ class AdminHomeView extends StatelessWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: _buildHeader(user),
+            child: _buildHeader(user, context),
           ),
         ),
         SliverToBoxAdapter(
@@ -134,7 +134,7 @@ class AdminHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(dynamic user) {
+  Widget _buildHeader(dynamic user, BuildContext context) {
     return PremiumCard(
       padding: const EdgeInsets.all(20),
       child: Row(

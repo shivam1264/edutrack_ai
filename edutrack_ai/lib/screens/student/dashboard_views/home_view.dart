@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:edutrack_ai/l10n/app_localizations.dart';
 
 import 'package:edutrack_ai/models/knowledge_node.dart';
 import 'package:edutrack_ai/providers/analytics_provider.dart';
@@ -37,7 +37,7 @@ class HomeView extends StatelessWidget {
                 children: [
                   _buildHeader(context, user, gamify),
                   const SizedBox(height: 20),
-                  _buildOverview(gamify),
+                  _buildOverview(gamify, context),
                 ],
               ),
             ),
@@ -228,7 +228,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildOverview(GamificationProvider gamify) {
+  Widget _buildOverview(GamificationProvider gamify, BuildContext ctx) {
     final classId = gamify.user?.classId ?? '';
 
     return Row(
@@ -263,7 +263,7 @@ class HomeView extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         _StatCard(
-          label: AppLocalizations.of(context)!.streak,
+          label: AppLocalizations.of(ctx)!.streak,
           value: '${gamify.user?.streak ?? 0}',
           icon: Icons.local_fire_department_rounded,
           color: AppTheme.warning,
