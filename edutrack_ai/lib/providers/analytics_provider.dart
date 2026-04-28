@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../services/analytics_service.dart';
 
 class AnalyticsProvider extends ChangeNotifier {

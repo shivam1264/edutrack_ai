@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/knowledge_node.dart';
 
 class BrainDNAService {
@@ -166,7 +167,7 @@ class BrainDNAService {
         final subject = data['subject'] as String? ?? 'General';
         final score = (data['score'] as num?)?.toDouble() ?? 0;
         final total = (data['total'] as num?)?.toDouble() ?? 1;
-        final percentage = total > 0 ? score / total : 0;
+        final percentage = total > 0 ? score / total : 0.0;
         
         subjectScores.putIfAbsent(subject, () => []);
         subjectScores[subject]!.add(percentage);
