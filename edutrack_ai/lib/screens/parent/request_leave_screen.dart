@@ -143,7 +143,7 @@ class _RequestLeaveScreenState extends State<RequestLeaveScreen> {
       body: _isSubmitting 
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
             child: Form(
               key: _formKey,
               child: Column(

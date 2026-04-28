@@ -23,7 +23,7 @@ class TeacherCommunicationScreen extends StatelessWidget {
         surfaceTintColor: Colors.white,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         children: [
           const Text(
             'Stay connected',

@@ -58,7 +58,7 @@ class DataManagementScreen extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
           _buildSectionHeader('SYSTEM STORAGE OVERVIEW'),

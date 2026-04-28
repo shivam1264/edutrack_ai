@@ -37,7 +37,7 @@ class _LeaveApprovalScreenState extends State<LeaveApprovalScreen> {
           if (items.isEmpty) return _buildEmpty();
 
           return ListView.builder(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             itemCount: items.length,
             itemBuilder: (context, index) {
               final leave = items[index];

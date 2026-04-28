@@ -88,7 +88,7 @@ class DoubtAnswerScreen extends StatelessWidget {
               }
 
               return SliverPadding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     if (pending.isNotEmpty) ...[

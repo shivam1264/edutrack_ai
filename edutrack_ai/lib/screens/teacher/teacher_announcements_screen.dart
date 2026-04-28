@@ -85,7 +85,7 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
                 });
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                   itemCount: sortedDocs.length,
                   itemBuilder: (context, index) {
                     final d = sortedDocs[index].data() as Map<String, dynamic>;

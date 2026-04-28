@@ -47,7 +47,7 @@ class ReportsScreen extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 _buildQuickStats().animate().fadeIn().slideY(begin: 0.1),

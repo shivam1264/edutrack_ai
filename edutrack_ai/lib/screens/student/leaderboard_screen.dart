@@ -80,7 +80,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
             child: Column(
               children: [
                 _buildTabs(),

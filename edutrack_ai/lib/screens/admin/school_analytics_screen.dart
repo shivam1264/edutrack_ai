@@ -52,7 +52,7 @@ class SchoolAnalyticsScreen extends StatelessWidget {
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     _buildOverallStats(),

@@ -105,7 +105,7 @@ class ParentChildView extends StatelessWidget {
   Widget _buildOverviewTab(Map<String, dynamic> data, String studentId) {
     final name = data['name'] ?? 'Student';
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

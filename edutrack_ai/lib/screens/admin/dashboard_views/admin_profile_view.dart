@@ -26,7 +26,7 @@ class AdminProfileView extends StatelessWidget {
         slivers: [
           _buildHeader(context, user),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 _buildSectionTitle(AppLocalizations.of(context)!.general),

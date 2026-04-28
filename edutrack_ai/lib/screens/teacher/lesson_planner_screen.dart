@@ -242,7 +242,7 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 PremiumCard(

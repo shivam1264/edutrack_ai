@@ -66,7 +66,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
                   child: Column(
                     children: periods.map((period) {
                       return _TimetableItem(

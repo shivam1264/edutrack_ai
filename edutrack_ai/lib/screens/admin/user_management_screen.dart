@@ -168,7 +168,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final doc = docs[index];

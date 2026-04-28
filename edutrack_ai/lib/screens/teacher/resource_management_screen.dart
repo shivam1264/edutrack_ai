@@ -121,7 +121,7 @@ class _AssignmentsList extends StatelessWidget {
         if (list.isEmpty) return _buildEmpty('No assignments deployed.');
 
         return ListView.builder(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
           itemCount: list.length,
           itemBuilder: (context, i) => _ResourceItem(
             title: list[i].title,
@@ -151,7 +151,7 @@ class _QuizzesList extends StatelessWidget {
         if (list.isEmpty) return _buildEmpty('No quizzes active.');
 
         return ListView.builder(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
           itemCount: list.length,
           itemBuilder: (context, i) => _ResourceItem(
             title: list[i].title,
@@ -182,7 +182,7 @@ class _NotesList extends StatelessWidget {
         if (list.isEmpty) return _buildEmpty('No notes uploaded.');
 
         return ListView.builder(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
           itemCount: list.length,
           itemBuilder: (context, i) => _ResourceItem(
             title: list[i].title,

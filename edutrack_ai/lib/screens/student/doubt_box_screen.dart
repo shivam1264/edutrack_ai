@@ -76,7 +76,7 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> {
 
                     return SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                       child: Column(
                         children: [
                           if (filteredDoubts.isEmpty)

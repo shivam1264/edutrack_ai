@@ -65,7 +65,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           _buildSubjectPicker(),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
               child: Column(
                 children: [
                   TextField(

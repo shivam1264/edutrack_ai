@@ -125,7 +125,7 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
                               }
                               return ListView.builder(
                                 reverse: true,
-                                padding: const EdgeInsets.all(20),
+                                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                                 itemCount: messages.length,
                                 itemBuilder: (context, i) {
                                   final m = messages[i];

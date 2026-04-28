@@ -133,7 +133,7 @@ class _SmartAnalysisScreenState extends State<SmartAnalysisScreen> {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             sliver: _isAnalyzing
                 ? SliverFillRemaining(
                     child: Center(
