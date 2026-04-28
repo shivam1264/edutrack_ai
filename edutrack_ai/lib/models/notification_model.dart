@@ -19,6 +19,8 @@ class NotificationModel {
   final bool isRead;
   final Map<String, dynamic>? data;
   final DateTime createdAt;
+  final String? senderName;
+  final String? senderId;
 
   NotificationModel({
     required this.id,
@@ -29,6 +31,8 @@ class NotificationModel {
     this.isRead = false,
     this.data,
     required this.createdAt,
+    this.senderName,
+    this.senderId,
   });
 
   factory NotificationModel.fromMap(String id, Map<String, dynamic> map) {
@@ -44,6 +48,8 @@ class NotificationModel {
       isRead: map['is_read'] as bool? ?? false,
       data: map['data'] as Map<String, dynamic>?,
       createdAt: (map['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      senderName: map['sender_name'] as String?,
+      senderId: map['sender_id'] as String?,
     );
   }
 
@@ -56,6 +62,8 @@ class NotificationModel {
       'is_read': isRead,
       'data': data,
       'created_at': Timestamp.fromDate(createdAt),
+      'sender_name': senderName,
+      'sender_id': senderId,
     };
   }
 
@@ -69,6 +77,8 @@ class NotificationModel {
       isRead: isRead ?? this.isRead,
       data: data,
       createdAt: createdAt,
+      senderName: senderName,
+      senderId: senderId,
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 
@@ -50,11 +51,14 @@ class _StudyPreferencesScreenState extends State<StudyPreferencesScreen> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Study preferences saved! ✅'), backgroundColor: AppTheme.success),
-                  );
-                  Navigator.pop(context);
+                onPressed: () async {
+                  await _savePreferences();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Study preferences saved! ✅'), backgroundColor: AppTheme.success),
+                    );
+                    Navigator.pop(context);
+                  }
                 },
                 child: const Text('Save Preferences'),
               ),

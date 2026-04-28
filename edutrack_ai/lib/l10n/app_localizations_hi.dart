@@ -9,6 +9,9 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get profile => 'प्रोफ़ाइल';
+
+  @override
   String get profileCenter => 'प्रोफ़ाइल केंद्र';
 
   @override

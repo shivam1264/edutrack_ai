@@ -76,7 +76,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> with Sing
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         tabs: const [
-          Tab(text: 'All Units'),
+          Tab(text: 'All'),
           Tab(text: 'Active'),
           Tab(text: 'Archived'),
         ],

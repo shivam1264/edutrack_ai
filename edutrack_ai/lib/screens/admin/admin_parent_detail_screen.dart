@@ -5,6 +5,7 @@ import '../../../widgets/premium_card.dart';
 import '../../../services/class_service.dart';
 import '../../../models/class_model.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'link_student_to_parent_screen.dart';
 
 class AdminParentDetailScreen extends StatefulWidget {
   final Map<String, dynamic> parentData;
@@ -40,7 +41,17 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
                       children: [
                         const Text('Linked Students', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                         TextButton.icon(
-                          onPressed: () => _showLinkStudentDialog(data),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => LinkStudentToParentScreen(
+                                  parentId: widget.parentId,
+                                  parentName: data['name'] ?? 'Parent',
+                                ),
+                              ),
+                            );
+                          },
                           icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
                           label: const Text('Link Student', style: TextStyle(fontWeight: FontWeight.bold)),
                           style: TextButton.styleFrom(foregroundColor: const Color(0xFF10B981)),

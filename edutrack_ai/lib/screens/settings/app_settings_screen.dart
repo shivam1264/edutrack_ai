@@ -4,6 +4,7 @@ import 'package:edutrack_ai/l10n/app_localizations.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/theme_provider.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -13,12 +14,32 @@ class AppSettingsScreen extends StatefulWidget {
 }
 
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
-  bool _darkMode = false;
   bool _notifications = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreference();
+  }
+
+  Future<void> _loadNotificationPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _notifications = prefs.getBool('notifications_enabled') ?? true;
+    });
+  }
+
+  Future<void> _saveNotificationPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', value);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
@@ -38,9 +59,15 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             PremiumCard(
               child: SwitchListTile(
                 title: Text(l10n.darkMode, style: const TextStyle(fontWeight: FontWeight.bold)),
-                secondary: Icon(Icons.dark_mode_outlined, color: _darkMode ? Colors.amber : AppTheme.textSecondary),
-                value: _darkMode,
-                onChanged: (v) => setState(() => _darkMode = v),
+                secondary: Icon(Icons.dark_mode_outlined, color: isDarkMode ? Colors.amber : AppTheme.textSecondary),
+                value: isDarkMode,
+                onChanged: (v) {
+                  if (v) {
+                    themeProvider.setThemeMode(ThemeMode.dark);
+                  } else {
+                    themeProvider.setThemeMode(ThemeMode.light);
+                  }
+                },
                 activeColor: AppTheme.primary,
               ),
             ),
@@ -52,7 +79,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 title: const Text('Push Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
                 secondary: const Icon(Icons.notifications_active_outlined, color: AppTheme.info),
                 value: _notifications,
-                onChanged: (v) => setState(() => _notifications = v),
+                onChanged: (v) {
+                  setState(() => _notifications = v);
+                  _saveNotificationPreference(v);
+                },
                 activeColor: AppTheme.primary,
               ),
             ),

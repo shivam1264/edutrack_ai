@@ -98,6 +98,12 @@ abstract class AppLocalizations {
     Locale('hi')
   ];
 
+  /// No description provided for @profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profile;
+
   /// No description provided for @profileCenter.
   ///
   /// In en, this message translates to:

@@ -44,7 +44,7 @@ class _TeacherAssignmentsScreenState extends State<TeacherAssignmentsScreen> wit
           isScrollable: true,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           tabs: const [
-            Tab(text: 'All Assignments'),
+            Tab(text: 'All'),
             Tab(text: 'Pending'),
             Tab(text: 'Submitted'),
             Tab(text: 'Graded'),

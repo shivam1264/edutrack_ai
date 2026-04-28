@@ -171,6 +171,16 @@ class NotificationsScreen extends StatelessWidget {
                                     fontSize: 13,
                                     color: AppTheme.textSecondary),
                               ),
+                              if (n.senderName != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'From: ${n.senderName}',
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.textHint,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ],
                               const SizedBox(height: 4),
                               Text(
                                 timeago.format(n.createdAt),

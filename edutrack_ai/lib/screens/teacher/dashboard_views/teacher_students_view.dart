@@ -51,20 +51,21 @@ class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTi
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         child: Column(
-        children: [
-          _buildSearchBar(),
-          _buildTabs(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildStudentList('all'),
-                _buildStudentList('top'),
-                _buildStudentList('needs_attention'),
-              ],
+          children: [
+            _buildSearchBar(),
+            _buildTabs(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildStudentList('all'),
+                  _buildStudentList('top'),
+                  _buildStudentList('needs_attention'),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: widget.selectedClassId != null 
         ? FloatingActionButton.extended(
@@ -144,9 +145,9 @@ class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTi
       dividerColor: Colors.transparent,
       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
       tabs: [
-        Tab(text: 'All ($allCount)'),
-        Tab(text: 'Top ($topCount)'),
-        Tab(text: 'Attention ($bottomCount)'),
+        const Tab(text: 'All'),
+        const Tab(text: 'Top'),
+        const Tab(text: 'Attention'),
       ],
     );
   }
