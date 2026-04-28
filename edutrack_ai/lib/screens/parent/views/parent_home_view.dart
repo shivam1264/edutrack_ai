@@ -8,16 +8,12 @@ import 'package:edutrack_ai/services/analytics_service.dart';
 import 'package:edutrack_ai/services/class_service.dart';
 import 'package:edutrack_ai/models/class_model.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
-import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:edutrack_ai/screens/parent/parent_wellness_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_academics_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_assignments_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_attendance_screen.dart';
 import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_updates_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_insights_view.dart';
 
 class ParentHomeView extends StatefulWidget {
   const ParentHomeView({super.key});
@@ -76,12 +72,6 @@ class _ParentHomeViewState extends State<ParentHomeView> {
                 _buildSectionHeader('Quick Access'),
                 const SizedBox(height: 16),
                 _buildQuickAccessGrid(context, childId),
-                const SizedBox(height: 24),
-                _buildSectionHeader('Recent Updates', onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentUpdatesView()));
-                }),
-                const SizedBox(height: 12),
-                _buildUpdatesList(childId),
                 const SizedBox(height: 100),
               ]),
             ),
@@ -338,83 +328,6 @@ class _ParentHomeViewState extends State<ParentHomeView> {
         ),
       ),
     );
-  }
-
-  Widget _buildUpdatesList(String? childId) {
-    return FutureBuilder<DocumentSnapshot>(
-      future: childId != null ? FirebaseFirestore.instance.collection('users').doc(childId).get() : null,
-      builder: (context, studentSnap) {
-        final classId = (studentSnap.data?.data() as Map<String, dynamic>?)?['class_id'];
-        
-        return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('announcements')
-              .where('class_id', isEqualTo: classId)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('No recent updates.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)));
-            }
-
-            // Sort locally to avoid needing a composite index
-            final docs = snapshot.data!.docs.toList();
-            docs.sort((a, b) {
-              final aTime = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-              final bTime = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-              return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
-            });
-
-            final recentDocs = docs.take(5).toList();
-
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: recentDocs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) {
-                final doc = recentDocs[i];
-                final data = doc.data() as Map<String, dynamic>;
-                final title = data['title'] ?? 'Announcement';
-                final content = data['content'] ?? '';
-                final timestamp = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-                final timeAgo = _getTimeAgo(timestamp);
-
-                return PremiumCard(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                        child: const Icon(Icons.campaign_rounded, color: Colors.orange, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
-                            Text(content, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      Text(timeAgo, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
-                    ],
-                  ),
-                );
-              }
-            );
-          }
-        );
-      }
-    );
-  }
-
-  String _getTimeAgo(DateTime dateTime) {
-    final difference = DateTime.now().difference(dateTime);
-    if (difference.inDays > 0) return '${difference.inDays}d ago';
-    if (difference.inHours > 0) return '${difference.inHours}h ago';
-    if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
-    return 'Just now';
   }
 
   void _showChildPicker(BuildContext context) {

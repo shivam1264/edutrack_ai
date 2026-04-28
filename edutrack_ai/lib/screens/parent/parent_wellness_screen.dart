@@ -41,6 +41,9 @@ class _ParentWellnessScreenState extends State<ParentWellnessScreen> {
     }
 
     final riskLevel = aiData?['risk_level'] ?? 'Low';
+    final report = aiData?['report']?.toString();
+    final summary = aiData?['summary']?.toString();
+    final answer = aiData?['answer']?.toString();
     final insights = (aiData?['insights'] as List? ?? [
       {'title': 'Great Progress', 'sub': 'Continue regular reading habits.', 'icon': Icons.auto_awesome_rounded, 'color': Colors.green},
       {'title': 'Balance Screen Time', 'sub': 'Monitor recreational usage.', 'icon': Icons.timer_rounded, 'color': Colors.orange},
@@ -56,6 +59,14 @@ class _ParentWellnessScreenState extends State<ParentWellnessScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildBurnoutAlert(riskLevel),
+          if ((report ?? '').isNotEmpty || (summary ?? '').isNotEmpty || (answer ?? '').isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _buildNarrativeCard(
+              report: report,
+              summary: summary,
+              answer: answer,
+            ),
+          ],
           const SizedBox(height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -170,6 +181,44 @@ class _ParentWellnessScreenState extends State<ParentWellnessScreen> {
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 12)),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNarrativeCard({
+    String? report,
+    String? summary,
+    String? answer,
+  }) {
+    final lines = [
+      if (summary != null && summary.trim().isNotEmpty) summary.trim(),
+      if (report != null && report.trim().isNotEmpty) report.trim(),
+      if (answer != null && answer.trim().isNotEmpty) answer.trim(),
+    ];
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.tips_and_updates_rounded, color: Color(0xFFF97316)),
+              SizedBox(width: 10),
+              Text('Parent Summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...lines.map(
+            (line) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                line,
+                style: const TextStyle(color: Color(0xFF475569), fontSize: 13, height: 1.5),
+              ),
             ),
           ),
         ],

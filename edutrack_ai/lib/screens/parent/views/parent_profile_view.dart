@@ -51,10 +51,13 @@ class ParentProfileView extends StatelessWidget {
                       ),
                       Positioned(
                         bottom: 0, right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(color: AppTheme.parentColor, shape: BoxShape.circle),
-                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(color: AppTheme.parentColor, shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                          ),
                         ),
                       ),
                     ],
@@ -62,6 +65,18 @@ class ParentProfileView extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(parent?.name ?? 'Guardian', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
                   Text(parent?.email ?? 'N/A', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.parentColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.edit_rounded, size: 18),
+                    label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
                 ],
               ),
             ),

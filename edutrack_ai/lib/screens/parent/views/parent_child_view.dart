@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
-import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
-import 'package:edutrack_ai/utils/app_theme.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:edutrack_ai/screens/parent/parent_academics_screen.dart';
-import 'package:edutrack_ai/screens/parent/parent_wellness_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_chat_screen.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_insights_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_updates_view.dart';
 
 class ParentChildView extends StatelessWidget {
   const ParentChildView({super.key});
@@ -38,41 +29,16 @@ class ParentChildView extends StatelessWidget {
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
-            title: const Text('Student Profile', style: TextStyle(fontWeight: FontWeight.w900)),
+            title: const Text('Student Information', style: TextStyle(fontWeight: FontWeight.w900)),
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.white,
             elevation: 0,
           ),
-          body: DefaultTabController(
-            length: 4,
-            child: Column(
-              children: [
-                _buildProfileHeader(name, rollNo, classId, avatarUrl),
-                const TabBar(
-                  labelColor: AppTheme.parentColor,
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: AppTheme.parentColor,
-                  indicatorWeight: 3,
-                  labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  tabs: [
-                    Tab(text: 'Overview'),
-                    Tab(text: 'Academics'),
-                    Tab(text: 'Wellness'),
-                    Tab(text: 'Activity'),
-                  ],
-                ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _buildOverviewTab(studentData, childId),
-                      _buildAcademicsTab(childId),
-                      _buildWellnessTab(childId),
-                      _buildActivityTab(childId),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          body: Column(
+            children: [
+              _buildProfileHeader(name, rollNo, classId, avatarUrl),
+              Expanded(child: _buildOverviewTab(studentData, childId)),
+            ],
           ),
         );
       }
@@ -172,108 +138,9 @@ class ParentChildView extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 32),
-          const Text('Quick Stats', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 16),
-          Consumer<AnalyticsProvider>(
-            builder: (context, analytics, _) {
-              final stats = analytics.studentAnalytics;
-              final avgScore = stats != null ? "${(stats['avg_score'] as num).toInt()}%" : "N/A";
-              return Row(
-                children: [
-                  _statBox(avgScore, 'Avg Score', Colors.green),
-                  const SizedBox(width: 12),
-                  _statBox('N/A', 'Class Rank', Colors.blue),
-                  const SizedBox(width: 12),
-                  _statBox('B+', 'Overall Grade', Colors.purple),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: const Color(0xFF6366F1).withOpacity(0.05), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.1))),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.psychology_rounded, color: Color(0xFF6366F1)),
-                    const SizedBox(width: 12),
-                    Text("$name's Strength", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF6366F1))),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Consumer<AnalyticsProvider>(
-                  builder: (context, analytics, _) {
-                    return Text(
-                      analytics.aiPrediction?['performance_insight'] ?? "Working hard to improve academic standards.", 
-                      style: const TextStyle(color: Color(0xFF475569), fontSize: 13, height: 1.5)
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 100),
         ],
       ),
-    );
-  }
-
-  Widget _buildAcademicsTab(String studentId) {
-    return ParentAcademicsScreen(studentId: studentId, isEmbedded: true);
-  }
-
-  Widget _buildWellnessTab(String studentId) {
-    return ParentWellnessScreen(studentId: studentId, isEmbedded: true);
-  }
-
-
-  Widget _buildActivityTab(String studentId) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('quiz_results')
-          .where('student_id', isEqualTo: studentId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text('No recent activity'));
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(24),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
-            final title = data['quiz_title'] ?? 'Quiz Result';
-            final score = data['score'] ?? 0;
-            final total = data['total'] ?? 0;
-            final date = (data['submitted_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-
-            return PremiumCard(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.quiz_rounded, color: Colors.blueAccent),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text(DateFormat('dd MMM, yyyy').format(date), style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  Text('$score/$total', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.blueAccent)),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -288,18 +155,4 @@ class ParentChildView extends StatelessWidget {
     );
   }
 
-  Widget _statBox(String val, String label, Color color) {
-    return Expanded(
-      child: PremiumCard(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Text(val, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
 }

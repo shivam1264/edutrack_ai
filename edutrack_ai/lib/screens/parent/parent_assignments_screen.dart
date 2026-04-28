@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../services/assignment_service.dart';
-import '../../../models/assignment_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/assignment_service.dart';
+import '../../models/assignment_model.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -97,7 +97,7 @@ class ParentAssignmentsScreen extends StatelessWidget {
                 final filtered = assignments.where((assignment) {
                   final submission = submissions[assignment.id];
                   final realStatus = _assignmentStatus(assignment, submission);
-                  if (status == 'completed') return realStatus == 'graded';
+                  if (status == 'completed') return realStatus == 'completed';
                   if (status == 'pending') return realStatus == 'pending' || realStatus == 'overdue';
                   return realStatus == status;
                 }).toList();
@@ -143,7 +143,7 @@ class ParentAssignmentsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      realStatus.toUpperCase(),
+                      _statusLabel(realStatus).toUpperCase(),
                       style: TextStyle(
                         color: color,
                         fontSize: 10, 
@@ -167,15 +167,26 @@ class ParentAssignmentsScreen extends StatelessWidget {
   String _assignmentStatus(AssignmentModel assignment, Map<String, dynamic>? submission) {
     if (submission != null) {
       final status = submission['status']?.toString().toLowerCase();
-      if (status == 'graded') return 'graded';
+      if (status == 'graded' || status == 'completed') return 'completed';
       return 'submitted';
     }
     return assignment.isOverdue ? 'overdue' : 'pending';
   }
 
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'overdue':
+        return 'pending';
+      case 'completed':
+        return 'completed';
+      default:
+        return status;
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status) {
-      case 'graded':
+      case 'completed':
         return Colors.green;
       case 'submitted':
         return Colors.blue;

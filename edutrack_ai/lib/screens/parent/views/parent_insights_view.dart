@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
-import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:edutrack_ai/screens/parent/parent_leave_request_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_chat_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_ai_chat_screen.dart';
-import 'package:edutrack_ai/screens/parent/parent_fee_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_reports_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_assignments_screen.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_updates_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
 
 class ParentInsightsView extends StatelessWidget {
   const ParentInsightsView({super.key});
@@ -24,7 +19,7 @@ class ParentInsightsView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Parent Actions', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text('AI Insights & Actions', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
@@ -42,13 +37,12 @@ class ParentInsightsView extends StatelessWidget {
               crossAxisCount: 3,
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
-              childAspectRatio: 0.85,
+              childAspectRatio: 0.95,
               children: [
                 _actionItem(context, 'Chat with AI', Icons.psychology_rounded, Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentAIChatScreen(studentId: childId)))),
-                _actionItem(context, 'HW Assist', Icons.edit_note_rounded, Colors.green, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentAssignmentsScreen()))),
-                _actionItem(context, 'Report', Icons.analytics_rounded, Colors.indigo, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentReportsScreen()))),
+                _actionItem(context, 'Assignments', Icons.edit_note_rounded, Colors.green, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentAssignmentsScreen()))),
+                _actionItem(context, 'Reports', Icons.analytics_rounded, Colors.indigo, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentReportsScreen()))),
                 _actionItem(context, 'Leave Request', Icons.event_busy_rounded, Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentLeaveRequestScreen()))),
-                _actionItem(context, 'Fee Payment', Icons.payments_rounded, Colors.teal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentFeeScreen()))),
                 _actionItem(context, 'Teacher Chat', Icons.forum_rounded, Colors.purple, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentChatScreen()))),
               ],
             ),
