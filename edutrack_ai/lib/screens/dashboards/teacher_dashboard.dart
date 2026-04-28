@@ -10,6 +10,7 @@ import 'package:edutrack_ai/screens/teacher/dashboard_views/teacher_classroom_vi
 import 'package:edutrack_ai/screens/teacher/dashboard_views/teacher_students_view.dart';
 import 'package:edutrack_ai/screens/teacher/dashboard_views/teacher_reports_view.dart';
 import 'package:edutrack_ai/screens/teacher/dashboard_views/teacher_more_view.dart';
+import 'package:edutrack_ai/widgets/glass_navigation_bar.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -60,17 +61,50 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         ];
 
         return Scaffold(
+          extendBody: true,
           backgroundColor: AppTheme.bgLight,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF059669),
+            toolbarHeight: 78,
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
             elevation: 0,
             centerTitle: true,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF047857),
+                    const Color(0xFF0F766E),
+                    AppTheme.info.withOpacity(0.92),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withOpacity(0.18),
+                  ),
+                ),
+              ),
+            ),
             title: classMap.isEmpty 
               ? const Text('No Classes Assigned', style: TextStyle(color: Colors.white, fontSize: 16))
               : Container(
                   constraints: const BoxConstraints(maxWidth: 220), // Constraint for center title
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.28)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 16,
+                        spreadRadius: -8,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       isExpanded: true, // Crucial for long names
@@ -109,68 +143,38 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             index: _currentIndex,
             children: tabs,
           ),
-           bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceLight,
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-              boxShadow: [
-                 BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 32, offset: const Offset(0, -10))
-               ],
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-              child: NavigationBarTheme(
-                data: NavigationBarThemeData(
-                  height: 78,
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  indicatorColor: const Color(0xFF059669).withOpacity(0.1),
-                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF059669));
-                    }
-                    return const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textHint);
-                  }),
-                  iconTheme: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return const IconThemeData(color: Color(0xFF059669), size: 26);
-                    }
-                    return IconThemeData(color: AppTheme.textHint, size: 24);
-                  }),
-                ),
-                child: NavigationBar(
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: (index) => setState(() => _currentIndex = index),
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard_rounded, color: Color(0xFF059669)),
-                      label: 'Dashboard',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.school_outlined),
-                      selectedIcon: Icon(Icons.school_rounded, color: Color(0xFF059669)),
-                      label: 'Classroom',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.people_alt_outlined),
-                      selectedIcon: Icon(Icons.people_alt_rounded, color: Color(0xFF059669)),
-                      label: 'Students',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.bar_chart_outlined),
-                      selectedIcon: Icon(Icons.bar_chart_rounded, color: Color(0xFF059669)),
-                      label: 'Reports',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.more_horiz_outlined),
-                      selectedIcon: Icon(Icons.more_horiz_rounded, color: Color(0xFF059669)),
-                      label: 'More',
-                    ),
-                  ],
-                ),
+          bottomNavigationBar: GlassNavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) => setState(() => _currentIndex = index),
+            accentColor: const Color(0xFF059669),
+            secondaryColor: AppTheme.info,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard_rounded, color: Color(0xFF059669)),
+                label: 'Dashboard',
               ),
-            ),
+              NavigationDestination(
+                icon: Icon(Icons.school_outlined),
+                selectedIcon: Icon(Icons.school_rounded, color: Color(0xFF059669)),
+                label: 'Classroom',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.people_alt_outlined),
+                selectedIcon: Icon(Icons.people_alt_rounded, color: Color(0xFF059669)),
+                label: 'Students',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.bar_chart_outlined),
+                selectedIcon: Icon(Icons.bar_chart_rounded, color: Color(0xFF059669)),
+                label: 'Reports',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.more_horiz_outlined),
+                selectedIcon: Icon(Icons.more_horiz_rounded, color: Color(0xFF059669)),
+                label: 'More',
+              ),
+            ],
           ),
         );
       }

@@ -77,6 +77,49 @@ class AppTheme {
       bodyLarge: GoogleFonts.plusJakartaSans(color: textPrimary, fontSize: 16),
       bodyMedium: GoogleFonts.plusJakartaSans(color: textSecondary, fontSize: 14),
     ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.white.withOpacity(0.84),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      foregroundColor: textPrimary,
+      titleTextStyle: GoogleFonts.plusJakartaSans(
+        color: textPrimary,
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+      ),
+      iconTheme: const IconThemeData(
+        color: textPrimary,
+        size: 22,
+      ),
+    ),
+    tabBarTheme: TabBarThemeData(
+      labelColor: textPrimary,
+      unselectedLabelColor: textHint,
+      indicatorSize: TabBarIndicatorSize.label,
+      indicator: BoxDecoration(
+        color: Colors.white.withOpacity(0.78),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderLight),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      labelStyle: GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+      unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      dividerColor: Colors.transparent,
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
