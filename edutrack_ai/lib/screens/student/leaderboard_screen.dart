@@ -31,10 +31,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: FutureBuilder<List<UserModel>>(
-        future: _selectedTabIndex == 0 
-            ? context.read<GamificationProvider>().getLeaderboard(classId)
-            : context.read<GamificationProvider>().getGlobalLeaderboard(),
+      body: StreamBuilder<List<UserModel>>(
+        stream: _selectedTabIndex == 0
+            ? context.read<GamificationProvider>().streamLeaderboard(classId)
+            : context.read<GamificationProvider>().streamGlobalLeaderboard(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

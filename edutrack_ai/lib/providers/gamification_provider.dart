@@ -126,4 +126,25 @@ class GamificationProvider with ChangeNotifier {
       return [];
     }
   }
+
+  Stream<List<UserModel>> streamLeaderboard(String classId) {
+    return _db
+        .collection('users')
+        .where('role', isEqualTo: 'student')
+        .where('class_id', isEqualTo: classId)
+        .orderBy('xp', descending: true)
+        .limit(10)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList());
+  }
+
+  Stream<List<UserModel>> streamGlobalLeaderboard() {
+    return _db
+        .collection('users')
+        .where('role', isEqualTo: 'student')
+        .orderBy('xp', descending: true)
+        .limit(20)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList());
+  }
 }
