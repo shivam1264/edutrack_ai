@@ -1,5 +1,5 @@
 class Config {
-  static const String baseUrl = 'https://edutrack-ai-prod.onrender.com';
+  static const String baseUrl = 'https://edutrack-ai-backend-gt8g.onrender.com';
 
   static String endpoint(String path) {
     if (!path.startsWith('/')) {

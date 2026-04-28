@@ -24,10 +24,20 @@ class AIService {
   }) async {
     final systemInstruction = """
 You are an expert Teacher. Generate a high-quality quiz in valid JSON format.
-The response MUST be ONLY a JSON list of objects with this structure:
-[{"text": "Sample Question", "options": ["A", "B", "C", "D"], "correctOption": 0, "marks": 1, "type": "mcq"}]
+The response MUST be ONLY a JSON list of objects.
+
+Structure for 'MCQ' (type: "mcq"):
+[{"text": "Question?", "options": ["A", "B", "C", "D"], "correctOption": 0, "marks": 1, "type": "mcq"}]
+
+Structure for 'True/False' (type: "mcq"):
+[{"text": "Question?", "options": ["True", "False"], "correctOption": 0, "marks": 1, "type": "mcq"}]
+
+Structure for 'Short Answer' (type: "short"):
+[{"text": "Question?", "options": [], "correctOption": -1, "marks": 2, "type": "short"}]
+
+Difficulty: $difficulty. Topic: $topic. Subject: $subject.
 """;
-    return await _exhaustOptions(systemInstruction, "Topic: $topic, Subject: $subject, Count: $count");
+    return await _exhaustOptions(systemInstruction, "Generate $count questions of type $type.");
   }
 
   Future<List<Map<String, dynamic>>> generateFlashcards(String content) async {
@@ -458,18 +468,43 @@ $message
           {"role": "user", "content": user}
         ],
         "temperature": 0.5,
-        "response_format": {"type": "json_object"}
+        // Removed response_format: json_object to allow list returns reliably
       }),
     ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       String text = data['choices'][0]['message']['content'];
-      final decoded = jsonDecode(text);
-      if (decoded is List) return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-      return [Map<String, dynamic>.from(decoded)];
+      
+      // Clean JSON string from potential markdown wrappers
+      final cleanedText = _cleanJson(text);
+      
+      try {
+        final decoded = jsonDecode(cleanedText);
+        if (decoded is List) return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+        if (decoded is Map && (decoded.containsKey('questions') || decoded.containsKey('flashcards'))) {
+           final list = (decoded['questions'] ?? decoded['flashcards']) as List;
+           return list.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+        return [Map<String, dynamic>.from(decoded)];
+      } catch (e) {
+        print('❌ AIService JSON Parse Error: $e\nOriginal Text: $text');
+        rethrow;
+      }
     }
-    throw Exception('Groq Error');
+    print('❌ Groq API Error: ${response.statusCode} - ${response.body}');
+    throw Exception('Groq Error: ${response.statusCode}');
+  }
+
+  String _cleanJson(String text) {
+    String cleaned = text.trim();
+    if (cleaned.startsWith('```')) {
+      // Remove opening block (e.g., ```json or just ```)
+      cleaned = cleaned.replaceFirst(RegExp(r'^```[a-z]*\n?'), '');
+      // Remove closing block
+      cleaned = cleaned.replaceFirst(RegExp(r'\n?```$'), '');
+    }
+    return cleaned.trim();
   }
 
   Future<String> _requestPlainGroq(String system, String user) async {

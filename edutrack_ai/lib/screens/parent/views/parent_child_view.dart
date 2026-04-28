@@ -95,7 +95,19 @@ class ParentChildView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-                Text('Grade $classId • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance.collection('classes').doc(classId).snapshots(),
+                  builder: (context, classSnap) {
+                    final cData = classSnap.data?.data() as Map<String, dynamic>?;
+                    String cName = 'Loading...';
+                    if (cData != null) {
+                      final standard = cData['standard'] ?? '';
+                      final section = cData['section'] ?? '';
+                      cName = section.isNotEmpty ? '$standard - $section' : standard;
+                    }
+                    return Text('Grade $cName • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 14));
+                  },
+                ),
                 const Text('EduTrack Primary Hub', style: TextStyle(color: Colors.grey, fontSize: 13)),
                 const SizedBox(height: 8),
                 Container(

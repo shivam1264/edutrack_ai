@@ -49,7 +49,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         final myClasses = allAvailableClasses.where((c) => assignedIds.contains(c.id)).toList();
         
         final Map<String, String> classMap = { for (var c in myClasses) c.id : c.displayName };
-        final currentClassName = classMap[_selectedClassId] ?? _selectedClassId ?? 'N/A';
+        final currentClassName = classMap[_selectedClassId] ?? (_selectedClassId != null ? 'Loading...' : 'N/A');
 
         final List<Widget> tabs = [
           TeacherHomeView(selectedClassId: _selectedClassId, currentClassName: currentClassName),

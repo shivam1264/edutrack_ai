@@ -108,11 +108,13 @@ class StudentProfileView extends StatelessWidget {
                         stream: FirebaseFirestore.instance.collection('classes').doc(user?.classId ?? '').snapshots(),
                         builder: (context, snapshot) {
                           final classData = snapshot.data?.data() as Map<String, dynamic>?;
-                          String className = user?.classId ?? "N/A";
+                          String className = 'Loading...';
                           if (classData != null) {
                             final standard = classData['standard'] ?? '';
                             final section = classData['section'] ?? '';
                             className = section.isNotEmpty ? '$standard - $section' : standard;
+                          } else if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {
+                            className = user?.classId ?? "N/A";
                           }
                           return Text(
                             'Class $className • ID: ${user?.schoolId ?? "---"}',

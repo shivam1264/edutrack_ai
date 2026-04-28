@@ -273,10 +273,11 @@ def generate_quiz():
     
     system_instruction = (
         "You are an expert Teacher. Generate a high-quality quiz in valid JSON format. "
-        "The response MUST be ONLY a JSON list of objects with this structure: "
-        '[{"text": "Sample Question", "options": ["A", "B", "C", "D"], "correctOption": 0, "marks": 1, "type": "mcq"}]'
-        "\nFor 'Short Answer', include empty options and -1 for correctOption, set type to 'short'."
-        "\nFor 'True/False', use ['True', 'False'] as options."
+        "The response MUST be ONLY a JSON list of objects. "
+        "\nStructure for 'MCQ' or 'True/False': "
+        '[{"text": "Question?", "options": ["Choice1", "Choice2", "..."], "correctOption": 0, "marks": 1, "type": "mcq"}]'
+        "\nFor 'Short Answer', use structure: "
+        '[{"text": "Question?", "options": [], "correctOption": -1, "marks": 2, "type": "short"}]'
     )
     
     prompt = (
