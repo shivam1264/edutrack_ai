@@ -63,7 +63,7 @@ class NoteDetailScreen extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 24),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: CachedNetwork_Image(
+                        child: CachedNetworkImage(
                           imageUrl: note.fileUrl!,
                           placeholder: (context, url) => Container(height: 200, color: Colors.grey[100], child: const Center(child: CircularProgressIndicator())),
                           errorWidget: (context, url, error) => const Icon(Icons.error),

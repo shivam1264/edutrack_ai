@@ -80,7 +80,7 @@ class ParentProfileView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(AppLocalizations.of(context)!.profileInformation, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -100,11 +100,11 @@ class ParentProfileView extends StatelessWidget {
                     _infoTile(AppLocalizations.of(context)!.relationship, parent?.relationship ?? 'Guardian', bottomPadding: 16),
                     _infoTile(AppLocalizations.of(context)!.homeAddress, parent?.address ?? 'No Address Provided', bottomPadding: 0),
                     const Divider(height: 32),
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.edit_note_rounded, color: AppTheme.parentColor, size: 18),
-                        SizedBox(width: 8),
+                        const Icon(Icons.edit_note_rounded, color: AppTheme.parentColor, size: 18),
+                        const SizedBox(width: 8),
                         Text(AppLocalizations.of(context)!.editProfileInfo, style: const TextStyle(color: AppTheme.parentColor, fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),

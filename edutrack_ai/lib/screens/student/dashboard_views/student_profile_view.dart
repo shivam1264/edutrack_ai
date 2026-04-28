@@ -72,7 +72,7 @@ class StudentProfileView extends StatelessWidget {
         ),
         child: Column(
           children: [
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(AppLocalizations.of(context)!.profileCenter, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),

@@ -137,11 +137,11 @@ class AdminProfileView extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: Colors.red.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withOpacity(0.1))),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.logout_rounded, color: Colors.red, size: 20),
-            SizedBox(width: 12),
+            const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
+            const SizedBox(width: 12),
             Text(AppLocalizations.of(context)!.logoutCommandCenter, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15)),
           ],
         ),
