@@ -77,10 +77,9 @@ class TeacherReportsView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppTheme.borderLight)),
-              child: const Row(
+              child: Row(
                 children: [
-                  Text('This Semester', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  Icon(Icons.keyboard_arrow_down_rounded, size: 14),
+                  Text(DateFormat('MMM yyyy').format(DateTime.now()), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -132,7 +131,18 @@ class TeacherReportsView extends StatelessWidget {
             child: FutureBuilder<List<double>>(
               future: AnalyticsService.instance.getClassPerformanceTrend(selectedClassId ?? ''),
               builder: (context, snapshot) {
-                final trend = snapshot.data ?? [60, 55, 65, 75, 72, 80, 82]; // Fallback visuals
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                }
+                final trend = snapshot.data ?? [];
+                if (trend.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No performance trend recorded yet.',
+                      style: TextStyle(color: AppTheme.textSecondary),
+                    ),
+                  );
+                }
                 return LineChart(
                   LineChartData(
                     gridData: const FlGridData(show: false),
@@ -204,7 +214,7 @@ class TeacherReportsView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('Subject Performance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-            const Text('This Semester', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
+            Text(DateFormat('MMM yyyy').format(DateTime.now()), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
           ],
         ),
         const SizedBox(height: 16),

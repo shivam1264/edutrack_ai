@@ -10,7 +10,6 @@ import '../reports_screen.dart';
 import '../school_analytics_screen.dart';
 import '../timetable_manager_screen.dart';
 import '../data_management_screen.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class AdminProfileView extends StatelessWidget {
   const AdminProfileView({super.key});
@@ -84,7 +83,13 @@ class AdminProfileView extends StatelessWidget {
                     children: [
                       Text(user?.name ?? 'Super Admin', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text(user?.email ?? 'admin@school.ai', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14)),
+                      Text(
+                        user?.email ?? 'Email not available',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       InkWell(
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),

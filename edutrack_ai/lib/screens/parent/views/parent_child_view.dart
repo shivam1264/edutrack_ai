@@ -25,6 +25,10 @@ class ParentChildView extends StatelessWidget {
         final rollNo = studentData['roll_no'] ?? 'N/A';
         final classId = studentData['class_id'] ?? '';
         final avatarUrl = studentData['avatar_url'] ?? studentData['avatarUrl'];
+        final schoolLabel =
+            studentData['school_name'] ??
+            studentData['school_id'] ??
+            'School not listed';
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -36,7 +40,7 @@ class ParentChildView extends StatelessWidget {
           ),
           body: Column(
             children: [
-              _buildProfileHeader(name, rollNo, classId, avatarUrl),
+              _buildProfileHeader(name, rollNo, classId, avatarUrl, schoolLabel),
               Expanded(child: _buildOverviewTab(studentData, childId)),
             ],
           ),
@@ -45,7 +49,13 @@ class ParentChildView extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader(String name, String rollNo, String classId, String? avatarUrl) {
+  Widget _buildProfileHeader(
+    String name,
+    String rollNo,
+    String classId,
+    String? avatarUrl,
+    String schoolLabel,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Row(
@@ -74,7 +84,10 @@ class ParentChildView extends StatelessWidget {
                     return Text('Grade $cName • Roll No. $rollNo', style: const TextStyle(color: Colors.grey, fontSize: 14));
                   },
                 ),
-                const Text('EduTrack Primary Hub', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                Text(
+                  schoolLabel,
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -106,13 +119,19 @@ class ParentChildView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          _infoTile('School', 'EduTrack Primary Hub'),
+          _infoTile(
+            'School',
+            data['school_name'] ?? data['school_id'] ?? 'School not listed',
+          ),
           const SizedBox(height: 32),
           StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance.collection('classes').doc(data['class_id']).snapshots(),
             builder: (context, classSnap) {
               final classData = classSnap.data?.data() as Map<String, dynamic>?;
-              final teacherName = classData?['teacher_name'] ?? 'Not Assigned';
+              final teacherName =
+                  classData?['class_teacher_name'] ??
+                  classData?['teacher_name'] ??
+                  'Not Assigned';
               
               return PremiumCard(
                 padding: const EdgeInsets.all(16),

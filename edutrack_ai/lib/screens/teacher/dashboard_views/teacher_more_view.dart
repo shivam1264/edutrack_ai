@@ -6,6 +6,8 @@ import '../../../utils/app_theme.dart';
 import '../../../models/user_model.dart';
 import '../../../models/class_model.dart';
 import '../../../services/class_service.dart';
+import '../../settings/app_settings_screen.dart';
+import '../../settings/help_support_screen.dart';
 import '../../settings/profile_screen.dart';
 
 class TeacherMoreView extends StatelessWidget {
@@ -33,12 +35,18 @@ class TeacherMoreView extends StatelessWidget {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
             }),
             _buildMenuItem(Icons.school_outlined, 'Class & Subject', () => _showAcademicSheet(context, user)),
-            _buildMenuItem(Icons.notifications_none_rounded, 'Notification Settings', () => _showNotificationSettings(context)),
+            _buildMenuItem(Icons.notifications_none_rounded, 'Notification Settings', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
+            }),
           ]),
           const SizedBox(height: 24),
           _buildSection('Support', [
-            _buildMenuItem(Icons.help_outline_rounded, 'Help & Support', () => _showSupportDialog(context)),
-            _buildMenuItem(Icons.feedback_outlined, 'Feedback', () => _showSupportDialog(context)),
+            _buildMenuItem(Icons.help_outline_rounded, 'Help & Support', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
+            }),
+            _buildMenuItem(Icons.feedback_outlined, 'Feedback', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
+            }),
           ]),
           const SizedBox(height: 24),
           _buildSection('Other', [
@@ -184,53 +192,16 @@ class TeacherMoreView extends StatelessWidget {
                     dense: true,
                     leading: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.class_rounded, color: Colors.orange, size: 16)),
                     title: Text(cls.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: Text('Standard ${cls.standard} - Section ${cls.section ?? 'N/A'}', style: const TextStyle(fontSize: 12)),
+                    subtitle: Text(
+                      'Standard ${cls.standard} - Section ${cls.section?.isNotEmpty == true ? cls.section : 'Not assigned'}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   );
                 },
               )),
             const SizedBox(height: 32),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showNotificationSettings(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setLocalState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Preferences', style: TextStyle(fontWeight: FontWeight.w900)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SwitchListTile(value: true, onChanged: (v) {}, title: const Text('Push Notifications', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)), subtitle: const Text('Alerts for doubts and attendance', style: TextStyle(fontSize: 11))),
-              SwitchListTile(value: false, onChanged: (v) {}, title: const Text('Email Reports', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)), subtitle: const Text('Weekly student performance', style: TextStyle(fontSize: 11))),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.secondary))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showSupportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Support Center', style: TextStyle(fontWeight: FontWeight.w900)),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(leading: Icon(Icons.email_outlined, color: AppTheme.primary), title: Text('Email Us', style: TextStyle(fontWeight: FontWeight.bold)), subtitle: Text('support@edutrack.ai')),
-            ListTile(leading: Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.secondary), title: Text('Live Chat', style: TextStyle(fontWeight: FontWeight.bold)), subtitle: Text('Available 9 AM - 6 PM')),
-          ],
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
       ),
     );
   }

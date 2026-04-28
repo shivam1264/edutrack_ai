@@ -15,6 +15,7 @@ class ParentReportsScreen extends StatelessWidget {
     final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : null;
     final avgScore = (analytics?['avg_score'] as num?)?.toDouble();
     final grade = avgScore == null ? 'N/A' : '${avgScore.toStringAsFixed(0)}%';
+    final reportWindow = DateTime.now();
     final insight = avgScore == null
         ? 'No academic report data is available yet.'
         : avgScore >= 75
@@ -43,10 +44,12 @@ class ParentReportsScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Text('Term 2 (Current)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                      Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+                      Text(
+                        '${_monthLabel(reportWindow)} Snapshot',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),
@@ -121,5 +124,23 @@ class ParentReportsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _monthLabel(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[date.month - 1];
   }
 }

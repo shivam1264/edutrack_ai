@@ -343,6 +343,7 @@ class _ProgressViewState extends State<ProgressView> {
   }
 
   Widget _buildMasteryCard(String subject, double mastery) {
+    final target = ((mastery + 10).clamp(75, 100)).toInt();
     return PremiumCard(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -357,8 +358,8 @@ class _ProgressViewState extends State<ProgressView> {
                   color: AppTheme.primaryLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  'Target: 95%',
+                child: Text(
+                  'Target: $target%',
                   style: TextStyle(
                     color: AppTheme.primary,
                     fontSize: 12,

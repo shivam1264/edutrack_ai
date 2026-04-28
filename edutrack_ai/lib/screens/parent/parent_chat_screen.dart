@@ -68,7 +68,9 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
                       style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
                     ),
                     Text(
-                      '$teacherName | Online',
+                      teacherId.isEmpty
+                          ? 'Teacher link pending'
+                          : '$teacherName | School chat',
                       style: const TextStyle(
                         fontSize: 11,
                         color: Colors.green,
@@ -80,16 +82,6 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
                 backgroundColor: Colors.white,
                 surfaceTintColor: Colors.white,
                 elevation: 0,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.videocam_rounded),
-                    onPressed: () => _showUnavailable(context, 'Video call'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.call_rounded),
-                    onPressed: () => _showUnavailable(context, 'Voice call'),
-                  ),
-                ],
               ),
               body: Column(
                 children: [
@@ -263,9 +255,4 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
     _messageController.clear();
   }
 
-  void _showUnavailable(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature is not connected for this classroom yet.')),
-    );
-  }
 }
