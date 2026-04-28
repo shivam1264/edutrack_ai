@@ -761,8 +761,9 @@ class TeacherHomeView extends StatelessWidget {
           },
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   String _getTimeAgo(DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
