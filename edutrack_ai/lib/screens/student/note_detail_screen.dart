@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../models/note_model.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
@@ -20,8 +21,9 @@ class NoteDetailScreen extends StatelessWidget {
     final hasFile = note.fileUrl != null && note.fileUrl!.isNotEmpty;
     final isImage = (note.fileType != null && ['jpg', 'jpeg', 'png', 'webp'].contains(note.fileType!.toLowerCase())) ||
                      (note.fileUrl != null && ['jpg', 'jpeg', 'png', 'webp'].any((ext) => note.fileUrl!.toLowerCase().contains(ext)));
-    final isPdf = (note.fileType != null && note.fileType!.toLowerCase() == 'pdf') ||
-                   (note.fileUrl != null && note.fileUrl!.toLowerCase().contains('.pdf'));
+    final isPdf = (note.fileType != null &&
+            note.fileType!.toLowerCase() == 'pdf') ||
+        (note.fileUrl != null && note.fileUrl!.toLowerCase().contains('.pdf'));
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -85,18 +87,48 @@ class NoteDetailScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           children: [
-                            const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent, size: 48),
+                            Icon(
+                              isPdf
+                                  ? Icons.picture_as_pdf_rounded
+                                  : Icons.insert_drive_file_rounded,
+                              color: isPdf ? Colors.redAccent : AppTheme.info,
+                              size: 48,
+                            ),
                             const SizedBox(height: 12),
-                            Text(note.fileType?.toUpperCase() ?? 'PDF', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                            Text(
+                              note.fileName ??
+                                  (note.fileType?.toUpperCase() ?? 'Document'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            const Text('Academic Resource Attached', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text(
+                              isPdf
+                                  ? 'PDF resource attached'
+                                  : 'Academic resource attached',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
                             const SizedBox(height: 20),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _launchURL(note.fileUrl!, context),
+                                onPressed: () => _openResource(
+                                  note.fileUrl!,
+                                  context,
+                                ),
                                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                                label: const Text('Open Resource', style: TextStyle(fontWeight: FontWeight.bold)),
+                                label: Text(
+                                  isPdf ? 'Open PDF' : 'Open Resource',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0F172A),
                                   foregroundColor: Colors.white,
@@ -125,8 +157,29 @@ class NoteDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _launchURL(String url, BuildContext context) async {
-    // Show a loading indicator
+  Future<void> _openResource(String url, BuildContext context) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The resource link is invalid.'),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
+
+    bool launched = false;
+    try {
+      launched = await launchUrl(
+        uri,
+        mode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+      );
+    } catch (_) {}
+    if (launched) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -148,16 +201,20 @@ class NoteDetailScreen extends StatelessWidget {
     try {
       final dio = Dio();
       final tempDir = await getTemporaryDirectory();
-      final extension = note.fileType ?? (url.split('.').last.split('?').first);
-      final fileName = "note_${note.id}.$extension";
+      final extension =
+          note.fileType ??
+          note.fileName?.split('.').last ??
+          url.split('.').last.split('?').first;
+      final sanitizedExtension = extension.replaceAll('.', '').trim();
+      final fileName = sanitizedExtension.isEmpty
+          ? 'note_${note.id}'
+          : 'note_${note.id}.$sanitizedExtension';
       final savePath = "${tempDir.path}/$fileName";
 
-      // Download the file
       await dio.download(url, savePath);
 
-      if (context.mounted) Navigator.pop(context); // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
 
-      // Open the file
       final result = await OpenFile.open(savePath);
       
       if (result.type != ResultType.done && context.mounted) {
@@ -170,7 +227,7 @@ class NoteDetailScreen extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to download or open resource: $e'),

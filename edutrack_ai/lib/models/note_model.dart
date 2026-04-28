@@ -11,6 +11,7 @@ class NoteModel {
   final String? description;
   final String? fileUrl;
   final String? fileType;
+  final String? fileName;
   final String? classId;
   final DateTime createdAt;
 
@@ -25,6 +26,7 @@ class NoteModel {
     this.description,
     this.fileUrl,
     this.fileType,
+    this.fileName,
     this.classId,
     required this.createdAt,
   });
@@ -41,6 +43,7 @@ class NoteModel {
       description: map['description'],
       fileUrl: map['fileUrl'],
       fileType: map['fileType'],
+      fileName: map['fileName'],
       classId: map['class_id'],
       createdAt: map['createdAt'] is Timestamp 
           ? (map['createdAt'] as Timestamp).toDate() 
@@ -61,6 +64,7 @@ class NoteModel {
       'description': description,
       'fileUrl': fileUrl,
       'fileType': fileType,
+      'fileName': fileName,
       'class_id': classId,
       'createdAt': createdAt,
     };
