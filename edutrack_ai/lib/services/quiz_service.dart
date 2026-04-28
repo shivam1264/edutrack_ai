@@ -139,11 +139,12 @@ class QuizService {
     final snap = await _db
         .collection('quiz_results')
         .where('student_id', isEqualTo: studentId)
-        .orderBy('submitted_at', descending: true)
         .get();
-    return snap.docs
+    final list = snap.docs
         .map((d) => QuizResultModel.fromMap(d.id, d.data()))
         .toList();
+    list.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+    return list;
   }
 
   // ─── Update Quiz ──────────────────────────────────────────────────────────────

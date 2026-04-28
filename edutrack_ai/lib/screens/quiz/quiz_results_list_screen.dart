@@ -5,6 +5,7 @@ import '../../services/quiz_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'quiz_review_screen.dart';
 
 class QuizResultsListScreen extends StatefulWidget {
   final QuizModel quiz;
@@ -171,64 +172,46 @@ class _ResultListItem extends StatelessWidget {
     final bool isExcellent = result.percentage >= 80;
     final bool isWeak = result.percentage < 40;
 
-    return PremiumCard(
-      opacity: 1,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: (isExcellent ? Colors.green : (isWeak ? Colors.red : Colors.orange)).withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                studentName[0].toUpperCase(),
-                style: TextStyle(
-                  color: isExcellent ? Colors.green : (isWeak ? Colors.red : Colors.orange),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                ),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => QuizReviewScreen(quiz: quiz, result: result),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: PremiumCard(
+        opacity: 1,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: (isExcellent ? Colors.green : (isWeak ? Colors.red : Colors.orange)).withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(studentName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.textPrimary)),
-                Text('Submitted ${timeAgo(result.submittedAt)}', style: const TextStyle(fontSize: 10, color: AppTheme.textHint, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('${result.score.toStringAsFixed(0)}/${quiz.totalMarks.toStringAsFixed(0)}', 
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.textPrimary)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: (isExcellent ? Colors.green : (isWeak ? Colors.red : Colors.orange)).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
+              child: Center(
                 child: Text(
-                  '${result.percentage.toStringAsFixed(0)}%',
+                  studentName[0].toUpperCase(),
                   style: TextStyle(
                     color: isExcellent ? Colors.green : (isWeak ? Colors.red : Colors.orange),
-                    fontSize: 10,
                     fontWeight: FontWeight.w900,
+                    fontSize: 16,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_right_rounded, color: AppTheme.textHint, size: 20),
-        ],
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(studentName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.textPrimary)), Text('Submitted ${timeAgo(result.submittedAt)}', style: const TextStyle(fontSize: 10, color: AppTheme.textHint, fontWeight: FontWeight.bold))])),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text('${result.score.toStringAsFixed(0)}/${quiz.totalMarks.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.textPrimary)), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: (isExcellent ? Colors.green : (isWeak ? Colors.red : Colors.orange)).withOpacity(0.1), borderRadius: BorderRadius.circular(6)), child: Text('${result.percentage.toStringAsFixed(0)}%', style: TextStyle(color: isExcellent ? Colors.green : (isWeak ? Colors.red : Colors.orange), fontSize: 10, fontWeight: FontWeight.w900)))]),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right_rounded, color: AppTheme.textHint, size: 20),
+          ],
+        ),
       ),
     );
   }

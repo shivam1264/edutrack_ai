@@ -150,7 +150,7 @@ class _MissionsViewState extends State<MissionsView> {
 
   Widget _buildSliverHeader(GamificationProvider gamify) {
     return SliverAppBar(
-      expandedHeight: 180,
+      expandedHeight: 240,
       floating: false,
       pinned: true,
       backgroundColor: AppTheme.primaryDark,
@@ -183,8 +183,23 @@ class _MissionsViewState extends State<MissionsView> {
                           const Text('Your Daily Missions', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                           const SizedBox(height: 4),
                           Text(
-                            'Level ${gamify.user?.level ?? 1} • ${gamify.user?.xp ?? 0} XP earned',
+                            'Level ${gamify.user?.level ?? 1} • Rank: ${gamify.rankName}',
                             style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: gamify.progressToNextLevel,
+                              minHeight: 6,
+                              backgroundColor: Colors.white.withOpacity(0.1),
+                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${gamify.user?.xp ?? 0} / ${gamify.xpToNextLevel} XP to Next Level',
+                            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),

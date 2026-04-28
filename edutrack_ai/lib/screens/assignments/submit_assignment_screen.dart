@@ -60,7 +60,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Assignment submitted successfully! ✅'), backgroundColor: Colors.green),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {

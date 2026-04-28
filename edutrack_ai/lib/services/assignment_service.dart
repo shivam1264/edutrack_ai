@@ -165,11 +165,12 @@ class AssignmentService {
     final snap = await _db
         .collection('submissions')
         .where('student_id', isEqualTo: studentId)
-        .orderBy('submitted_at', descending: true)
         .get();
-    return snap.docs
+    final list = snap.docs
         .map((d) => SubmissionModel.fromMap(d.id, d.data()))
         .toList();
+    list.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+    return list;
   }
 
   // ─── Update Assignment ────────────────────────────────────────────────────────

@@ -16,8 +16,9 @@ import '../../services/ai_service.dart';
 
 class CreateQuizScreen extends StatefulWidget {
   final String classId;
+  final QuizModel? quiz; // Null if creating, non-null if editing
 
-  const CreateQuizScreen({super.key, required this.classId});
+  const CreateQuizScreen({super.key, required this.classId, this.quiz});
 
   @override
   State<CreateQuizScreen> createState() => _CreateQuizScreenState();
@@ -39,6 +40,20 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
   void initState() {
     super.initState();
     _initSubjects();
+    if (widget.quiz != null) {
+      _titleCtrl.text = widget.quiz!.title;
+      _subject = widget.quiz!.subject;
+      _durationMins = widget.quiz!.durationMins;
+      _startTime = widget.quiz!.startTime;
+      _endTime = widget.quiz!.endTime;
+      _questions.addAll(widget.quiz!.questions.map((q) => _QuestionDraft(
+        type: q.type,
+        text: q.text,
+        options: q.options,
+        correctOption: q.correctOption ?? 0,
+        marks: q.marks,
+      )));
+    }
   }
 
   void _initSubjects() {
@@ -188,7 +203,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     setState(() => _isSaving = false);
   }
 
-  Future<void> _createQuiz() async {
+  Future<void> _saveQuiz() async {
     if (!_formKey.currentState!.validate()) return;
     if (_questions.isEmpty) {
       _showSnack('Add at least one question!', isError: true);
@@ -200,22 +215,38 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       final uid = context.read<AuthProvider>().user?.uid ?? '';
       final questions = _questions.map((q) => q.toQuizQuestion()).toList();
 
-      await QuizService().createQuiz(
-        classId: widget.classId,
-        teacherId: uid,
-        title: _titleCtrl.text.trim(),
-        subject: _subject,
-        durationMins: _durationMins,
-        startTime: _startTime,
-        endTime: _endTime,
-        questions: questions,
-      );
+      if (widget.quiz == null) {
+        // Create Mode
+        await QuizService().createQuiz(
+          classId: widget.classId,
+          teacherId: uid,
+          title: _titleCtrl.text.trim(),
+          subject: _subject,
+          durationMins: _durationMins,
+          startTime: _startTime,
+          endTime: _endTime,
+          questions: questions,
+        );
+      } else {
+        // Edit Mode
+        final updates = {
+          'title': _titleCtrl.text.trim(),
+          'subject': _subject,
+          'duration_mins': _durationMins,
+          'start_time': Timestamp.fromDate(_startTime),
+          'end_time': Timestamp.fromDate(_endTime),
+          'questions': questions.map((q) => q.toMap()).toList(),
+        };
+        await QuizService().updateQuiz(widget.quiz!.id, updates);
+      }
 
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Quiz Broadcasted! Students notified. ⚡'),
+            content: Text(widget.quiz == null 
+              ? 'Quiz Broadcasted! Students notified. ⚡' 
+              : 'Quiz Protocol Updated! Changes synced. 🔄'),
             backgroundColor: AppTheme.secondary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -265,7 +296,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Create Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        const Text(widget.quiz == null ? 'Create Quiz' : 'Edit Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                         StreamBuilder<ClassModel>(
                           stream: ClassService().getClassById(widget.classId),
                           builder: (context, classSnap) {
@@ -296,7 +327,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
               if (_isSaving)
                 const Padding(padding: EdgeInsets.all(16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
               else
-                IconButton(onPressed: _createQuiz, icon: const Icon(Icons.check_circle_rounded), tooltip: 'Create Quiz'),
+                IconButton(onPressed: _saveQuiz, icon: const Icon(Icons.check_circle_rounded), tooltip: widget.quiz == null ? 'Create Quiz' : 'Update Quiz'),
             ],
           ),
           SliverToBoxAdapter(
@@ -452,9 +483,9 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           width: double.infinity,
           height: 60,
           child: ElevatedButton.icon(
-            onPressed: _isSaving ? null : _createQuiz,
+            onPressed: _isSaving ? null : _saveQuiz,
             icon: const Icon(Icons.rocket_launch_rounded),
-            label: Text(_isSaving ? 'Broadcasting...' : 'Launch Quiz Assessment', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+            label: Text(_isSaving ? 'Broadcasting...' : (widget.quiz == null ? 'Launch Quiz Assessment' : 'Update Quiz Protocol'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.secondary,
               foregroundColor: Colors.white,
@@ -518,7 +549,13 @@ class _QuestionDraft {
   final List<String> options = ['', '', '', ''];
   int correctOption = 0;
   double marks = 1;
-  _QuestionDraft({required this.type});
+  _QuestionDraft({required this.type, this.text = '', List<String>? options, this.correctOption = 0, this.marks = 1}) {
+    if (options != null) {
+      for (int i = 0; i < options.length && i < 4; i++) {
+        this.options[i] = options[i];
+      }
+    }
+  }
 
   QuizQuestion toQuizQuestion() {
     return QuizQuestion(

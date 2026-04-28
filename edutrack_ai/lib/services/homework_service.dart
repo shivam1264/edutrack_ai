@@ -50,7 +50,7 @@ class HomeworkService {
         'show_hint_first': showHintFirst,
         'image_data': imageData,
       }),
-    );
+    ).timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
       throw Exception('AI service error. Please try again.');

@@ -14,8 +14,9 @@ import '../../services/class_service.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
   final String classId;
+  final AssignmentModel? assignment; // Null if creating, non-null if editing
 
-  const CreateAssignmentScreen({super.key, required this.classId});
+  const CreateAssignmentScreen({super.key, required this.classId, this.assignment});
 
   @override
   State<CreateAssignmentScreen> createState() =>
@@ -39,6 +40,13 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   void initState() {
     super.initState();
     _initSubjects();
+    if (widget.assignment != null) {
+      _titleCtrl.text = widget.assignment!.title;
+      _descCtrl.text = widget.assignment!.description;
+      _marksCtrl.text = widget.assignment!.maxMarks.toStringAsFixed(0);
+      _subject = widget.assignment!.subject;
+      _dueDate = widget.assignment!.dueDate;
+    }
   }
 
   void _initSubjects() {
@@ -64,27 +72,50 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     }
   }
 
-  Future<void> _create() async {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
     try {
       final uid = context.read<AuthProvider>().user?.uid ?? '';
-      await AssignmentService().createAssignment(
-        classId: widget.classId,
-        teacherId: uid,
-        title: _titleCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
-        subject: _subject,
-        dueDate: _dueDate,
-        maxMarks: double.parse(_marksCtrl.text),
-        attachedFile: _pickedFile,
-      );
+      
+      if (widget.assignment == null) {
+        // Create Mode
+        await AssignmentService().createAssignment(
+          classId: widget.classId,
+          teacherId: uid,
+          title: _titleCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          subject: _subject,
+          dueDate: _dueDate,
+          maxMarks: double.parse(_marksCtrl.text),
+          attachedFile: _pickedFile,
+        );
+      } else {
+        // Edit Mode
+        final updates = {
+          'title': _titleCtrl.text.trim(),
+          'description': _descCtrl.text.trim(),
+          'subject': _subject,
+          'due_date': Timestamp.fromDate(_dueDate),
+          'max_marks': double.parse(_marksCtrl.text),
+        };
+        
+        if (_pickedFile != null) {
+          final url = await AssignmentService().uploadFile(_pickedFile!, folder: 'assignments');
+          if (url != null) updates['file_url'] = url;
+        }
+
+        await AssignmentService().updateAssignment(widget.assignment!.id, updates);
+      }
+
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Mission Configured! Assignment live. 🚀'),
+            content: Text(widget.assignment == null 
+              ? 'Mission Configured! Assignment live. 🚀' 
+              : 'Mission Updated! Changes saved. 🛡️'),
             backgroundColor: AppTheme.secondary,
             behavior: SnackBarBehavior.floating,
           ),
@@ -101,6 +132,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     }
     setState(() => _isSaving = false);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +162,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Create Assignment', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text(widget.assignment == null ? 'Create Assignment' : 'Edit Assignment', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                         StreamBuilder<ClassModel>(
                           stream: ClassService().getClassById(widget.classId),
                           builder: (context, classSnap) {
@@ -301,9 +333,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton.icon(
-                          onPressed: _isSaving ? null : _create,
+                          onPressed: _isSaving ? null : _save,
                           icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.rocket_launch_rounded),
-                          label: Text(_isSaving ? 'Deploying...' : 'Deploy Assignment', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                          label: Text(_isSaving ? 'Deploying...' : (widget.assignment == null ? 'Deploy Assignment' : 'Update Assignment'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.secondary,
                             foregroundColor: Colors.white,

@@ -143,7 +143,7 @@ class _ProgressViewState extends State<ProgressView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMainStats(avgScore, (data['attendance'] as num?)?.toDouble() ?? 95.0),
+          _buildMainStats(avgScore, (data['attendance'] as num?)?.toDouble() ?? 0.0),
           const SizedBox(height: 32),
           Text(
             _selectedTabIndex == 0 ? 'Learning Velocity (Overall)' : 'Learning Trend',

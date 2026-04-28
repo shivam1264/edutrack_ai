@@ -102,11 +102,14 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
+                                  onTap: () async {
+                                    final result = await Navigator.push(
                                       context,
                                       MaterialPageRoute(builder: (_) => SubmitAssignmentScreen(assignment: assignment, existingSubmission: sub)),
                                     );
+                                    if (result == true) {
+                                      setState(() {}); // Refresh submissions
+                                    }
                                   },
                                   child: _AssignmentCard(
                                     subject: assignment.subject,

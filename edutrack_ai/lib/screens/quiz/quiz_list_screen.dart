@@ -7,6 +7,7 @@ import '../../services/quiz_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'take_quiz_screen.dart';
+import 'quiz_review_screen.dart';
 
 class QuizListScreen extends StatefulWidget {
   final String classId;
@@ -19,7 +20,7 @@ class QuizListScreen extends StatefulWidget {
 
 class _QuizListScreenState extends State<QuizListScreen> {
   int _selectedTabIndex = 0;
-  final List<String> _tabs = ['All', 'Upcoming', 'Completed'];
+  final List<String> _tabs = ['All', 'Pending', 'Completed'];
 
   @override
   Widget build(BuildContext context) {
@@ -51,77 +52,104 @@ class _QuizListScreenState extends State<QuizListScreen> {
 
                 final quizzes = snapshot.data ?? [];
 
-                final filteredQuizzes = quizzes.where((q) {
-                  if (_selectedTabIndex == 0) return true;
-                  if (_selectedTabIndex == 1) return q.isUpcoming || q.isActive; // Upcoming/Live
-                  if (_selectedTabIndex == 2) return !q.isActive && !q.isUpcoming; // Completed
-                  return true;
-                }).toList();
+                return FutureBuilder<List<QuizResultModel>>(
+                  future: QuizService().getStudentResults(userId),
+                  builder: (context, resSnapshot) {
+                    final results = resSnapshot.data ?? [];
+                    final resultMap = {for (var r in results) r.quizId: r};
 
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Column(
-                    children: [
-                      if (filteredQuizzes.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40),
-                          child: Center(child: Text('No quizzes found.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold))),
-                        )
-                      else
-                        ...filteredQuizzes.map((quiz) {
-                          String timeLabel = 'Starts in';
-                          String timeValue = '';
-                          Color statusColor = AppTheme.primary;
-                          
-                          if (quiz.isActive) {
-                            timeLabel = 'Status';
-                            timeValue = 'LIVE';
-                            statusColor = Colors.red;
-                          } else if (quiz.isUpcoming) {
-                            timeLabel = 'Starts at';
-                            timeValue = DateFormat('hh:mm a').format(quiz.startTime);
-                            statusColor = Colors.orange;
-                          } else {
-                            timeLabel = 'Status';
-                            timeValue = 'ENDED';
-                            statusColor = Colors.grey;
-                          }
+                    final filteredQuizzes = quizzes.where((q) {
+                      final hasTaken = resultMap.containsKey(q.id);
+                      if (_selectedTabIndex == 0) return true;
+                      if (_selectedTabIndex == 1) return !hasTaken && (q.isActive || q.isUpcoming); // Pending
+                      if (_selectedTabIndex == 2) return hasTaken || q.isExpired; // Completed/Expired
+                      return true;
+                    }).toList();
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: GestureDetector(
-                              onTap: quiz.isActive ? () async {
-                                final result = await QuizService().getStudentResult(quizId: quiz.id, studentId: userId);
-                                if (!context.mounted) return;
-                                if (result != null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: const Text('You have already completed this quiz.'), backgroundColor: AppTheme.accent),
-                                  );
-                                  return;
-                                }
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => TakeQuizScreen(quiz: quiz)));
-                              } : null,
-                              child: _QuizCard(
-                                subject: quiz.subject,
-                                title: quiz.title,
-                                date: DateFormat('MMM dd, yyyy').format(quiz.startTime),
-                                timeLabel: timeLabel,
-                                timeValue: timeValue,
-                                icon: _getIconForSubject(quiz.subject),
-                                color: _getColorForSubject(quiz.subject),
-                                statusColor: statusColor,
-                              ),
-                            ),
-                          );
-                        }),
-                      const SizedBox(height: 24),
-                      _buildChallengeBanner(),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+                    return SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Column(
+                        children: [
+                          if (filteredQuizzes.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Center(child: Text('No quizzes found.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold))),
+                            )
+                          else
+                            ...filteredQuizzes.map((quiz) {
+                              String timeLabel = 'Starts in';
+                              String timeValue = '';
+                              Color statusColor = AppTheme.primary;
+                              
+                              if (quiz.isActive) {
+                                timeLabel = 'Status';
+                                timeValue = 'LIVE';
+                                statusColor = Colors.red;
+                              } else if (quiz.isUpcoming) {
+                                timeLabel = 'Starts at';
+                                timeValue = DateFormat('hh:mm a').format(quiz.startTime);
+                                statusColor = Colors.orange;
+                              } else {
+                                timeLabel = 'Status';
+                                timeValue = 'ENDED';
+                                statusColor = Colors.grey;
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final result = resultMap[quiz.id] ?? await QuizService().getStudentResult(quizId: quiz.id, studentId: userId);
+                                    if (!context.mounted) return;
+                                    
+                                    if (result != null) {
+                                      // Already completed, show review
+                                      Navigator.push(
+                                        context, 
+                                        MaterialPageRoute(
+                                          builder: (_) => QuizReviewScreen(quiz: quiz, result: result),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (quiz.isActive) {
+                                      final taken = await Navigator.push(context, MaterialPageRoute(builder: (_) => TakeQuizScreen(quiz: quiz)));
+                                      if (taken == true) {
+                                        setState(() {}); // Refresh
+                                      }
+                                    } else if (quiz.isUpcoming) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: const Text('Quiz has not started yet.'), backgroundColor: AppTheme.accent),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: const Text('Quiz has already ended.'), backgroundColor: AppTheme.danger),
+                                      );
+                                    }
+                                  },
+                                  child: _QuizCard(
+                                    subject: quiz.subject,
+                                    title: quiz.title,
+                                    date: DateFormat('MMM dd, yyyy').format(quiz.startTime),
+                                    timeLabel: timeLabel,
+                                    timeValue: timeValue,
+                                    icon: _getIconForSubject(quiz.subject),
+                                    color: _getColorForSubject(quiz.subject),
+                                    statusColor: statusColor,
+                                  ),
+                                ),
+                              );
+                            }),
+                          const SizedBox(height: 24),
+                          _buildChallengeBanner(),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    );
+                  },
                 );
-              },
             ),
           ),
         ],

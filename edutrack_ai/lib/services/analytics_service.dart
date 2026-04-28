@@ -82,13 +82,42 @@ class AnalyticsService {
     final subjectAvg = subjectScores.map((k, v) =>
         MapEntry(k, v.reduce((a, b) => a + b) / v.length));
 
+    // Attendance
+    final attendSnap = await _db
+        .collection('attendance')
+        .where('student_id', isEqualTo: studentId)
+        .get();
+    
+    int presentCount = 0;
+    int totalAttendDays = attendSnap.docs.length;
+    for (var doc in attendSnap.docs) {
+      final status = doc.data()['status']?.toString().toLowerCase();
+      if (status == 'present' || status == 'late') presentCount++;
+    }
+    final attendanceRate = totalAttendDays > 0 ? (presentCount / totalAttendDays) * 100 : 0.0;
+
+    // Total Assignments for Class
+    final classId = studentProfile?['class_id'] ?? '';
+    int totalAssignments = 0;
+    if (classId.isNotEmpty) {
+      final assignSnap = await _db
+          .collection('assignments')
+          .where('class_id', isEqualTo: classId)
+          .get();
+      totalAssignments = assignSnap.docs.length;
+    }
+    final courseCompletion = totalAssignments > 0 ? (submitted / totalAssignments) * 100 : 0.0;
+
     return {
-      'class_id': studentProfile?['class_id'] ?? '',
+      'class_id': classId,
       'avg_score': avgScore,
       'last_5_scores': scores.take(5).toList(),
       'subject_avg': subjectAvg,
       'submitted_count': submitted,
       'graded_count': graded,
+      'attendance': attendanceRate,
+      'course_completion': courseCompletion,
+      'total_assignments': totalAssignments,
     };
   }
 

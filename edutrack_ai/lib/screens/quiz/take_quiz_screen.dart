@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/quiz_service.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/gamification_provider.dart';
+import 'quiz_review_screen.dart';
 
 class TakeQuizScreen extends StatefulWidget {
   final QuizModel quiz;
@@ -105,7 +106,14 @@ class _TakeQuizScreenState extends State<TakeQuizScreen> {
     final question = widget.quiz.questions[_currentIndex];
     final progress = (_currentIndex + 1) / widget.quiz.questions.length;
 
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        if (didPop && _submitted) {
+          // Potentially return true if we were popped directly
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         title: Text(widget.quiz.title),
@@ -339,9 +347,24 @@ class _TakeQuizScreenState extends State<TakeQuizScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(context)
-                      .popUntil((r) => r.isFirst),
+                  onPressed: () => Navigator.pop(context, true),
                   child: const Text('Back to Dashboard'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => QuizReviewScreen(quiz: widget.quiz, result: _result!),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.fact_check_rounded),
+                  label: const Text('Review Detailed Results'),
                 ),
               ),
             ],

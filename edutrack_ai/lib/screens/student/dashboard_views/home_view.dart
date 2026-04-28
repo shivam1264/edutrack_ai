@@ -27,7 +27,7 @@ class HomeView extends StatelessWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildHeader(context, user),
+          _buildHeader(context, user, gamify),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -101,7 +101,9 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, user) {
+  Widget _buildHeader(BuildContext context, user, GamificationProvider gamify) {
+    final progress = gamify.progressToNextLevel;
+    
     return SliverToBoxAdapter(
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 60, 20, 40),
@@ -152,6 +154,37 @@ class HomeView extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+            // XP Progress Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Level ${gamify.user?.level ?? 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                      Text('${gamify.user?.xp ?? 0} / ${gamify.xpToNextLevel} XP', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: Colors.white.withOpacity(0.1),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -264,6 +297,7 @@ class HomeView extends StatelessWidget {
     final analytics = context.watch<AnalyticsProvider>();
     final data = analytics.studentAnalytics;
     final avg = (data?['avg_score'] as num?)?.toDouble() ?? 0.0;
+    final completion = (data?['course_completion'] as num?)?.toDouble() ?? 0.0;
     
     return PremiumCard(
       padding: const EdgeInsets.all(20),
@@ -284,11 +318,12 @@ class HomeView extends StatelessWidget {
               const Icon(Icons.auto_graph_rounded, color: AppTheme.accent),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
+          // Overall Mastery (Quiz Scores)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Overall Mastery', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const Text('Quiz Average', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               Text('${avg.toStringAsFixed(0)}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppTheme.primary)),
             ],
           ),
@@ -300,6 +335,25 @@ class HomeView extends StatelessWidget {
               minHeight: 10,
               backgroundColor: AppTheme.bgLight,
               valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Course Completion (Assignments)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Assignments Progress', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('${completion.toStringAsFixed(0)}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppTheme.secondary)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: completion / 100,
+              minHeight: 10,
+              backgroundColor: AppTheme.bgLight,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.secondary),
             ),
           ),
         ],

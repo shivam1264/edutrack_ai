@@ -12,6 +12,7 @@ import 'package:edutrack_ai/screens/attendance/teacher_attendance_screen.dart';
 import 'package:edutrack_ai/screens/assignments/create_assignment_screen.dart';
 import 'package:edutrack_ai/screens/quiz/create_quiz_screen.dart';
 import 'package:edutrack_ai/screens/teacher/upload_notes_screen.dart';
+import 'package:edutrack_ai/screens/teacher/resource_management_screen.dart';
 import 'package:edutrack_ai/screens/teacher/teacher_announcements_screen.dart';
 import 'package:edutrack_ai/screens/teacher/bulk_grade_screen.dart';
 import 'package:edutrack_ai/screens/assignments/assignment_audit_screen.dart';
@@ -343,6 +344,10 @@ class TeacherHomeView extends StatelessWidget {
               const SizedBox(width: 16),
               _buildActionButton(context, Icons.upload_file_rounded, 'Upload\nNotes', Colors.orange, () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => UploadNotesScreen(classId: selectedClassId ?? '')));
+              }),
+              const SizedBox(width: 16),
+              _buildActionButton(context, Icons.inventory_2_rounded, 'Manage\nAll', AppTheme.secondary, () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => ResourceManagementScreen(classId: selectedClassId ?? '')));
               }),
             ],
           ),
