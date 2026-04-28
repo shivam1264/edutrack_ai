@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edutrack_ai/l10n/app_localizations.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';

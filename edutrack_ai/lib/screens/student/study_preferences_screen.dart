@@ -124,4 +124,11 @@ class _StudyPreferencesScreenState extends State<StudyPreferencesScreen> {
       ),
     );
   }
+
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('study_difficulty', _difficulty);
+    await prefs.setStringList('study_subjects', _selectedSubjects.toList());
+    await prefs.setBool('ai_feedback', _aiFeedback);
+  }
 }

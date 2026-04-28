@@ -429,18 +429,6 @@ class NotificationItem {
   });
 }
 
-// Stub classes for compilation
-class SubmissionModel {
-  final String id;
-  final String assignmentId;
-  final String studentId;
-  final DateTime submittedAt;
-  final AssignmentStatus status;
-  SubmissionModel({required this.id, required this.assignmentId, required this.studentId, required this.submittedAt, required this.status});
-}
-
-enum AssignmentStatus { pending, submitted, graded }
-
 class QuizReviewScreen extends StatelessWidget {
   final dynamic quiz;
   final dynamic result;
