@@ -21,6 +21,8 @@ class QuizListScreen extends StatefulWidget {
 class _QuizListScreenState extends State<QuizListScreen> {
   int _selectedTabIndex = 0;
   final List<String> _tabs = ['All', 'Pending', 'Completed'];
+  DateTime? _selectedDate;
+  bool _sortByLatest = true;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +36,31 @@ class _QuizListScreenState extends State<QuizListScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Date filter button
+          IconButton(
+            icon: Icon(
+              _selectedDate != null ? Icons.event_busy : Icons.calendar_today,
+              color: _selectedDate != null ? AppTheme.primary : null,
+            ),
+            tooltip: _selectedDate != null ? 'Clear date filter' : 'Filter by date',
+            onPressed: () {
+              if (_selectedDate != null) {
+                setState(() => _selectedDate = null);
+              } else {
+                _selectDate(context);
+              }
+            },
+          ),
+          // Sort toggle
+          IconButton(
+            icon: Icon(
+              _sortByLatest ? Icons.arrow_downward : Icons.arrow_upward,
+            ),
+            tooltip: _sortByLatest ? 'Latest first' : 'Oldest first',
+            onPressed: () => setState(() => _sortByLatest = !_sortByLatest),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -58,7 +85,25 @@ class _QuizListScreenState extends State<QuizListScreen> {
                     final results = resSnapshot.data ?? [];
                     final resultMap = {for (var r in results) r.quizId: r};
 
-                    final filteredQuizzes = quizzes.where((q) {
+                    // Sort quizzes by start time
+                    final sortedQuizzes = quizzes.toList();
+                    sortedQuizzes.sort((a, b) {
+                      if (_sortByLatest) {
+                        return b.startTime.compareTo(a.startTime); // Latest first
+                      }
+                      return a.startTime.compareTo(b.startTime); // Oldest first
+                    });
+
+                    // Filter by date and tab
+                    var filteredQuizzes = sortedQuizzes.where((q) {
+                      // Date filter
+                      if (_selectedDate != null) {
+                        final quizDate = DateTime(q.startTime.year, q.startTime.month, q.startTime.day);
+                        final filterDate = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+                        if (quizDate != filterDate) return false;
+                      }
+                      
+                      // Tab filter
                       final hasTaken = resultMap.containsKey(q.id);
                       if (_selectedTabIndex == 0) return true;
                       if (_selectedTabIndex == 1) return !hasTaken && (q.isActive || q.isUpcoming); // Pending
@@ -71,10 +116,41 @@ class _QuizListScreenState extends State<QuizListScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Column(
                         children: [
+                          // Show date filter chip if selected
+                          if (_selectedDate != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Chip(
+                                avatar: const Icon(Icons.event, size: 18),
+                                label: Text('${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'),
+                                deleteIcon: const Icon(Icons.close, size: 18),
+                                onDeleted: () => setState(() => _selectedDate = null),
+                                backgroundColor: AppTheme.primaryLight,
+                                side: BorderSide(color: AppTheme.primary.withOpacity(0.3)),
+                              ),
+                            ),
+                          
                           if (filteredQuizzes.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 40),
-                              child: Center(child: Text('No quizzes found.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold))),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      _selectedDate != null ? Icons.event_busy : Icons.quiz_outlined,
+                                      size: 48,
+                                      color: AppTheme.textHint,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _selectedDate != null 
+                                          ? 'No quizzes for ${DateFormat('MMM dd, yyyy').format(_selectedDate!)}'
+                                          : 'No quizzes found.',
+                                      style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             )
                           else
                             ...filteredQuizzes.map((quiz) {
@@ -156,6 +232,33 @@ class _QuizListScreenState extends State<QuizListScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppTheme.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   Widget _buildTabs() {

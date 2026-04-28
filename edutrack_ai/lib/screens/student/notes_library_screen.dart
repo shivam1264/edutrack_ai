@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:edutrack_ai/models/note_model.dart';
@@ -21,6 +22,8 @@ class NotesLibraryScreen extends StatefulWidget {
 class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
   int _selectedTabIndex = 0;
   final List<String> _tabs = ['All', 'Mathematics', 'Science', 'English', 'History', 'Computer'];
+  DateTime? _selectedDate;
+  bool _sortByLatest = true;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +41,31 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Date filter button
+          IconButton(
+            icon: Icon(
+              _selectedDate != null ? Icons.event_busy : Icons.calendar_today,
+              color: _selectedDate != null ? AppTheme.primary : null,
+            ),
+            tooltip: _selectedDate != null ? 'Clear date filter' : 'Filter by date',
+            onPressed: () {
+              if (_selectedDate != null) {
+                setState(() => _selectedDate = null);
+              } else {
+                _selectDate(context);
+              }
+            },
+          ),
+          // Sort toggle
+          IconButton(
+            icon: Icon(
+              _sortByLatest ? Icons.arrow_downward : Icons.arrow_upward,
+            ),
+            tooltip: _sortByLatest ? 'Latest first' : 'Oldest first',
+            onPressed: () => setState(() => _sortByLatest = !_sortByLatest),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -60,14 +88,26 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                 sortedDocs.sort((a, b) {
                   final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
                   final bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
-                  return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+                  if (_sortByLatest) {
+                    return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now()); // Latest first
+                  }
+                  return (aTime ?? Timestamp.now()).compareTo(bTime ?? Timestamp.now()); // Oldest first
                 });
 
                 var notes = sortedDocs.map((d) {
                   return NoteModel.fromMap(d.id, d.data() as Map<String, dynamic>);
                 }).toList();
                 
-                // Filter by selected tab
+                // Filter by selected date
+                if (_selectedDate != null) {
+                  notes = notes.where((n) {
+                    final noteDate = DateTime(n.createdAt.year, n.createdAt.month, n.createdAt.day);
+                    final filterDate = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+                    return noteDate == filterDate;
+                  }).toList();
+                }
+                
+                // Filter by selected tab (subject)
                 if (_selectedTabIndex > 0) {
                   final selectedSubject = _tabs[_selectedTabIndex];
                   notes = notes.where((n) => n.subject.toLowerCase() == selectedSubject.toLowerCase()).toList();
@@ -78,15 +118,38 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   child: Column(
                     children: [
+                      // Show date filter chip if selected
+                      if (_selectedDate != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Chip(
+                            avatar: const Icon(Icons.event, size: 18),
+                            label: Text('${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'),
+                            deleteIcon: const Icon(Icons.close, size: 18),
+                            onDeleted: () => setState(() => _selectedDate = null),
+                            backgroundColor: AppTheme.primaryLight,
+                            side: BorderSide(color: AppTheme.primary.withOpacity(0.3)),
+                          ),
+                        ),
+                      
                       if (notes.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 60),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 60),
                           child: Center(
                             child: Column(
                               children: [
-                                Icon(Icons.note_alt_rounded, size: 64, color: Colors.grey),
-                                SizedBox(height: 16),
-                                Text('No notes found for this subject.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+                                Icon(
+                                  _selectedDate != null ? Icons.event_busy : Icons.note_alt_rounded,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _selectedDate != null 
+                                      ? 'No notes for ${DateFormat('MMM dd, yyyy').format(_selectedDate!)}'
+                                      : 'No notes found for this subject.',
+                                  style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                                ),
                               ],
                             ),
                           ),
@@ -121,6 +184,33 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppTheme.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   Widget _buildTabs() {
