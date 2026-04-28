@@ -142,14 +142,15 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                         else
                           ElevatedButton.icon(
                             onPressed: () => AssignmentService().openFile(assignment.fileUrl!),
-                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18, color: Colors.white),
                             label: const Text('View Reference Document'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.bgLight,
-                              foregroundColor: AppTheme.primary,
-                              elevation: 0,
-                              side: const BorderSide(color: AppTheme.borderLight),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 4,
+                              shadowColor: AppTheme.primary.withOpacity(0.3),
+                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
                           ),
                       ],

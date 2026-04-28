@@ -110,6 +110,7 @@ class AttendanceService {
     required String classId,
     required DateTime date,
     String? subject,
+    bool filterBySubject = true,
   }) async {
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
@@ -118,8 +119,12 @@ class AttendanceService {
         .where('class_id', isEqualTo: classId)
         .where('date_string', isEqualTo: dateStr);
 
-    if (subject != null) {
-      query = query.where('subject', isEqualTo: subject);
+    if (filterBySubject) {
+      if (subject != null) {
+        query = query.where('subject', isEqualTo: subject);
+      } else {
+        query = query.where('subject', isNull: true);
+      }
     }
 
     final snap = await query.get();
@@ -220,6 +225,7 @@ class AttendanceService {
     required String classId,
     required DateTime date,
     String? subject,
+    bool filterBySubject = true,
   }) {
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
@@ -228,8 +234,12 @@ class AttendanceService {
         .where('class_id', isEqualTo: classId)
         .where('date_string', isEqualTo: dateStr);
 
-    if (subject != null) {
-      query = query.where('subject', isEqualTo: subject);
+    if (filterBySubject) {
+      if (subject != null) {
+        query = query.where('subject', isEqualTo: subject);
+      } else {
+        query = query.where('subject', isNull: true);
+      }
     }
 
     return query.snapshots().map((snap) => snap.docs

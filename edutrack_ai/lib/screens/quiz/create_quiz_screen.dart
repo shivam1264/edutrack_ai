@@ -592,29 +592,35 @@ class _QuestionEditorState extends State<_QuestionEditor> {
                   children: [
                     GestureDetector(
                       onTap: () => setState(() => widget.draft.correctOption = i),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: widget.draft.correctOption == i ? AppTheme.secondary.withOpacity(0.1) : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: widget.draft.correctOption == i ? AppTheme.secondary : AppTheme.textHint.withOpacity(0.3)),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: widget.draft.correctOption == i ? AppTheme.secondary : Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: widget.draft.correctOption == i ? AppTheme.secondary : AppTheme.textHint.withOpacity(0.3)),
+                            boxShadow: widget.draft.correctOption == i ? [BoxShadow(color: AppTheme.secondary.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                          ),
+                          child: Icon(
+                            widget.draft.correctOption == i ? Icons.check_rounded : Icons.circle_outlined,
+                            size: 16,
+                            color: widget.draft.correctOption == i ? Colors.white : AppTheme.textHint,
+                          ),
                         ),
-                        child: Icon(
-                          widget.draft.correctOption == i ? Icons.check_rounded : Icons.circle_outlined,
-                          size: 16,
-                          color: widget.draft.correctOption == i ? AppTheme.secondary : AppTheme.textHint,
-                        ),
-                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
                         initialValue: widget.draft.options[i],
                         decoration: InputDecoration(
-                          hintText: 'Choice ${['A', 'B', 'C', 'D'][i]}', 
+                          hintText: 'Choice ${['A', 'B', 'C', 'D'][i]}',
                           isDense: true,
                           filled: widget.draft.correctOption == i,
-                          fillColor: widget.draft.correctOption == i ? AppTheme.secondary.withOpacity(0.05) : null,
+                          fillColor: widget.draft.correctOption == i ? AppTheme.secondary.withOpacity(0.08) : null,
+                          enabledBorder: widget.draft.correctOption == i 
+                            ? OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.secondary, width: 2))
+                            : OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.textHint.withOpacity(0.1))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.secondary, width: 2)),
                         ),
                         maxLines: null,
                         keyboardType: TextInputType.multiline,

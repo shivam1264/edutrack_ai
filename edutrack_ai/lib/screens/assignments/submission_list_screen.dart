@@ -34,7 +34,8 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
   Future<void> _loadSubmissions() async {
     final list = await _service.getSubmissionsByAssignment(widget.assignment.id);
     
-    for (var sub in list) {
+    // Parallelize name fetching for better performance
+    await Future.wait(list.map((sub) async {
       if (!_studentNames.containsKey(sub.studentId)) {
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(sub.studentId).get();
         if (userDoc.exists) {
@@ -43,7 +44,7 @@ class _SubmissionListScreenState extends State<SubmissionListScreen> {
           _studentNames[sub.studentId] = 'Unknown Student';
         }
       }
-    }
+    }));
 
     if (mounted) {
       setState(() {
@@ -294,20 +295,59 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
           ),
           const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1)),
           if (widget.submission.fileUrl != null) ...[
-            InkWell(
-              onTap: _openFile,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.secondary.withOpacity(0.3))),
-                child: const Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf_rounded, color: AppTheme.danger, size: 20),
-                    SizedBox(width: 12),
-                    Expanded(child: Text('View Attached Asset', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.secondary))),
-                    Icon(Icons.open_in_new_rounded, size: 16, color: AppTheme.secondary),
-                  ],
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final isImage = ['jpg', 'jpeg', 'png', 'webp'].any((ext) => widget.submission.fileUrl!.toLowerCase().contains(ext));
+                return InkWell(
+                  onTap: _openFile,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isImage ? AppTheme.secondary.withOpacity(0.05) : AppTheme.bgLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.secondary.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              isImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
+                              color: isImage ? AppTheme.secondary : AppTheme.danger,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Evidence of Work', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppTheme.textPrimary)),
+                                  Text('Click to inspect full asset', style: TextStyle(fontSize: 10, color: AppTheme.textHint)),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.open_in_new_rounded, size: 16, color: AppTheme.textHint),
+                          ],
+                        ),
+                        if (isImage) ...[
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              widget.submission.fileUrl!,
+                              height: 120,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_rounded),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }
             ),
             const SizedBox(height: 16),
           ],

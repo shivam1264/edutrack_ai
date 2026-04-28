@@ -339,10 +339,36 @@ class _DoubtCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(question, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
                 if (!isPending && answer != null && answer!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  const Divider(height: 1),
-                  const SizedBox(height: 10),
-                  Text(answer!, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.withOpacity(0.1)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_user_rounded, color: Colors.green, size: 14),
+                            const SizedBox(width: 6),
+                            const Text(
+                              "Teacher's Expert Answer", 
+                              style: TextStyle(color: Colors.green, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          answer!, 
+                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, height: 1.4, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 8),
                 Text(date, style: const TextStyle(color: AppTheme.textHint, fontSize: 12)),

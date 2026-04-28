@@ -56,7 +56,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'],
+      allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'jpg', 'jpeg', 'png', 'webp'],
     );
     if (result != null && result.files.isNotEmpty) {
       setState(() {
@@ -289,7 +289,7 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                               Icon(_filePath != null ? Icons.check_circle_rounded : Icons.upload_file_rounded,
                                   size: 40, color: _filePath != null ? const Color(0xFF059669) : Colors.grey),
                               const SizedBox(height: 8),
-                              Text(_fileName ?? 'Tap to select PDF / DOC / PPT',
+                              Text(_fileName ?? 'Tap to select PDF / Image / Document',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(color: _filePath != null ? const Color(0xFF059669) : Colors.grey, fontWeight: FontWeight.w600)),
                             ],

@@ -58,6 +58,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       final details = await AttendanceService().getAttendanceByDate(
         classId: _selectedClassId!,
         date: date,
+        filterBySubject: false,
       );
       setState(() {
         _detailsCache[date] = details;
@@ -322,9 +323,16 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                   color: _getStatusColor(a.status).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  a.status.name.toUpperCase(),
-                  style: TextStyle(color: _getStatusColor(a.status), fontWeight: FontWeight.w900, fontSize: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      a.status.name.toUpperCase(),
+                      style: TextStyle(color: _getStatusColor(a.status), fontWeight: FontWeight.w900, fontSize: 10),
+                    ),
+                    if (a.subject != null)
+                      Text(a.subject!, style: const TextStyle(color: AppTheme.textHint, fontSize: 8, fontWeight: FontWeight.bold)),
+                  ],
                 ),
               ),
             );
