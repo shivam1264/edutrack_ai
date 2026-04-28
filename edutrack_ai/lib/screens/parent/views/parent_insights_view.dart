@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:edutrack_ai/providers/auth_provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:edutrack_ai/screens/parent/parent_leave_request_screen.dart';
-import 'package:edutrack_ai/screens/parent/parent_chat_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_ai_chat_screen.dart';
-import 'package:edutrack_ai/screens/parent/parent_reports_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_assignments_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_chat_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_leave_request_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_reports_screen.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
+import 'package:edutrack_ai/widgets/premium_card.dart';
 
 class ParentInsightsView extends StatelessWidget {
   const ParentInsightsView({super.key});
@@ -14,87 +16,207 @@ class ParentInsightsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : null;
+    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty)
+        ? user.parentOf!.first
+        : null;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('AI Insights & Actions', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
+        title: const Text(
+          'AI Insights & Actions',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Quick Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 20),
+            const Text(
+              'Tools',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Focused parent actions for support, reports, and communication.',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 16),
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 3,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.95,
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.25,
               children: [
-                _actionItem(context, 'Chat with AI', Icons.psychology_rounded, Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentAIChatScreen(studentId: childId)))),
-                _actionItem(context, 'Assignments', Icons.edit_note_rounded, Colors.green, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentAssignmentsScreen()))),
-                _actionItem(context, 'Reports', Icons.analytics_rounded, Colors.indigo, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentReportsScreen()))),
-                _actionItem(context, 'Leave Request', Icons.event_busy_rounded, Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentLeaveRequestScreen()))),
-                _actionItem(context, 'Teacher Chat', Icons.forum_rounded, Colors.purple, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentChatScreen()))),
+                _actionItem(
+                  context,
+                  'AI Assistant',
+                  'Ask questions about progress and learning.',
+                  Icons.psychology_rounded,
+                  AppTheme.primary,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ParentAIChatScreen(studentId: childId),
+                    ),
+                  ),
+                ),
+                _actionItem(
+                  context,
+                  'Assignments',
+                  'Review pending and completed work.',
+                  Icons.edit_note_rounded,
+                  AppTheme.secondary,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ParentAssignmentsScreen(),
+                    ),
+                  ),
+                ),
+                _actionItem(
+                  context,
+                  'Reports',
+                  'Open academic summaries and detailed reports.',
+                  Icons.analytics_rounded,
+                  AppTheme.info,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ParentReportsScreen(),
+                    ),
+                  ),
+                ),
+                _actionItem(
+                  context,
+                  'Leave Request',
+                  'Submit absence requests for your child.',
+                  Icons.event_busy_rounded,
+                  AppTheme.parentColor,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ParentLeaveRequestScreen(),
+                    ),
+                  ),
+                ),
+                _actionItem(
+                  context,
+                  'Teacher Chat',
+                  'Message the class teacher directly.',
+                  Icons.forum_rounded,
+                  AppTheme.accent,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ParentChatScreen(),
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 40),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF818CF8)]),
-                borderRadius: BorderRadius.circular(24),
-              ),
+            const SizedBox(height: 20),
+            PremiumCard(
+              padding: const EdgeInsets.all(18),
               child: Row(
                 children: [
-                  Expanded(
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.lightbulb_outline_rounded,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Need help?', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        const Text('Our AI assistant is here to help you 24/7.', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ParentAIChatScreen(studentId: childId))),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF6366F1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                          child: const Text('Chat Now', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          'AI guidance is available throughout the dashboard.',
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Use it when you need quick interpretation, not as a replacement for teacher context.',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.support_agent_rounded, color: Colors.white54, size: 80),
                 ],
               ),
-            ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
-            const SizedBox(height: 100),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _actionItem(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
+  Widget _actionItem(
+    BuildContext context,
+    String label,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return PremiumCard(
       onTap: onTap,
+      padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-            child: Icon(icon, color: color, size: 32),
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 8),
-          Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+          const Spacer(),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.textSecondary,
+            ),
+          ),
         ],
       ),
     );

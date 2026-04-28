@@ -64,54 +64,35 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           extendBody: true,
           backgroundColor: AppTheme.bgLight,
           appBar: AppBar(
-            toolbarHeight: 78,
-            backgroundColor: Colors.transparent,
+            toolbarHeight: 72,
+            backgroundColor: AppTheme.surfaceLight,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
             centerTitle: true,
-            flexibleSpace: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF047857),
-                    const Color(0xFF0F766E),
-                    AppTheme.info.withOpacity(0.92),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.white.withOpacity(0.18),
-                  ),
-                ),
-              ),
-            ),
             title: classMap.isEmpty 
-              ? const Text('No Classes Assigned', style: TextStyle(color: Colors.white, fontSize: 16))
+              ? const Text('No Classes Assigned', style: TextStyle(fontSize: 16))
               : Container(
-                  constraints: const BoxConstraints(maxWidth: 220), // Constraint for center title
+                  constraints: const BoxConstraints(maxWidth: 240),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.28)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 16,
-                        spreadRadius: -8,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                    color: AppTheme.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.borderLight),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      isExpanded: true, // Crucial for long names
+                      isExpanded: true,
                       value: _selectedClassId,
-                      dropdownColor: const Color(0xFF065F46),
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      dropdownColor: Colors.white,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.textPrimary,
+                      ),
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                       onChanged: (newValue) {
                         if (newValue != null) {
                           setState(() => _selectedClassId = newValue);
@@ -129,7 +110,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                icon: const Icon(Icons.refresh_rounded),
                 onPressed: () {
                   if (_selectedClassId != null) {
                     context.read<AnalyticsProvider>().loadClassAnalytics(_selectedClassId!);

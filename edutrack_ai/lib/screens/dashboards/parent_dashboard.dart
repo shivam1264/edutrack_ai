@@ -75,8 +75,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
             label: 'Updates',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.parentColor),
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded, color: AppTheme.parentColor),
             label: 'Profile',
           ),
         ],

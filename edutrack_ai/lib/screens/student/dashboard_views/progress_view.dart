@@ -61,15 +61,23 @@ class _ProgressViewState extends State<ProgressView> {
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 120,
+      expandedHeight: 104,
       floating: false,
       pinned: true,
-      backgroundColor: AppTheme.primary,
+      backgroundColor: AppTheme.surfaceLight,
+      surfaceTintColor: Colors.transparent,
       flexibleSpace: FlexibleSpaceBar(
-        title: const Text('Performance DNA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+        titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
+        title: const Text(
+          'Performance Overview',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
         background: Container(
           decoration: const BoxDecoration(
-            gradient: AppTheme.studentGradient,
+            color: AppTheme.surfaceLight,
+            border: Border(
+              bottom: BorderSide(color: AppTheme.borderLight),
+            ),
           ),
         ),
       ),
@@ -81,7 +89,7 @@ class _ProgressViewState extends State<ProgressView> {
     final dynamicTabs = ['All', ...subjectAvg.keys];
 
     return Container(
-      height: 60,
+      height: 52,
       margin: const EdgeInsets.symmetric(vertical: 16),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -94,19 +102,21 @@ class _ProgressViewState extends State<ProgressView> {
             onTap: () => setState(() => _selectedTabIndex = index),
             child: Container(
               margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primary : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isSelected ? AppTheme.primary : AppTheme.borderLight),
-                boxShadow: isSelected ? [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                color: isSelected ? AppTheme.primaryLight : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? AppTheme.primary : AppTheme.borderLight,
+                ),
               ),
               child: Center(
                 child: Text(
                   dynamicTabs[index],
                   style: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color:
+                        isSelected ? AppTheme.primary : AppTheme.textSecondary,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                   ),
                 ),
               ),
@@ -174,8 +184,15 @@ class _ProgressViewState extends State<ProgressView> {
           child: PremiumCard(
             padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Average Score', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                const Text(
+                  'Average Score',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   '${avgScore.toStringAsFixed(1)}%',
@@ -190,8 +207,15 @@ class _ProgressViewState extends State<ProgressView> {
           child: PremiumCard(
             padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Attendance', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                const Text(
+                  'Attendance',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   '${attendance.toStringAsFixed(0)}%',
@@ -209,7 +233,11 @@ class _ProgressViewState extends State<ProgressView> {
     if (scores.isEmpty) {
       return Container(
         height: 220,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppTheme.borderLight)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderLight),
+        ),
         child: const Center(child: Text('Complete more quizzes to see trend!')),
       );
     }
@@ -219,7 +247,7 @@ class _ProgressViewState extends State<ProgressView> {
       padding: const EdgeInsets.fromLTRB(10, 20, 20, 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.borderLight),
       ),
       child: LineChart(
@@ -250,13 +278,20 @@ class _ProgressViewState extends State<ProgressView> {
             LineChartBarData(
               spots: scores.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
               isCurved: true,
-              gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.accent]),
-              barWidth: 4,
+              gradient: const LinearGradient(
+                colors: [AppTheme.primary, AppTheme.info],
+              ),
+              barWidth: 3,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
-                gradient: LinearGradient(colors: [AppTheme.primary.withOpacity(0.2), AppTheme.primary.withOpacity(0.0)]),
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primary.withOpacity(0.16),
+                    AppTheme.primary.withOpacity(0.0),
+                  ],
+                ),
               ),
             ),
           ],
@@ -317,9 +352,19 @@ class _ProgressViewState extends State<ProgressView> {
             children: [
               Text('$subject Mastery', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: const Text('Target: 95%', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Target: 95%',
+                  style: TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),

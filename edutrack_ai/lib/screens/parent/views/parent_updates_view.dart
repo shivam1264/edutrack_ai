@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
+import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
 
 class ParentUpdatesView extends StatelessWidget {
   const ParentUpdatesView({super.key});
@@ -13,12 +11,9 @@ class ParentUpdatesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('Updates', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
+        title: const Text('Updates', style: TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: DefaultTabController(
         length: 4,
@@ -26,11 +21,7 @@ class ParentUpdatesView extends StatelessWidget {
           children: [
             const TabBar(
               isScrollable: true,
-              labelColor: Color(0xFFF97316),
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Color(0xFFF97316),
-              indicatorWeight: 3,
-              labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               tabs: [
                 Tab(text: 'All'),
                 Tab(text: 'Notices'),
@@ -110,7 +101,7 @@ class ParentUpdatesView extends StatelessWidget {
                 });
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(20),
                   itemCount: sortedDocs.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, i) {
@@ -158,7 +149,7 @@ class ParentUpdatesView extends StatelessWidget {
                           Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
                         ],
                       ),
-                    ).animate().fadeIn(delay: (i * 50).ms).slideX(begin: 0.05);
+                    );
                   },
                 );
               },

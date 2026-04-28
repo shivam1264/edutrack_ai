@@ -1,11 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+
+import '../../../services/analytics_service.dart';
 import '../../../utils/app_theme.dart';
 import '../../../widgets/premium_card.dart';
-import '../../../services/analytics_service.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
 
 class AdminAnalyticsView extends StatefulWidget {
   const AdminAnalyticsView({super.key});
@@ -22,29 +21,58 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('Analytics Overview', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
+        title: const Text(
+          'Analytics Overview',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTopMetrics(),
             const SizedBox(height: 24),
-            const Text('Enrollment Trend (Last 7 Days)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+            const Text(
+              'Enrollment Trend',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'New student entries over the last seven days.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
             const SizedBox(height: 16),
             _buildEnrollmentChart(),
-            const SizedBox(height: 32),
-            const Text('Top Performing Classes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+            const SizedBox(height: 28),
+            const Text(
+              'Top Performing Classes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Average class performance based on current analytics.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
             const SizedBox(height: 16),
             _buildPerformanceList(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
             _buildAIIntelligence(),
-            const SizedBox(height: 100),
           ],
         ),
       ),
@@ -56,59 +84,34 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
       children: [
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'student').snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .where('role', isEqualTo: 'student')
+                .snapshots(),
             builder: (context, snapshot) {
               final count = snapshot.data?.docs.length ?? 0;
-              return PremiumCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Total Students', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    Text('$count', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.primary)),
-                    const SizedBox(height: 4),
-                    const Row(
-                      children: [
-                        Icon(Icons.trending_up_rounded, color: Colors.green, size: 14),
-                        SizedBox(width: 4),
-                        Text('Live', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
+              return _MetricCard(
+                title: 'Total Students',
+                value: '$count',
+                subtitle: 'Live count',
+                color: AppTheme.primary,
               );
-            }
+            },
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
           child: FutureBuilder<double>(
             future: _analyticsService.getGlobalAttendance(),
             builder: (context, snapshot) {
               final rate = snapshot.data ?? 0.0;
-              return PremiumCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Today\'s Attendance', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    Text('${rate.toStringAsFixed(1)}%', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.secondary)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(rate > 85 ? Icons.check_circle_outline : Icons.warning_amber_rounded, 
-                             color: rate > 85 ? Colors.green : Colors.orange, size: 14),
-                        const SizedBox(width: 4),
-                        Text(rate > 85 ? 'Healthy' : 'Monitor', 
-                             style: TextStyle(color: rate > 85 ? Colors.green : Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
+              return _MetricCard(
+                title: 'Attendance Today',
+                value: '${rate.toStringAsFixed(1)}%',
+                subtitle: rate > 85 ? 'Healthy' : 'Monitor',
+                color: rate > 85 ? AppTheme.secondary : AppTheme.warning,
               );
-            }
+            },
           ),
         ),
       ],
@@ -120,45 +123,41 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
       future: _analyticsService.getGlobalEnrollmentTrend(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Container(
-            height: 200,
-            child: PremiumCard(
-              child: Center(child: Text('Error loading trend: ${snapshot.error}', style: const TextStyle(color: Colors.red, fontSize: 10))),
+          return const PremiumCard(
+            child: Text(
+              'Enrollment trend could not be loaded.',
+              style: TextStyle(color: AppTheme.danger),
             ),
           );
         }
 
         if (!snapshot.hasData) {
-          return Container(
-            height: 200,
-            child: const PremiumCard(
+          return const SizedBox(
+            height: 220,
+            child: PremiumCard(
               child: Center(child: CircularProgressIndicator()),
             ),
           );
         }
 
         final data = snapshot.data!;
-        final spots = data.asMap().entries.map((e) {
-          return FlSpot(e.key.toDouble(), (e.value['count'] as int).toDouble());
+        final spots = data.asMap().entries.map((entry) {
+          return FlSpot(
+            entry.key.toDouble(),
+            (entry.value['count'] as int).toDouble(),
+          );
         }).toList();
 
-        // Check if all counts are zero
-        bool allZero = data.every((e) => (e['count'] as int) == 0);
-        if (allZero) {
-          return Container(
-            height: 200,
-            child: const PremiumCard(
-              child: Center(child: Text('No new student enrollments this week', style: TextStyle(color: Colors.grey, fontSize: 12))),
-            ),
-          );
-        }
-
-        // Ensure at least 2 spots for the line chart
-        if (spots.length < 2) {
-          return Container(
-            height: 200,
-            child: const PremiumCard(
-              child: Center(child: Text('Gathering data...', style: TextStyle(color: Colors.grey))),
+        if (data.every((e) => (e['count'] as int) == 0) || spots.length < 2) {
+          return const SizedBox(
+            height: 220,
+            child: PremiumCard(
+              child: Center(
+                child: Text(
+                  'Not enough enrollment activity yet.',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              ),
             ),
           );
         }
@@ -167,28 +166,40 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
         if (maxY < 5) maxY = 5;
 
         return PremiumCard(
-          padding: const EdgeInsets.fromLTRB(10, 24, 24, 10),
+          padding: const EdgeInsets.fromLTRB(12, 20, 20, 12),
           child: SizedBox(
-            height: 200,
+            height: 220,
             child: LineChart(
               LineChartData(
                 gridData: const FlGridData(show: false),
                 titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        int index = value.toInt();
-                        if (index >= 0 && index < data.length) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(data[index]['date'], style: const TextStyle(fontSize: 9, color: Color(0xFF64748B))),
-                          );
+                        final index = value.toInt();
+                        if (index < 0 || index >= data.length) {
+                          return const SizedBox();
                         }
-                        return const SizedBox();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            data[index]['date'],
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -207,8 +218,12 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
-                        colors: [AppTheme.primary.withOpacity(0.2), AppTheme.primary.withOpacity(0)],
-                        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.primary.withOpacity(0.16),
+                          AppTheme.primary.withOpacity(0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
                     ),
                   ),
@@ -217,7 +232,7 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
             ),
           ),
         );
-      }
+      },
     );
   }
 
@@ -230,13 +245,25 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
         }
 
         final classes = snapshot.data!;
-        if (classes.isEmpty) return const Center(child: Text('No class performance data yet.', style: TextStyle(fontSize: 12, color: Color(0xFF475569))));
+        if (classes.isEmpty) {
+          return const PremiumCard(
+            child: Text(
+              'No class performance data yet.',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+          );
+        }
 
         return Column(
           children: classes.asMap().entries.map((entry) {
             final data = entry.value;
             final index = entry.key;
-            final colors = [Colors.blue, Colors.purple, Colors.amber, Colors.red];
+            final colors = [
+              AppTheme.primary,
+              AppTheme.accent,
+              AppTheme.warning,
+              AppTheme.secondary,
+            ];
             final percent = (data['average_score'] as double).clamp(0, 100);
 
             return Padding(
@@ -245,69 +272,165 @@ class _AdminAnalyticsViewState extends State<AdminAnalyticsView> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
+                    SizedBox(
+                      width: 24,
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textHint,
+                        ),
+                      ),
+                    ),
                     Expanded(
                       flex: 2,
-                      child: Text(data['name'] ?? 'Class', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      child: Text(
+                        data['name'] ?? 'Class',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       flex: 4,
                       child: LinearProgressIndicator(
                         value: percent / 100,
-                        backgroundColor: AppTheme.bgLight,
-                        valueColor: AlwaysStoppedAnimation<Color>(colors[index % colors.length]),
+                        backgroundColor: AppTheme.borderLight,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          colors[index % colors.length],
+                        ),
                         minHeight: 8,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Text('${percent.toStringAsFixed(1)}%', style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text(
+                      '${percent.toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
                   ],
                 ),
               ),
             );
           }).toList(),
         );
-      }
+      },
     );
   }
 
   Widget _buildAIIntelligence() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(24),
-      ),
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'AI Intelligence',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'High-level AI monitoring across the school.',
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.auto_awesome_rounded, color: Colors.blueAccent),
-              const SizedBox(width: 8),
-              const Text('AI Intelligence', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('ai_predictions')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data?.docs.length ?? 0;
+                  return _AIStatCard(
+                    label: 'Total Insights',
+                    value: '$count',
+                    trend: 'Real-time',
+                    color: AppTheme.primary,
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('ai_predictions')
+                    .where('risk_level', isEqualTo: 'High')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data?.docs.length ?? 0;
+                  return _AIStatCard(
+                    label: 'High Risk',
+                    value: '$count',
+                    trend: 'Needs review',
+                    color: AppTheme.danger,
+                  );
+                },
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('ai_predictions').snapshots(),
-                builder: (context, snapshot) {
-                  final count = snapshot.data?.docs.length ?? 0;
-                  return _AIStatCard(label: 'Total Insights', value: '$count', trend: 'Real-time', color: Colors.blueAccent);
-                }
-              ),
-              const SizedBox(width: 16),
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('ai_predictions').where('risk_level', isEqualTo: 'High').snapshots(),
-                builder: (context, snapshot) {
-                  final count = snapshot.data?.docs.length ?? 0;
-                  return _AIStatCard(label: 'At Risk Students', value: '$count', trend: 'Requires Action', color: Colors.redAccent);
-                }
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final String subtitle;
+  final Color color;
+
+  const _MetricCard({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -321,7 +444,12 @@ class _AIStatCard extends StatelessWidget {
   final String trend;
   final Color color;
 
-  const _AIStatCard({required this.label, required this.value, required this.trend, required this.color});
+  const _AIStatCard({
+    required this.label,
+    required this.value,
+    required this.trend,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -329,18 +457,39 @@ class _AIStatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          color: AppTheme.surfaceSubtle,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.borderLight),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+            Text(
+              value,
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(trend, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+            Text(
+              trend,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       ),

@@ -1,5 +1,5 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+
 import '../utils/app_theme.dart';
 
 class PremiumCard extends StatelessWidget {
@@ -19,50 +19,46 @@ class PremiumCard extends StatelessWidget {
     this.gradientColors,
     this.blur = 10.0,
     this.opacity = 0.8,
-    this.borderRadius = 24.0,
+    this.borderRadius = 16.0,
     this.margin,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: margin,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+    final decoration = BoxDecoration(
+      borderRadius: BorderRadius.circular(borderRadius),
+      color: gradientColors == null
+          ? AppTheme.surfaceLight.withOpacity(
+              opacity.clamp(0.0, 1.0).toDouble(),
+            )
+          : null,
+      gradient: gradientColors == null
+          ? null
+          : LinearGradient(
+              colors: gradientColors!,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-        child: ClipRRect(
+      border: Border.all(
+        color: gradientColors == null
+            ? AppTheme.borderLight
+            : Colors.white.withOpacity(0.18),
+      ),
+      boxShadow: AppTheme.cardShadow,
+    );
+
+    return Container(
+      margin: margin,
+      decoration: decoration,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(borderRadius),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-            child: Container(
-              padding: padding ?? const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(opacity),
-                borderRadius: BorderRadius.circular(borderRadius),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.4),
-                  width: 1.5,
-                ),
-                gradient: gradientColors != null
-                    ? LinearGradient(
-                        colors: gradientColors!,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-              ),
-              child: child,
-            ),
+          child: Padding(
+            padding: padding ?? const EdgeInsets.all(16),
+            child: child,
           ),
         ),
       ),

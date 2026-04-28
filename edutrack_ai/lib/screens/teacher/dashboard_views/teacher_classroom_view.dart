@@ -32,12 +32,12 @@ class TeacherClassroomView extends StatelessWidget {
           children: [
             const Text(
               'Classroom Management',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
-              'Manage your classroom activities and students',
-              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+              'Manage teaching tools, attendance, and communication for $currentClassName.',
+              style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 24),
             _buildSection('Academic Tools', [
@@ -113,7 +113,7 @@ class TeacherClassroomView extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 24),
         ),

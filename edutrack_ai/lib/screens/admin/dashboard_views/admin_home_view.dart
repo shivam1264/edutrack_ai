@@ -1,19 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_theme.dart';
 import '../../../widgets/premium_card.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import '../add_student_screen.dart';
-import '../add_teacher_screen.dart';
 import '../add_admin_screen.dart';
 import '../add_parent_screen.dart';
-import '../class_management_screen.dart';
-import '../announcement_screen.dart';
-import '../admin_students_screen.dart';
-import '../admin_teachers_screen.dart';
+import '../add_student_screen.dart';
+import '../add_teacher_screen.dart';
 import '../ai_risk_report_screen.dart';
+import '../announcement_screen.dart';
+import '../class_management_screen.dart';
 import '../user_management_screen.dart';
 
 class AdminHomeView extends StatelessWidget {
@@ -26,17 +24,18 @@ class AdminHomeView extends StatelessWidget {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        _buildHeader(context, user),
-        
-        // ─── AI Risk Sentinel ──────────────────────────────────
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: _buildHeader(user),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: _buildRiskSentinel(context),
           ),
         ),
-
-        // ─── Core Management Metrics ─────────────────────────────
         SliverPadding(
           padding: const EdgeInsets.all(20),
           sliver: SliverGrid(
@@ -44,63 +43,85 @@ class AdminHomeView extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 1.55, // Increased aspect ratio to avoid overflow
+              childAspectRatio: 1.45,
             ),
             delegate: SliverChildListDelegate([
               _MetricBox(
-                label: 'Student Hub',
+                label: 'Students',
                 collection: 'users',
                 filterField: 'role',
                 filterValue: 'student',
                 icon: Icons.people_alt_rounded,
-                color: const Color(0xFF3B82F6),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+                color: AppTheme.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserManagementScreen()),
+                ),
               ),
               _MetricBox(
-                label: 'Faculty Pool',
+                label: 'Teachers',
                 collection: 'users',
                 filterField: 'role',
                 filterValue: 'teacher',
                 icon: Icons.school_rounded,
-                color: const Color(0xFF8B5CF6),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+                color: AppTheme.accent,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserManagementScreen()),
+                ),
               ),
               _MetricBox(
-                label: 'Active Units',
+                label: 'Classes',
                 collection: 'classes',
                 icon: Icons.hub_rounded,
-                color: const Color(0xFFF59E0B),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagementScreen())),
+                color: AppTheme.warning,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ClassManagementScreen(),
+                  ),
+                ),
               ),
               _MetricBox(
-                label: 'System Alerts',
+                label: 'Broadcasts',
                 collection: 'announcements',
                 icon: Icons.campaign_rounded,
-                color: const Color(0xFF10B981),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementScreen())),
+                color: AppTheme.secondary,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AnnouncementScreen()),
+                ),
               ),
             ]),
           ),
         ),
-
-        // ─── Administration Hub ──────────────────────────────────
         SliverToBoxAdapter(
-          child: _buildAdminActions(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildAdminActions(context),
+          ),
         ),
-
-        // ─── Recent Intelligence ──────────────────────────────────
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 32, 20, 120),
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 120),
           sliver: SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.history_toggle_off_rounded, size: 20, color: Color(0xFF94A3B8)),
-                    const SizedBox(width: 8),
-                    Text('Administrative Logs', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-                  ],
+                const Text(
+                  'Administrative Logs',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Recent school-wide communication activity.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _buildRecentAlerts(),
@@ -112,127 +133,219 @@ class AdminHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, user) {
-    return SliverAppBar(
-      expandedHeight: 180,
-      pinned: true,
-      backgroundColor: const Color(0xFF0F172A),
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+  Widget _buildHeader(dynamic user) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Administration',
+                  style: TextStyle(
+                    color: AppTheme.textHint,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ),
-            Positioned(
-              top: -20, right: -20,
-              child: Icon(Icons.shield_rounded, color: const Color(0xFF6366F1).withOpacity(0.05), size: 220),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('SCHOOL ADMINISTRATOR', style: TextStyle(color: Color(0xFF6366F1), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                  const SizedBox(height: 2),
-                  const Text('Elite Dashboard', style: TextStyle(color: Color(0xFF0F172A), fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1)),
-                  const SizedBox(height: 4),
-                  const Text('Real-time system oversight and metrics', style: TextStyle(color: Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.w500)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(color: Colors.black.withOpacity(0.05), shape: BoxShape.circle),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF0F172A),
-                backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-                child: user?.avatarUrl == null 
-                  ? const Icon(Icons.person_outline, color: Color(0xFF0F172A), size: 20)
-                  : null,
-              ),
+                const SizedBox(height: 6),
+                const Text(
+                  'School Operations Dashboard',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'System oversight, people management, and alerts.',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: AppTheme.surfaceSubtle,
+            foregroundColor: AppTheme.adminColor,
+            backgroundImage:
+                user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+            child: user?.avatarUrl == null
+                ? const Icon(Icons.person_outline, size: 22)
+                : null,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildRiskSentinel(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AIRiskReportScreen())),
-      child: PremiumCard(
-        opacity: 1,
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFF43F5E)]),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
-              ),
-              child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('AI BEHAVIORAL SENTINEL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: Color(0xFFEF4444))),
-                  const SizedBox(height: 2),
-                  Text('Analyzing behavioral patterns for 424 students...', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
-          ],
-        ),
+    return PremiumCard(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AIRiskReportScreen()),
       ),
-    ).animate(onPlay: (controller) => controller.repeat(reverse: true)).shimmer(duration: 2.seconds, color: Colors.white.withOpacity(0.1));
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.danger.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.shield_outlined,
+              color: AppTheme.danger,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AI Risk Monitor',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Review high-priority behavioral and academic signals.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: AppTheme.textHint,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildAdminActions(BuildContext context) {
+    final actions = [
+      {
+        'label': 'Add Student',
+        'icon': Icons.person_add_rounded,
+        'color': AppTheme.primary,
+        'screen': const AddStudentScreen(),
+      },
+      {
+        'label': 'Add Teacher',
+        'icon': Icons.school_rounded,
+        'color': AppTheme.accent,
+        'screen': const AddTeacherScreen(),
+      },
+      {
+        'label': 'Add Parent',
+        'icon': Icons.family_restroom_rounded,
+        'color': AppTheme.secondary,
+        'screen': const AddParentScreen(),
+      },
+      {
+        'label': 'Add Admin',
+        'icon': Icons.admin_panel_settings_rounded,
+        'color': AppTheme.info,
+        'screen': const AddAdminScreen(),
+      },
+      {
+        'label': 'Classes',
+        'icon': Icons.hub_rounded,
+        'color': AppTheme.warning,
+        'screen': const ClassManagementScreen(),
+      },
+      {
+        'label': 'Broadcast',
+        'icon': Icons.campaign_rounded,
+        'color': AppTheme.danger,
+        'screen': const AnnouncementScreen(),
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Text('Administrative Center', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -0.5)),
-        ),
-        SizedBox(
-          height: 120,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            physics: const BouncingScrollPhysics(),
-            children: [
-              _ActionTile(label: 'Add Student', icon: Icons.person_add_rounded, color: const Color(0xFF3B82F6), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddStudentScreen()))),
-              _ActionTile(label: 'Add Teacher', icon: Icons.school_rounded, color: const Color(0xFF8B5CF6), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddTeacherScreen()))),
-              _ActionTile(label: 'Add Parent', icon: Icons.family_restroom_rounded, color: const Color(0xFF10B981), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddParentScreen()))),
-              _ActionTile(label: 'Add Admin', icon: Icons.admin_panel_settings_rounded, color: const Color(0xFF6366F1), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddAdminScreen()))),
-              _ActionTile(label: 'Units', icon: Icons.hub_rounded, color: const Color(0xFFF59E0B), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagementScreen()))),
-              _ActionTile(label: 'Broadcast', icon: Icons.campaign_rounded, color: const Color(0xFFF43F5E), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementScreen()))),
-            ],
+        const Text(
+          'Administration Tools',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.textPrimary,
           ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Create records and manage core school entities.',
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: actions.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.95,
+          ),
+          itemBuilder: (context, index) {
+            final action = actions[index];
+            return PremiumCard(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => action['screen']! as Widget),
+              ),
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: (action['color']! as Color).withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      action['icon']! as IconData,
+                      color: action['color']! as Color,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    action['label']! as String,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );
@@ -240,11 +353,31 @@ class AdminHomeView extends StatelessWidget {
 
   Widget _buildRecentAlerts() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('announcements').orderBy('createdAt', descending: true).limit(3).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('announcements')
+          .limit(6)
+          .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox();
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const PremiumCard(
+            child: Text(
+              'No recent logs available.',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+          );
+        }
+
+        final docs = snapshot.data!.docs.toList();
+        docs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTime = aData['created_at'] as Timestamp?;
+          final bTime = bData['created_at'] as Timestamp?;
+          return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+        });
+
         return Column(
-          children: snapshot.data!.docs.map((doc) {
+          children: docs.take(3).map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -252,18 +385,47 @@ class AdminHomeView extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.circle, size: 8, color: Colors.orange),
-                    const SizedBox(width: 16),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.warning,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(data['title'] ?? 'System Broadcast', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A))),
-                          Text(data['content'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                          Text(
+                            data['title'] ?? 'System Broadcast',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            data['content'] ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    const Text('Recently', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+                    const Text(
+                      'Recent',
+                      style: TextStyle(
+                        color: AppTheme.textHint,
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -284,74 +446,66 @@ class _MetricBox extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _MetricBox({required this.label, required this.collection, this.filterField, this.filterValue, required this.icon, required this.color, required this.onTap});
+  const _MetricBox({
+    required this.label,
+    required this.collection,
+    this.filterField,
+    this.filterValue,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PremiumCard(
       onTap: onTap,
-      child: PremiumCard(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Reduced vertical padding
-        child: StreamBuilder<QuerySnapshot>(
-          stream: filterField != null 
-              ? FirebaseFirestore.instance.collection(collection).where(filterField!, isEqualTo: filterValue).snapshots()
-              : FirebaseFirestore.instance.collection(collection).snapshots(),
-          builder: (context, snapshot) {
-            final count = snapshot.data?.docs.length ?? 0;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min, // Use min size
-              children: [
-                Icon(icon, color: color, size: 20), // Reduced icon size
-                const SizedBox(height: 4), // Reduced spacing
-                Text('$count', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color)),
-                Text(label, 
-                  maxLines: 1, 
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)
+      padding: const EdgeInsets.all(16),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: filterField != null
+            ? FirebaseFirestore.instance
+                  .collection(collection)
+                  .where(filterField!, isEqualTo: filterValue)
+                  .snapshots()
+            : FirebaseFirestore.instance.collection(collection).snapshots(),
+        builder: (context, snapshot) {
+          final count = snapshot.data?.docs.length ?? 0;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionTile({required this.label, required this.icon, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 20),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(color: color.withOpacity(0.15), blurRadius: 15, offset: const Offset(0, 6)),
-                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
-                ],
+                child: Icon(icon, color: color, size: 20),
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1E293B), letterSpacing: -0.2)),
-        ],
+              const Spacer(),
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
