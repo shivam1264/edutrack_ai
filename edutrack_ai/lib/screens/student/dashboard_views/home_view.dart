@@ -8,7 +8,10 @@ import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
 import 'package:edutrack_ai/providers/gamification_provider.dart';
 import 'package:edutrack_ai/screens/assignments/student_assignments_screen.dart';
+import 'package:edutrack_ai/screens/student/academic_calendar_screen.dart';
 import 'package:edutrack_ai/screens/student/dashboard_views/progress_view.dart';
+import 'package:edutrack_ai/screens/student/global_search_screen.dart';
+import 'package:edutrack_ai/screens/student/notifications_screen.dart';
 import 'package:edutrack_ai/services/brain_dna_service.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:edutrack_ai/widgets/brain_dna_visualizer.dart';
@@ -27,6 +30,20 @@ class HomeView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GlobalSearchScreen()),
+          );
+        },
+        backgroundColor: AppTheme.primary,
+        icon: const Icon(Icons.search, color: Colors.white),
+        label: const Text(
+          'Search',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -38,6 +55,8 @@ class HomeView extends StatelessWidget {
                   _buildHeader(context, user, gamify),
                   const SizedBox(height: 20),
                   _buildOverview(gamify, context),
+                  const SizedBox(height: 20),
+                  _buildCalendarShortcut(context),
                 ],
               ),
             ),
@@ -192,6 +211,45 @@ class HomeView extends StatelessWidget {
                   ],
                 ),
               ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.borderLight),
+                  ),
+                  child: Stack(
+                    children: [
+                      const Icon(
+                        Icons.notifications_outlined,
+                        color: AppTheme.primary,
+                        size: 24,
+                      ),
+                      // Notification badge (show if there are notifications)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               CircleAvatar(
                 radius: 24,
                 backgroundColor: AppTheme.primaryLight,
@@ -295,6 +353,84 @@ class HomeView extends StatelessWidget {
           color: AppTheme.warning,
         ),
       ],
+    );
+  }
+
+  Widget _buildCalendarShortcut(BuildContext context) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AcademicCalendarScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.calendar_month_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Academic Calendar',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'View all assignments, quizzes & notes by date',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios,
+                color: AppTheme.primary,
+                size: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

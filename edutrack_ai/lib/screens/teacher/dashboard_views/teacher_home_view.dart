@@ -13,6 +13,7 @@ import 'package:edutrack_ai/screens/assignments/create_assignment_screen.dart';
 import 'package:edutrack_ai/screens/attendance/teacher_attendance_screen.dart';
 import 'package:edutrack_ai/screens/quiz/create_quiz_screen.dart';
 import 'package:edutrack_ai/screens/teacher/bulk_grade_screen.dart';
+import 'package:edutrack_ai/screens/teacher/teacher_calendar_screen.dart';
 import 'package:edutrack_ai/screens/teacher/dashboard_views/teacher_students_view.dart';
 import 'package:edutrack_ai/screens/teacher/resource_management_screen.dart';
 import 'package:edutrack_ai/screens/teacher/teacher_announcements_screen.dart';
@@ -57,6 +58,8 @@ class TeacherHomeView extends StatelessWidget {
                 _buildClassPerformanceChart(classData, context),
                 const SizedBox(height: 24),
                 _buildQuickActions(context),
+                const SizedBox(height: 24),
+                _buildCalendarShortcut(context),
                 const SizedBox(height: 24),
                 _buildRecentActivity(context),
               ]),
@@ -775,5 +778,85 @@ class TeacherHomeView extends StatelessWidget {
     if (hour < 12) return l10n.goodMorning;
     if (hour < 17) return l10n.goodAfternoon;
     return l10n.goodEvening;
+  }
+
+  Widget _buildCalendarShortcut(BuildContext context) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TeacherCalendarScreen(classId: selectedClassId),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.calendar_month_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Academic Calendar',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage assignments, quizzes & notes',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios,
+                color: AppTheme.primary,
+                size: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
