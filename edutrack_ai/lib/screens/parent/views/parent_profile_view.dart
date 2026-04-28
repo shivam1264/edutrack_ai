@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_child_view.dart';
-import 'package:edutrack_ai/screens/parent/views/parent_insights_view.dart';
 import 'package:edutrack_ai/screens/settings/profile_screen.dart';
 import 'package:edutrack_ai/screens/settings/account_settings_screen.dart';
 import 'package:edutrack_ai/screens/settings/app_settings_screen.dart';
@@ -114,15 +112,49 @@ class ParentProfileView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
+            const Text('Account', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+            const SizedBox(height: 16),
+            _prefItem(
+              context,
+              Icons.manage_accounts_outlined,
+              'Account Settings',
+              null,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
+            ),
+            const SizedBox(height: 24),
             const Text('Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),
-            _prefItem(Icons.notifications_outlined, 'Notification Settings', null),
-            _prefItem(Icons.language_rounded, 'Language', 'English'),
-            _prefItem(Icons.privacy_tip_outlined, 'Privacy Policy', null),
-            _prefItem(Icons.help_outline_rounded, 'Help & Support', null),
+            _prefItem(
+              context,
+              Icons.notifications_outlined,
+              'Notification Settings',
+              null,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen())),
+            ),
+            _prefItem(
+              context,
+              Icons.language_rounded,
+              'Language',
+              'English',
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen())),
+            ),
+            _prefItem(
+              context,
+              Icons.privacy_tip_outlined,
+              'Privacy Policy',
+              null,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen())),
+            ),
+            _prefItem(
+              context,
+              Icons.help_outline_rounded,
+              'Help & Support',
+              null,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen())),
+            ),
             const SizedBox(height: 40),
             InkWell(
-              onTap: () => context.read<AuthProvider>().logout(),
+              onTap: () => _showLogoutDialog(context),
               child: Row(
                 children: [
                   const Icon(Icons.logout_rounded, color: Colors.red),
@@ -152,11 +184,18 @@ class ParentProfileView extends StatelessWidget {
     );
   }
 
-  Widget _prefItem(IconData icon, String title, String? trailing) {
+  Widget _prefItem(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String? trailing,
+    VoidCallback onTap,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
       child: ListTile(
+        onTap: onTap,
         leading: Icon(icon, color: const Color(0xFF64748B), size: 20),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         trailing: Row(
@@ -166,6 +205,33 @@ class ParentProfileView extends StatelessWidget {
             const Icon(Icons.chevron_right_rounded, color: Colors.grey),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout from this parent account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthProvider>().logout();
+            },
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
