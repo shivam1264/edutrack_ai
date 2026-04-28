@@ -10,6 +10,8 @@ import '../../services/cloudinary_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/class_model.dart';
 import '../../services/class_service.dart';
+import '../../models/note_model.dart';
+import '../student/note_detail_screen.dart';
 
 class UploadNotesScreen extends StatefulWidget {
   final String classId;
@@ -355,6 +357,10 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
                             opacity: 1,
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                             child: ListTile(
+                              onTap: () {
+                                final noteModel = NoteModel.fromMap(docId, d);
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => NoteDetailScreen(note: noteModel)));
+                              },
                               leading: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(color: const Color(0xFF059669).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),

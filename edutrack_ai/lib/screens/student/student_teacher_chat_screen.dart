@@ -133,7 +133,13 @@ class _StudentTeacherChatScreenState extends State<StudentTeacherChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || chatId.isEmpty || studentId.isEmpty) return;
 
-    await _chatService.sendMessage(chatId, studentId, text);
+    await _chatService.sendMessage(
+      chatId: chatId,
+      senderId: studentId,
+      text: text,
+      studentId: studentId,
+      teacherId: widget.teacherId,
+    );
     _messageController.clear();
   }
 }

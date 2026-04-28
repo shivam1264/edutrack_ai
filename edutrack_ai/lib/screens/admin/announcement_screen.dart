@@ -153,17 +153,64 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
 
     try {
       // Create announcement document in Firestore
-      await FirebaseFirestore.instance.collection('announcements').add({
+      // Create announcement document in Firestore
+      final announcementData = {
         'title': _titleController.text,
         'content': _messageController.text,
+        'message': _messageController.text, // Added for compatibility with student view
+        'teacher_name': 'Admin', // Added for compatibility with student view
         'type': 'announcement',
         'category': _target == 'all' ? 'School-wide' : (_target == 'teachers' ? 'Faculty' : 'Class'),
         'priority': 'Medium',
         'target': _target,
         if (_target == 'class') 'class_id': _selectedClassId,
         'createdAt': FieldValue.serverTimestamp(),
+        'created_at': FieldValue.serverTimestamp(), // Added for compatibility
         'sender_id': 'admin',
-      });
+      };
+
+      await FirebaseFirestore.instance.collection('announcements').add(announcementData);
+
+      // --- BROADCAST TO INDIVIDUAL NOTIFICATIONS ---
+      // This ensures the notification bell icon shows the update for each user.
+      Query query = FirebaseFirestore.instance.collection('users');
+      if (_target == 'teachers') {
+        query = query.where('role', isEqualTo: 'teacher');
+      } else if (_target == 'class' && _selectedClassId != null) {
+        query = query.where('class_id', isEqualTo: _selectedClassId);
+      }
+
+      final usersSnap = await query.get();
+      final batch = FirebaseFirestore.instance.batch();
+      int count = 0;
+
+      for (var doc in usersSnap.docs) {
+        final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
+        batch.set(notifRef, {
+          'user_id': doc.id,
+          'title': _titleController.text,
+          'body': _messageController.text,
+          'type': 'announcement',
+          'is_read': false,
+          'created_at': FieldValue.serverTimestamp(),
+          'data': {
+            'type': 'announcement',
+            'target': _target,
+          }
+        });
+        
+        count++;
+        if (count >= 490) { // Firestore batch limit is 500
+          await batch.commit();
+          // Reset count and batch for simplicity in this demo context
+          count = 0;
+        }
+      }
+
+      if (count > 0) {
+        await batch.commit();
+      }
+
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Announcement broadcasted!')));

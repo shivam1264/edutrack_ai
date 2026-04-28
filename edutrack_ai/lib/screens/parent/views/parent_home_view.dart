@@ -30,6 +30,19 @@ class _ParentHomeViewState extends State<ParentHomeView> {
   String? _selectedChildId;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final parent = context.read<AuthProvider>().user;
+      final linkedChildren = parent?.parentOf ?? [];
+      if (linkedChildren.isNotEmpty) {
+        final firstChildId = linkedChildren.first;
+        context.read<AnalyticsProvider>().loadStudentAnalytics(firstChildId);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final parent = context.watch<AuthProvider>().user;
     final linkedChildren = parent?.parentOf ?? [];
@@ -182,8 +195,8 @@ class _ParentHomeViewState extends State<ParentHomeView> {
   }
 
   Widget _buildWellnessCard(BuildContext context, String? childId) {
-    final aiData = context.watch<AnalyticsProvider>().aiPrediction;
-    final riskLevel = aiData?['risk_level'] ?? 'Low';
+    final wellnessData = context.watch<AnalyticsProvider>().wellnessFor(childId ?? '');
+    final riskLevel = wellnessData?['risk_level'] ?? 'Low';
     final wellnessMsg = riskLevel == 'Low' ? 'Your child is doing well!' : (riskLevel == 'High' ? 'Attention may be required' : 'Monitor progress closely');
     final wellnessSub = riskLevel == 'Low' ? 'Keep up the encouragement.' : 'Review recent activity.';
     final riskColor = riskLevel == 'High' ? Colors.red : (riskLevel == 'Medium' ? Colors.orange : Colors.green);

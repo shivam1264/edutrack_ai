@@ -5,6 +5,10 @@ import '../../widgets/premium_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'note_editor_screen.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'dart:io';
 
 class NoteDetailScreen extends StatelessWidget {
   final NoteModel note;
@@ -122,19 +126,54 @@ class NoteDetailScreen extends StatelessWidget {
   }
 
   Future<void> _launchURL(String url, BuildContext context) async {
-    final uri = Uri.parse(url);
+    // Show a loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: PremiumCard(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Opening Resource...', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ),
+    );
+
     try {
-      // Force external application for PDFs (browser or PDF viewer)
-      // This is generally more reliable for Cloudinary URLs on mobile
-      await launchUrl(
-        uri, 
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e) {
-      if (context.mounted) {
+      final dio = Dio();
+      final tempDir = await getTemporaryDirectory();
+      final extension = note.fileType ?? (url.split('.').last.split('?').first);
+      final fileName = "note_${note.id}.$extension";
+      final savePath = "${tempDir.path}/$fileName";
+
+      // Download the file
+      await dio.download(url, savePath);
+
+      if (context.mounted) Navigator.pop(context); // Close loading dialog
+
+      // Open the file
+      final result = await OpenFile.open(savePath);
+      
+      if (result.type != ResultType.done && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open resource. Please ensure a PDF viewer is installed.'),
+            content: Text('Could not open file: ${result.message}'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to download or open resource: $e'),
             backgroundColor: AppTheme.danger,
           ),
         );

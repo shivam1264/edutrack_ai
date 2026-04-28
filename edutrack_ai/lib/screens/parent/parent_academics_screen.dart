@@ -26,9 +26,9 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
         children: [
           const TabBar(
             isScrollable: true,
-            labelColor: Color(0xFFF97316),
+            labelColor: AppTheme.parentColor,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: Color(0xFFF97316),
+            indicatorColor: AppTheme.parentColor,
             indicatorWeight: 3,
             labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [

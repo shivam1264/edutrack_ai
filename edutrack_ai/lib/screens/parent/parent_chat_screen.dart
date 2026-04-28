@@ -96,7 +96,7 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
                           },
                         ),
                   ),
-                  _buildChatInput(chatId, parent?.uid ?? ''),
+                  _buildChatInput(chatId, parent?.uid ?? '', childId, teacherId),
                 ],
               ),
             );
@@ -135,7 +135,7 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
     );
   }
 
-  Widget _buildChatInput(String chatId, String senderId) {
+  Widget _buildChatInput(String chatId, String senderId, String? studentId, String? teacherId) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
       color: Colors.white,
@@ -155,7 +155,13 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
           GestureDetector(
             onTap: () {
               if (_messageController.text.trim().isNotEmpty && chatId.isNotEmpty) {
-                _chatService.sendMessage(chatId, senderId, _messageController.text.trim());
+                _chatService.sendMessage(
+                  chatId: chatId,
+                  senderId: senderId,
+                  text: _messageController.text.trim(),
+                  studentId: studentId,
+                  teacherId: teacherId,
+                );
                 _messageController.clear();
               }
             },

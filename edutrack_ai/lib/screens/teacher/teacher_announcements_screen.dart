@@ -61,8 +61,14 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('announcements')
-                  .where('class_id', isEqualTo: widget.classId)
+                  .where(Filter.or(
+                    Filter('class_id', isEqualTo: widget.classId),
+                    Filter('target', isEqualTo: 'all'),
+                    Filter('target', isEqualTo: 'teachers'),
+                  ))
                   .snapshots(),
+
+
               builder: (context, snapshot) {
                 if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());

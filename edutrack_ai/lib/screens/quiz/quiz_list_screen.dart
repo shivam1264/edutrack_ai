@@ -150,6 +150,7 @@ class _QuizListScreenState extends State<QuizListScreen> {
                     );
                   },
                 );
+              },
             ),
           ),
         ],

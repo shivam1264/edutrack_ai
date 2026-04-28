@@ -4,10 +4,10 @@ import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import '../../services/assignment_service.dart';
 import '../../services/quiz_service.dart';
-import '../../services/notes_service.dart';
+import '../../services/note_service.dart';
 import '../../models/assignment_model.dart';
 import '../../models/quiz_model.dart';
-import '../../models/notes_model.dart';
+import '../../models/note_model.dart';
 import '../../providers/auth_provider.dart';
 import '../assignments/create_assignment_screen.dart';
 import '../quiz/create_quiz_screen.dart';
@@ -175,7 +175,7 @@ class _NotesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<NoteModel>>(
-      stream: NotesService().streamNotesByClass(classId),
+      stream: NoteService().streamNotesByClass(classId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final list = snapshot.data!;
@@ -192,9 +192,9 @@ class _NotesList extends StatelessWidget {
             onEdit: () {
               // Notes editing is handled within UploadNotesScreen typically, 
               // but we can redirect or show a dialog.
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadNotesScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => UploadNotesScreen(classId: classId)));
             },
-            onDelete: () => _confirmDelete(context, 'Note', () => NotesService().deleteNote(list[i].id)),
+            onDelete: () => _confirmDelete(context, 'Note', () => NoteService().deleteNote(list[i].id)),
           ).animate().fadeIn(delay: (i * 50).ms).slideX(begin: 0.1),
         );
       },

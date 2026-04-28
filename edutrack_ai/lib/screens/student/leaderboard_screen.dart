@@ -34,8 +34,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       body: StreamBuilder<List<UserModel>>(
         stream: _selectedTabIndex == 0
             ? context.read<GamificationProvider>().streamLeaderboard(classId)
-            : context.read<GamificationProvider>().streamGlobalLeaderboard(),
+            : _selectedTabIndex == 1
+                ? context.read<GamificationProvider>().streamSchoolLeaderboard(authUser?.schoolId ?? '')
+                : context.read<GamificationProvider>().streamGlobalLeaderboard(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error loading leaderboard: ${snapshot.error}', textAlign: TextAlign.center),
+                ],
+              ),
+            );
+          }
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }

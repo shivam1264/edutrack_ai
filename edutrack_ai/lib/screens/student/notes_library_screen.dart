@@ -64,18 +64,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                 });
 
                 var notes = sortedDocs.map((d) {
-                  final data = d.data() as Map<String, dynamic>;
-                  return NoteModel(
-                    id: d.id,
-                    title: data['title'] ?? '',
-                    subject: data['subject'] ?? '',
-                    content: data['description'] ?? '',
-                    studentId: data['teacherId'] ?? '',
-                    createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-                    teacherId: data['teacherId'],
-                    teacherName: data['teacherName'],
-                    fileUrl: data['fileUrl'],
-                  );
+                  return NoteModel.fromMap(d.id, d.data() as Map<String, dynamic>);
                 }).toList();
                 
                 // Filter by selected tab

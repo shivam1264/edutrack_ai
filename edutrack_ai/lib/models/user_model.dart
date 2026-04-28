@@ -17,6 +17,8 @@ class UserModel {
   final List<String>? assignedClasses; // for teachers: multiple hubs
   final List<String>? parentOf; // for parents: list of child student_ids
   final List<String>? subjects; // for teachers: list of assigned subjects
+  final String? address;        // for everyone
+  final String? relationship;   // for parents
   final int xp;                // For gamification
   final int level;             // For gamification
   final int streak;            // For gamification
@@ -37,6 +39,8 @@ class UserModel {
     this.assignedClasses,
     this.parentOf,
     this.subjects,
+    this.address,
+    this.relationship,
     this.xp = 0,
     this.level = 1,
     this.streak = 0,
@@ -59,6 +63,8 @@ class UserModel {
       assignedClasses: _parseAssignedClasses(map),
       parentOf: _parseParentOf(map['parent_of']),
       subjects: map['subjects'] != null ? List<String>.from(map['subjects']) : null,
+      address: map['address'],
+      relationship: map['relationship'],
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
       streak: map['streak'] ?? 0,
@@ -82,6 +88,8 @@ class UserModel {
       if (assignedClasses != null && assignedClasses!.isNotEmpty) 'assigned_classes': assignedClasses,
       if (parentOf != null && parentOf!.isNotEmpty) 'parent_of': parentOf,
       if (subjects != null && subjects!.isNotEmpty) 'subjects': subjects,
+      if (address != null) 'address': address,
+      if (relationship != null) 'relationship': relationship,
       'xp': xp,
       'level': level,
       'streak': streak,
@@ -141,6 +149,8 @@ class UserModel {
     int? xp,
     int? level,
     List<String>? badges,
+    String? address,
+    String? relationship,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -157,6 +167,8 @@ class UserModel {
       assignedClasses: assignedClasses ?? this.assignedClasses,
       parentOf: parentOf ?? this.parentOf,
       subjects: subjects ?? this.subjects,
+      address: address ?? this.address,
+      relationship: relationship ?? this.relationship,
       xp: xp ?? this.xp,
       level: level ?? this.level,
       badges: badges ?? this.badges,

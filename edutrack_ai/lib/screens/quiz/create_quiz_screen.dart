@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../models/quiz_model.dart';
 import '../../providers/auth_provider.dart';
@@ -296,7 +297,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(widget.quiz == null ? 'Create Quiz' : 'Edit Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text(widget.quiz == null ? 'Create Quiz' : 'Edit Quiz', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                         StreamBuilder<ClassModel>(
                           stream: ClassService().getClassById(widget.classId),
                           builder: (context, classSnap) {

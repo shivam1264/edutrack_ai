@@ -289,6 +289,7 @@ class _TakeQuizScreenState extends State<TakeQuizScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

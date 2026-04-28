@@ -25,6 +25,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _rollNoCtrl;
   late TextEditingController _bioCtrl;
   late TextEditingController _phoneCtrl;
+  late TextEditingController _addressCtrl;
+  late TextEditingController _relationshipCtrl;
 
   @override
   void initState() {
@@ -33,7 +35,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _nameCtrl = TextEditingController(text: user?.name ?? '');
     _rollNoCtrl = TextEditingController(text: user?.rollNo ?? '');
     _bioCtrl = TextEditingController(text: user?.toMap()['bio'] ?? '');
-    _phoneCtrl = TextEditingController(text: user?.toMap()['phone'] ?? '');
+    _phoneCtrl = TextEditingController(text: user?.phone ?? '');
+    _addressCtrl = TextEditingController(text: user?.address ?? '');
+    _relationshipCtrl = TextEditingController(text: user?.relationship ?? '');
   }
 
   @override
@@ -42,6 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _rollNoCtrl.dispose();
     _bioCtrl.dispose();
     _phoneCtrl.dispose();
+    _addressCtrl.dispose();
+    _relationshipCtrl.dispose();
     super.dispose();
   }
 
@@ -88,6 +94,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'roll_no': _rollNoCtrl.text.trim(),
       'bio': _bioCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
+      'address': _addressCtrl.text.trim(),
+      'relationship': _relationshipCtrl.text.trim(),
     });
 
     if (mounted) {
@@ -164,12 +172,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     maxLines: 3,
                    ),
                    const SizedBox(height: 20),
-                   _buildTextField(
-                    label: 'Phone Number',
-                    controller: _phoneCtrl,
-                    icon: Icons.phone_android_rounded,
-                    keyboardType: TextInputType.phone,
-                   ),
+                    _buildTextField(
+                     label: 'Phone Number',
+                     controller: _phoneCtrl,
+                     icon: Icons.phone_android_rounded,
+                     keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextField(
+                     label: 'Home Address',
+                     controller: _addressCtrl,
+                     icon: Icons.location_on_outlined,
+                     maxLines: 2,
+                    ),
+                    if (user.role == UserRole.parent) ...[
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        label: 'Relationship to Student',
+                        controller: _relationshipCtrl,
+                        icon: Icons.family_restroom_rounded,
+                      ),
+                    ],
 
                    const SizedBox(height: 48),
                    SizedBox(

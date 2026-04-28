@@ -5,6 +5,8 @@ import '../doubt_answer_screen.dart';
 import '../leave_approval_screen.dart';
 import '../teacher_announcements_screen.dart';
 
+import '../teacher_chat_list_screen.dart';
+
 class TeacherCommunicationScreen extends StatelessWidget {
   final String classId;
 
@@ -28,8 +30,25 @@ class TeacherCommunicationScreen extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 24),
+          _buildCommAction(
+            context,
+            'Parent & Student Chat',
+            'Communicate with parents and students',
+            Icons.chat_bubble_rounded,
+            const Color(0xFFF97316),
+            0,
+            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherChatListScreen())),
+          ),
+          const SizedBox(height: 16),
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('announcements').where('class_id', isEqualTo: classId).snapshots(),
+            stream: FirebaseFirestore.instance.collection('announcements')
+                .where(Filter.or(
+                  Filter('class_id', isEqualTo: classId),
+                  Filter('target', isEqualTo: 'all'),
+                  Filter('target', isEqualTo: 'teachers'),
+                ))
+                .snapshots(),
+
             builder: (context, snapshot) {
               final count = snapshot.data?.docs.length ?? 0;
               return _buildCommAction(

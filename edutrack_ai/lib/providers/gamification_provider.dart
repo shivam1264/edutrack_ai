@@ -132,19 +132,50 @@ class GamificationProvider with ChangeNotifier {
         .collection('users')
         .where('role', isEqualTo: 'student')
         .where('class_id', isEqualTo: classId)
-        .orderBy('xp', descending: true)
-        .limit(10)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList());
+        .map((snap) {
+          final users = snap.docs.map((doc) {
+            final data = doc.data();
+            // Ensure uid is present
+            if (data['uid'] == null) data['uid'] = doc.id;
+            return UserModel.fromMap(data);
+          }).toList();
+          // Sort by XP descending
+          users.sort((a, b) => b.xp.compareTo(a.xp));
+          return users.take(15).toList();
+        });
   }
 
+  Stream<List<UserModel>> streamSchoolLeaderboard(String schoolId) {
+    return _db
+        .collection('users')
+        .where('role', isEqualTo: 'student')
+        .where('school_id', isEqualTo: schoolId)
+        .snapshots()
+        .map((snap) {
+          final users = snap.docs.map((doc) {
+            final data = doc.data();
+            if (data['uid'] == null) data['uid'] = doc.id;
+            return UserModel.fromMap(data);
+          }).toList();
+          users.sort((a, b) => b.xp.compareTo(a.xp));
+          return users.take(20).toList();
+        });
+  }
   Stream<List<UserModel>> streamGlobalLeaderboard() {
     return _db
         .collection('users')
         .where('role', isEqualTo: 'student')
-        .orderBy('xp', descending: true)
-        .limit(20)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList());
+        .map((snap) {
+          final users = snap.docs.map((doc) {
+            final data = doc.data();
+            if (data['uid'] == null) data['uid'] = doc.id;
+            return UserModel.fromMap(data);
+          }).toList();
+          // Sort by XP descending
+          users.sort((a, b) => b.xp.compareTo(a.xp));
+          return users.take(25).toList();
+        });
   }
 }

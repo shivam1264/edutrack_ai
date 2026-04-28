@@ -3,14 +3,43 @@ import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
 import '../../widgets/premium_card.dart';
 
-class ParentWellnessScreen extends StatelessWidget {
+class ParentWellnessScreen extends StatefulWidget {
   final String? studentId;
   final bool isEmbedded;
   const ParentWellnessScreen({super.key, this.studentId, this.isEmbedded = false});
 
   @override
+  State<ParentWellnessScreen> createState() => _ParentWellnessScreenState();
+}
+
+class _ParentWellnessScreenState extends State<ParentWellnessScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.studentId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<AnalyticsProvider>().loadWellnessData(widget.studentId!);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final aiData = context.watch<AnalyticsProvider>().aiPrediction;
+    final provider = context.watch<AnalyticsProvider>();
+    final studentId = widget.studentId ?? '';
+    final aiData = provider.wellnessFor(studentId);
+    final isLoading = provider.isWellnessLoading && aiData == null;
+
+    if (isLoading) {
+      return widget.isEmbedded
+          ? const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+          : Scaffold(
+              backgroundColor: Colors.white,
+              appBar: AppBar(title: const Text('Wellness & AI Insights')),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+    }
+
     final riskLevel = aiData?['risk_level'] ?? 'Low';
     final insights = (aiData?['insights'] as List? ?? [
       {'title': 'Great Progress', 'sub': 'Continue regular reading habits.', 'icon': Icons.auto_awesome_rounded, 'color': Colors.green},
@@ -28,7 +57,14 @@ class ParentWellnessScreen extends StatelessWidget {
         children: [
           _buildBurnoutAlert(riskLevel),
           const SizedBox(height: 32),
-          const Text('AI Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('AI Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+              if (provider.isWellnessLoading)
+                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            ],
+          ),
           const SizedBox(height: 16),
           ...insights.map((ins) => _insightTile(
             ins['title'] ?? 'Insight',
@@ -49,7 +85,7 @@ class ParentWellnessScreen extends StatelessWidget {
       ),
     );
 
-    if (isEmbedded) return body;
+    if (widget.isEmbedded) return body;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -58,6 +94,12 @@ class ParentWellnessScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => provider.loadWellnessData(studentId, force: true),
+          ),
+        ],
       ),
       body: body,
     );

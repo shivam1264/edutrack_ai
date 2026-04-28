@@ -72,12 +72,19 @@ class ParentUpdatesView extends StatelessWidget {
             return StreamBuilder<QuerySnapshot>(
               stream: filterType == null 
                   ? FirebaseFirestore.instance.collection('announcements')
-                      .where('class_id', isEqualTo: classId)
+                      .where(Filter.or(
+                        Filter('class_id', isEqualTo: classId),
+                        Filter('target', isEqualTo: 'all'),
+                      ))
                       .snapshots()
                   : FirebaseFirestore.instance.collection('announcements')
-                      .where('class_id', isEqualTo: classId)
+                      .where(Filter.or(
+                        Filter('class_id', isEqualTo: classId),
+                        Filter('target', isEqualTo: 'all'),
+                      ))
                       .where('type', isEqualTo: filterType)
                       .snapshots(),
+
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 
@@ -109,8 +116,9 @@ class ParentUpdatesView extends StatelessWidget {
                   itemBuilder: (context, i) {
                     final doc = sortedDocs[i];
                     final data = doc.data() as Map<String, dynamic>;
-                    final title = data['title'] ?? 'Update';
-                    final content = data['content'] ?? '';
+                    final title = data['title'] ?? data['teacher_name'] ?? 'Update';
+                    final content = data['content'] ?? data['message'] ?? '';
+
                     final timestamp = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
                     final timeAgo = _getTimeAgo(timestamp);
                     final type = data['type'] ?? 'Notice';

@@ -121,6 +121,23 @@ class AnalyticsService {
     };
   }
 
+  // ─── Get Student Wellness Stats ─────────────────────────────────────────────
+  Future<Map<String, dynamic>> getStudentWellnessStats(String studentId) async {
+    final analytics = await getStudentAnalytics(studentId);
+    final profileSnap = await _db.collection('users').doc(studentId).get();
+    final profile = profileSnap.data();
+
+    return {
+      'name': profile?['name'] ?? 'Student',
+      'avg_score': analytics['avg_score'],
+      'attendance': analytics['attendance'],
+      'submission_rate': analytics['course_completion'],
+      'xp': profile?['xp'] ?? 0,
+      'level': profile?['level'] ?? 1,
+      'streak': profile?['streak'] ?? 0,
+    };
+  }
+
   // ─── Get student rank in class ──────────────────────────────────────────────
   Future<Map<String, dynamic>?> getStudentRank(String studentId, String classId) async {
     final analytics = await getClassAnalytics(classId);

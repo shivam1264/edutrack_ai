@@ -74,8 +74,12 @@ class _CommunicationViewState extends State<CommunicationView> with SingleTicker
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('announcements')
-          .where('class_id', isEqualTo: classId)
+          .where(Filter.or(
+            Filter('class_id', isEqualTo: classId),
+            Filter('target', isEqualTo: 'all'),
+          ))
           .snapshots(),
+
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         
@@ -117,7 +121,7 @@ class _CommunicationViewState extends State<CommunicationView> with SingleTicker
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(d['teacher_name'] ?? 'Teacher', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                            Text(d['teacher_name'] ?? d['title'] ?? 'Announcement', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                             Text(dateStr, style: const TextStyle(color: AppTheme.textHint, fontSize: 10, fontWeight: FontWeight.bold)),
                           ],
                         ),
@@ -125,7 +129,8 @@ class _CommunicationViewState extends State<CommunicationView> with SingleTicker
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text(d['message'] ?? '', style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary, height: 1.5)),
+                  Text(d['message'] ?? d['content'] ?? '', style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary, height: 1.5)),
+
                 ],
               ),
             );

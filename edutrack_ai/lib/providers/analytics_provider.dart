@@ -28,6 +28,8 @@ class AnalyticsProvider extends ChangeNotifier {
     try {
       _studentAnalytics = await _service.getStudentAnalytics(studentId);
       _aiPrediction = await _service.getAIPrediction(studentId);
+      // Auto-load wellness as well
+      loadWellnessData(studentId);
     } catch (_) {}
 
     _isLoading = false;
@@ -46,9 +48,9 @@ class AnalyticsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadWellnessData(String studentId, String name, Map<String, dynamic> stats) async {
+  Future<void> loadWellnessData(String studentId, {bool force = false}) async {
     // 1. Check Cache first
-    if (_wellnessCache.containsKey(studentId)) {
+    if (!force && _wellnessCache.containsKey(studentId)) {
       return; // Already have it
     }
 
@@ -56,7 +58,11 @@ class AnalyticsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _service.getUnifiedWellness(name: name, stats: stats);
+      final stats = await _service.getStudentWellnessStats(studentId);
+      final result = await _service.getUnifiedWellness(
+        name: stats['name'],
+        stats: stats,
+      );
       if (result != null) {
         _wellnessCache[studentId] = result;
       }
@@ -65,6 +71,11 @@ class AnalyticsProvider extends ChangeNotifier {
     }
 
     _isWellnessLoading = false;
+    notifyListeners();
+  }
+
+  void clearWellnessCache() {
+    _wellnessCache.clear();
     notifyListeners();
   }
 }

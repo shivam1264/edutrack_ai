@@ -33,7 +33,7 @@ class ParentChildView extends StatelessWidget {
         final name = studentData['name'] ?? 'Unknown';
         final rollNo = studentData['roll_no'] ?? 'N/A';
         final classId = studentData['class_id'] ?? '';
-        final avatarUrl = studentData['avatarUrl'];
+        final avatarUrl = studentData['avatar_url'] ?? studentData['avatarUrl'];
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -49,9 +49,9 @@ class ParentChildView extends StatelessWidget {
               children: [
                 _buildProfileHeader(name, rollNo, classId, avatarUrl),
                 const TabBar(
-                  labelColor: Color(0xFFF97316),
+                  labelColor: AppTheme.parentColor,
                   unselectedLabelColor: Colors.grey,
-                  indicatorColor: Color(0xFFF97316),
+                  indicatorColor: AppTheme.parentColor,
                   indicatorWeight: 3,
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   tabs: [

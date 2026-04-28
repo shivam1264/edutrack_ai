@@ -37,7 +37,7 @@ class ParentProfileView extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFF97316), width: 2)),
+                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppTheme.parentColor, width: 2)),
                         child: CircleAvatar(
                           radius: 50,
                           backgroundColor: Colors.grey[100],
@@ -53,7 +53,7 @@ class ParentProfileView extends StatelessWidget {
                         bottom: 0, right: 0,
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(color: Color(0xFFF97316), shape: BoxShape.circle),
+                          decoration: const BoxDecoration(color: AppTheme.parentColor, shape: BoxShape.circle),
                           child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
                         ),
                       ),
@@ -66,11 +66,38 @@ class ParentProfileView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            const Text('Profile Information', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Profile Information', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+              ],
+            ),
             const SizedBox(height: 16),
-            _infoTile('Parent Name', parent?.name ?? 'John Doe'),
-            _infoTile('Email', parent?.email ?? 'john.doe@gmail.com'),
-            _infoTile('Phone', parent?.phone ?? 'N/A'),
+            InkWell(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+              borderRadius: BorderRadius.circular(16),
+              child: PremiumCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _infoTile('Guardian Name', parent?.name ?? 'Guardian', bottomPadding: 16),
+                    _infoTile('Email Address', parent?.email ?? 'N/A', bottomPadding: 16),
+                    _infoTile('Phone Number', parent?.phone ?? 'N/A', bottomPadding: 16),
+                    _infoTile('Relationship', parent?.relationship ?? 'Guardian', bottomPadding: 16),
+                    _infoTile('Home Address', parent?.address ?? 'No Address Provided', bottomPadding: 0),
+                    const Divider(height: 32),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.edit_note_rounded, color: AppTheme.parentColor, size: 18),
+                        SizedBox(width: 8),
+                        Text('Edit Profile Information', style: TextStyle(color: AppTheme.parentColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 32),
             const Text('Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),
@@ -96,14 +123,15 @@ class ParentProfileView extends StatelessWidget {
     );
   }
 
-  Widget _infoTile(String label, String value) {
+  Widget _infoTile(String label, String value, {double bottomPadding = 20}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.only(bottom: bottomPadding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          const SizedBox(width: 16),
+          Expanded(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)))),
         ],
       ),
     );

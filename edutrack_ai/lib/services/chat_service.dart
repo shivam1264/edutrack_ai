@@ -40,16 +40,28 @@ class ChatService {
         .map((snap) => snap.docs.map((doc) => ChatMessage.fromFirestore(doc, currentUserId)).toList());
   }
 
-  Future<void> sendMessage(String chatId, String senderId, String text) async {
+  Future<void> sendMessage({
+    required String chatId,
+    required String senderId,
+    required String text,
+    String? studentId,
+    String? teacherId,
+  }) async {
     await _db.collection('chats').doc(chatId).collection('messages').add({
       'sender_id': senderId,
       'text': text,
       'timestamp': FieldValue.serverTimestamp(),
     });
     
-    await _db.collection('chats').doc(chatId).set({
+    final Map<String, dynamic> chatUpdate = {
       'last_message': text,
       'last_timestamp': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+      'last_sender_id': senderId,
+    };
+
+    if (studentId != null) chatUpdate['student_id'] = studentId;
+    if (teacherId != null) chatUpdate['teacher_id'] = teacherId;
+
+    await _db.collection('chats').doc(chatId).set(chatUpdate, SetOptions(merge: true));
   }
 }
