@@ -144,7 +144,7 @@ class AuthService {
       final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('deleteUser');
       await callable.call({'targetUid': uid});
     } catch (e) {
-      print('❌ Failed to delete full account: $e');
+      debugPrint('❌ Failed to delete full account: $e');
       // Fallback: at least delete from Firestore if function fails
       await deleteUserRecord(uid);
       throw e;

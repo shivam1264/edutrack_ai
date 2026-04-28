@@ -67,7 +67,7 @@ class AnalyticsProvider extends ChangeNotifier {
         _wellnessCache[studentId] = result;
       }
     } catch (e) {
-      print('Provider Wellness Error: $e');
+      debugPrint('Provider Wellness Error: $e');
     }
 
     _isWellnessLoading = false;

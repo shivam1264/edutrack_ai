@@ -62,7 +62,7 @@ class QuizService {
       list.sort((a, b) => b.startTime.compareTo(a.startTime)); // Descending by start time
       return list;
     } catch (e) {
-      print('QuizService Error: $e');
+      debugPrint('QuizService Error: $e');
       rethrow;
     }
   }

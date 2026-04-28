@@ -326,10 +326,12 @@ class HomeView extends StatelessWidget {
 
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
+          return const Center(
             child: Text(
-              AppLocalizations.of(context)!.caughtUp,
-              style: const TextStyle(color: AppTheme.textSecondary),
+              'All caught up!',
+              style: TextStyle(color: AppTheme.textSecondary),
             ),
+          );
         }
 
         return Column(

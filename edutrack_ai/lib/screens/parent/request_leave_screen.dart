@@ -10,6 +10,7 @@ import '../../utils/app_theme.dart';
 import 'package:http/http.dart' as http;
 import '../../utils/config.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RequestLeaveScreen extends StatefulWidget {
   final String? studentId;
@@ -93,13 +94,26 @@ class _RequestLeaveScreenState extends State<RequestLeaveScreen> {
       final user = context.read<AuthProvider>().user;
       final studentId = widget.studentId ?? user?.parentOf?.first ?? '';
       
-      // We need to get the child's classId. For now, assume it's stored in parentOf or use a placeholder.
-      // In a real app, you'd fetch the student's profile first.
+      // Fetch student's classId if not provided
+      String? actualClassId = widget.classId;
+      if (actualClassId == null && studentId.isNotEmpty) {
+        final studentDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(studentId)
+            .get();
+        if (studentDoc.exists) {
+          actualClassId = studentDoc.data()?['class_id'] as String?;
+        }
+      }
+      
+      if (actualClassId == null) {
+        throw Exception('Unable to determine student class. Please contact support.');
+      }
       
       await LeaveService().submitLeaveRequest(
         studentId: studentId,
         parentId: user?.uid ?? '',
-        classId: widget.classId ?? 'Class 1', // Use passed classId or default fallback
+        classId: actualClassId,
         startDate: _startDate,
         endDate: _endDate,
         reason: _reasonCtrl.text.trim(),

@@ -50,7 +50,7 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
               }
             }
           } catch (e) {
-            print('Grade resolution error: $e');
+            debugPrint('Grade resolution error: $e');
           }
         }
       });
@@ -78,7 +78,7 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
         _savedPlans = list.take(10).toList();
       });
     } catch (e) {
-      print('Load plans error: $e');
+      debugPrint('Load plans error: $e');
     }
   }
 
@@ -130,7 +130,7 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
       });
       _loadSavedPlans();
     } catch (e) {
-      print('Archive Error: $e');
+      debugPrint('Archive Error: $e');
     }
   }
 

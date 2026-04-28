@@ -55,7 +55,7 @@ class _SmartAnalysisScreenState extends State<SmartAnalysisScreen> {
 
       setState(() => _analysisResult = analysis);
     } catch (e) {
-      print('AI Analysis Error: $e');
+      debugPrint('AI Analysis Error: $e');
       _setFallbackAnalysis();
     }
     

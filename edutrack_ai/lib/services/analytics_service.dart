@@ -180,7 +180,7 @@ class AnalyticsService {
           ...analytics,
         });
       } catch (e) {
-        print('DEBUG: Error processing student $uid: $e');
+        debugPrint('DEBUG: Error processing student $uid: $e');
         // Add basic info even if analytics fail
         studentData.add({
           'uid': uid,
@@ -277,8 +277,7 @@ class AnalyticsService {
     final now = DateTime.now();
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
     
-    // Fetch all students to avoid composite index requirements for this hackathon
-    // In production, you'd create an index for (role, created_at)
+    // Fetch all students
     final studentsSnap = await _db.collection('users')
         .where('role', isEqualTo: 'student')
         .get();
@@ -388,7 +387,7 @@ class AnalyticsService {
       });
       return analysis;
     } catch (e) {
-      print('AI Study Plan Error: $e');
+      debugPrint('AI Study Plan Error: $e');
     }
     return null;
   }
@@ -407,7 +406,7 @@ class AnalyticsService {
       });
       return analysis;
     } catch (e) {
-      print('Unified Wellness Error: $e');
+      debugPrint('Unified Wellness Error: $e');
     }
     return null;
   }

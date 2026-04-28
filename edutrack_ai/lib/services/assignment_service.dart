@@ -72,7 +72,7 @@ class AssignmentService {
       list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
       return list;
     } catch (e) {
-      print('AssignmentService Error: $e');
+      debugPrint('AssignmentService Error: $e');
       rethrow;
     }
   }

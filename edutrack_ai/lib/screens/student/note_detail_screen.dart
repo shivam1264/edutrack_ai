@@ -6,10 +6,7 @@ import '../../widgets/premium_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'note_editor_screen.dart';
-import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
-import 'dart:io';
+import 'pdf_viewer_screen.dart';
 
 class NoteDetailScreen extends StatelessWidget {
   final NoteModel note;
@@ -118,10 +115,21 @@ class NoteDetailScreen extends StatelessWidget {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _openResource(
-                                  note.fileUrl!,
-                                  context,
-                                ),
+                                onPressed: () {
+                                  if (isPdf) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => PdfViewerScreen(
+                                          pdfUrl: note.fileUrl!,
+                                          title: note.fileName ?? 'PDF Document',
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    _openResource(note.fileUrl!, context);
+                                  }
+                                },
                                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
                                 label: Text(
                                   isPdf ? 'Open PDF' : 'Open Resource',
@@ -169,68 +177,27 @@ class NoteDetailScreen extends StatelessWidget {
       return;
     }
 
-    bool launched = false;
     try {
-      launched = await launchUrl(
+      final launched = await launchUrl(
         uri,
         mode: kIsWeb
             ? LaunchMode.platformDefault
             : LaunchMode.externalApplication,
       );
-    } catch (_) {}
-    if (launched) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: PremiumCard(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Opening Resource...', style: TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    try {
-      final dio = Dio();
-      final tempDir = await getTemporaryDirectory();
-      final extension =
-          note.fileType ??
-          note.fileName?.split('.').last ??
-          url.split('.').last.split('?').first;
-      final sanitizedExtension = extension.replaceAll('.', '').trim();
-      final fileName = sanitizedExtension.isEmpty
-          ? 'note_${note.id}'
-          : 'note_${note.id}.$sanitizedExtension';
-      final savePath = "${tempDir.path}/$fileName";
-
-      await dio.download(url, savePath);
-
-      if (context.mounted) Navigator.pop(context);
-
-      final result = await OpenFile.open(savePath);
       
-      if (result.type != ResultType.done && context.mounted) {
+      if (!launched && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open file: ${result.message}'),
+          const SnackBar(
+            content: Text('Could not open resource. No compatible app found.'),
             backgroundColor: AppTheme.danger,
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to download or open resource: $e'),
+            content: Text('Failed to open resource: $e'),
             backgroundColor: AppTheme.danger,
           ),
         );
@@ -258,6 +225,3 @@ class NoteDetailScreen extends StatelessWidget {
     );
   }
 }
-
-// Fixed a typo in the widget name
-typedef CachedNetwork_Image = CachedNetworkImage;

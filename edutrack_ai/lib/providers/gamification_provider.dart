@@ -107,7 +107,7 @@ class GamificationProvider with ChangeNotifier {
         
       return snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
     } catch (e) {
-      print('Error fetching leaderboard: $e');
+      debugPrint('Error fetching leaderboard: $e');
       return [];
     }
   }
@@ -122,7 +122,7 @@ class GamificationProvider with ChangeNotifier {
         
       return snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
     } catch (e) {
-      print('Error fetching global leaderboard: $e');
+      debugPrint('Error fetching global leaderboard: $e');
       return [];
     }
   }
