@@ -590,16 +590,32 @@ class _QuestionEditorState extends State<_QuestionEditor> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    Radio<int>(
-                      value: i,
-                      groupValue: widget.draft.correctOption,
-                      onChanged: (v) => setState(() => widget.draft.correctOption = v!),
-                      activeColor: AppTheme.secondary,
+                    GestureDetector(
+                      onTap: () => setState(() => widget.draft.correctOption = i),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: widget.draft.correctOption == i ? AppTheme.secondary.withOpacity(0.1) : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: widget.draft.correctOption == i ? AppTheme.secondary : AppTheme.textHint.withOpacity(0.3)),
+                        ),
+                        child: Icon(
+                          widget.draft.correctOption == i ? Icons.check_rounded : Icons.circle_outlined,
+                          size: 16,
+                          color: widget.draft.correctOption == i ? AppTheme.secondary : AppTheme.textHint,
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
                         initialValue: widget.draft.options[i],
-                        decoration: InputDecoration(hintText: 'Choice ${['A', 'B', 'C', 'D'][i]}', isDense: true),
+                        decoration: InputDecoration(
+                          hintText: 'Choice ${['A', 'B', 'C', 'D'][i]}', 
+                          isDense: true,
+                          filled: widget.draft.correctOption == i,
+                          fillColor: widget.draft.correctOption == i ? AppTheme.secondary.withOpacity(0.05) : null,
+                        ),
                         maxLines: null,
                         keyboardType: TextInputType.multiline,
                         onChanged: (v) => widget.draft.options[i] = v,

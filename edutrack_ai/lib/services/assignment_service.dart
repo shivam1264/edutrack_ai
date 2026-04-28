@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../models/assignment_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'cloudinary_service.dart';   // ← Cloudinary instead of Firebase Storage
 
 class AssignmentService {
@@ -190,5 +191,15 @@ class AssignmentService {
     }
     
     await batch.commit();
+  }
+
+  // ─── Utility to open URLs ───────────────────────────────────────────────────
+  Future<void> openFile(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
+    }
   }
 }

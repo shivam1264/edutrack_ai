@@ -14,7 +14,10 @@ class NoteDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTeacherNote = note.teacherId != null;
     final hasFile = note.fileUrl != null && note.fileUrl!.isNotEmpty;
-    final isImage = note.fileType != null && ['jpg', 'jpeg', 'png', 'webp'].contains(note.fileType!.toLowerCase());
+    final isImage = (note.fileType != null && ['jpg', 'jpeg', 'png', 'webp'].contains(note.fileType!.toLowerCase())) ||
+                     (note.fileUrl != null && ['jpg', 'jpeg', 'png', 'webp'].any((ext) => note.fileUrl!.toLowerCase().contains(ext)));
+    final isPdf = (note.fileType != null && note.fileType!.toLowerCase() == 'pdf') ||
+                   (note.fileUrl != null && note.fileUrl!.toLowerCase().contains('.pdf'));
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -121,18 +124,19 @@ class NoteDetailScreen extends StatelessWidget {
   Future<void> _launchURL(String url, BuildContext context) async {
     final uri = Uri.parse(url);
     try {
-      // Try platform default first (lets OS decide: browser or PDF app)
-      bool success = await launchUrl(uri, mode: LaunchMode.platformDefault);
-      
-      if (!success) {
-        // Fallback to external application
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
+      // Force external application for PDFs (browser or PDF viewer)
+      // This is generally more reliable for Cloudinary URLs on mobile
+      await launchUrl(
+        uri, 
+        mode: LaunchMode.externalApplication,
+      );
     } catch (e) {
-      // If both fail, show error
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening resource: $e')),
+          SnackBar(
+            content: Text('Could not open resource. Please ensure a PDF viewer is installed.'),
+            backgroundColor: AppTheme.danger,
+          ),
         );
       }
     }

@@ -123,6 +123,36 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                       Text(assignment.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.textPrimary)),
                       const SizedBox(height: 8),
                       Text(assignment.description, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.5)),
+                      if (assignment.fileUrl != null) ...[
+                        const SizedBox(height: 20),
+                        const Divider(color: AppTheme.borderLight),
+                        const SizedBox(height: 12),
+                        const Text('ATTACHED RESOURCE', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, fontSize: 11, letterSpacing: 1)),
+                        const SizedBox(height: 12),
+                        if (['jpg', 'jpeg', 'png', 'webp'].any((ext) => assignment.fileUrl!.toLowerCase().contains(ext)))
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              assignment.fileUrl!,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Center(child: Text('Failed to load image')),
+                            ),
+                          )
+                        else
+                          ElevatedButton.icon(
+                            onPressed: () => AssignmentService().openFile(assignment.fileUrl!),
+                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                            label: const Text('View Reference Document'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.bgLight,
+                              foregroundColor: AppTheme.primary,
+                              elevation: 0,
+                              side: const BorderSide(color: AppTheme.borderLight),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                 ),
