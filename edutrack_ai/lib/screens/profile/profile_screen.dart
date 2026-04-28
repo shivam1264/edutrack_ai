@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/cloudinary_service.dart';
 import '../../utils/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
@@ -56,11 +57,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l10n.profile),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -221,8 +223,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: OutlinedButton.icon(
                 onPressed: () => authProvider.logout(),
                 icon: const Icon(Icons.logout_rounded, color: AppTheme.danger),
-                label: const Text('Logout',
-                    style: TextStyle(color: AppTheme.danger)),
+                label: Text(l10n.logout,
+                    style: const TextStyle(color: AppTheme.danger)),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppTheme.danger),
                   padding: const EdgeInsets.symmetric(vertical: 14),

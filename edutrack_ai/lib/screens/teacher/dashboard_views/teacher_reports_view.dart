@@ -37,7 +37,7 @@ class TeacherReportsView extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         children: [
           _buildPerformanceStats(data),
           const SizedBox(height: 24),

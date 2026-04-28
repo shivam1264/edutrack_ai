@@ -50,8 +50,20 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           headers: {
             'Accept': 'application/pdf',
           },
+          receiveTimeout: const Duration(seconds: 30),
         ),
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            debugPrint('Downloading: ${(received / total * 100).toStringAsFixed(0)}%');
+          }
+        },
       );
+
+      // Verify file was downloaded
+      final file = File(savePath);
+      if (!await file.exists()) {
+        throw Exception('File was not downloaded successfully');
+      }
 
       if (mounted) {
         setState(() {
@@ -60,10 +72,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         });
       }
     } catch (e) {
+      debugPrint('PDF Download Error: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to load PDF: $e';
+          _errorMessage = 'Failed to load PDF: ${e.toString()}';
         });
       }
     }

@@ -73,13 +73,28 @@ class TeacherHomeView extends StatelessWidget {
         ? user.subjects!.join(', ')
         : 'Teacher';
 
-    return PremiumCard(
+    return Container(
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF059669), Color(0xFF10B981)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF059669).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 24,
-            backgroundColor: const Color(0xFFE6F4F1),
+            radius: 28,
+            backgroundColor: Colors.white.withOpacity(0.2),
             backgroundImage: user?.avatarUrl != null
                 ? CachedNetworkImageProvider(user!.avatarUrl!)
                 : null,
@@ -89,32 +104,32 @@ class TeacherHomeView extends StatelessWidget {
                         ? user!.name[0].toUpperCase()
                         : 'T',
                     style: const TextStyle(
-                      color: AppTheme.secondary,
-                      fontSize: 18,
+                      color: Colors.white,
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
                     ),
                   )
                 : null,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.teacherDashboard,
+                  _getGreeting(context),
                   style: const TextStyle(
-                    color: AppTheme.textHint,
+                    color: Colors.white70,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${_getGreeting(context)}, ${user?.name.split(' ').first ?? 'Teacher'}',
+                  user?.name.split(' ').first ?? 'Teacher',
                   style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 22,
+                    color: Colors.white,
+                    fontSize: 24,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -122,7 +137,7 @@ class TeacherHomeView extends StatelessWidget {
                 Text(
                   '$currentClassName | $subjectText',
                   style: const TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: Colors.white70,
                     fontSize: 13,
                   ),
                 ),
@@ -140,16 +155,15 @@ class TeacherHomeView extends StatelessWidget {
                 label: Text('$count'),
                 isLabelVisible: count > 0,
                 child: Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceSubtle,
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.borderLight),
                   ),
                   child: const Icon(
                     Icons.notifications_none_rounded,
-                    color: AppTheme.textPrimary,
+                    color: Colors.white,
                   ),
                 ),
               );
@@ -165,131 +179,134 @@ class TeacherHomeView extends StatelessWidget {
     final pendingTasks = data?['pending_tasks'] ?? 0;
     final announcements = data?['announcements_count'] ?? 0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.todayAtGlance,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderLight),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.todayAtGlance,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Class health and activity overview.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  DateFormat('dd MMM yyyy').format(DateTime.now()),
                   style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
+                    fontSize: 12,
+                    color: Color(0xFF059669),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Class health and activity overview.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textSecondary,
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _OverviewCard(
+                  label: 'Students',
+                  value: '$students',
+                  icon: Icons.people_rounded,
+                  color: const Color(0xFF059669),
                 ),
-              ],
-            ),
-            Text(
-              DateFormat('dd MMM yyyy').format(DateTime.now()),
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textHint,
-                fontWeight: FontWeight.w600,
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: FutureBuilder<double>(
-                future: AnalyticsService.instance.getClassAttendance(
-                  selectedClassId ?? '',
+              const SizedBox(width: 12),
+              Expanded(
+                child: _OverviewCard(
+                  label: 'Pending',
+                  value: '$pendingTasks',
+                  icon: Icons.pending_actions_rounded,
+                  color: AppTheme.warning,
                 ),
-                builder: (context, snapshot) {
-                  final attendance = snapshot.data ?? 0.0;
-                  return _buildStatCard(
-                    '${attendance.toStringAsFixed(0)}%',
-                    AppLocalizations.of(context)!.attendance,
-                    Icons.how_to_reg_rounded,
-                    AppTheme.secondary,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TeacherAttendanceScreen(
-                            classId: selectedClassId ?? '',
-                            className: currentClassName,
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                '$students',
-                AppLocalizations.of(context)!.students,
-                Icons.people_outline_rounded,
-                AppTheme.info,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          TeacherStudentsView(selectedClassId: selectedClassId),
-                    ),
-                  );
-                },
+              const SizedBox(width: 12),
+              Expanded(
+                child: _OverviewCard(
+                  label: 'Updates',
+                  value: '$announcements',
+                  icon: Icons.announcement_rounded,
+                  color: AppTheme.info,
+                ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _OverviewCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                '$pendingTasks',
-                AppLocalizations.of(context)!.pending,
-                Icons.assignment_late_outlined,
-                AppTheme.warning,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          BulkGradeScreen(classId: selectedClassId ?? ''),
-                    ),
-                  );
-                },
-              ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                '$announcements',
-                AppLocalizations.of(context)!.updates,
-                Icons.campaign_outlined,
-                AppTheme.accent,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TeacherAnnouncementsScreen(
-                        classId: selectedClassId ?? '',
-                      ),
-                    ),
-                  );
-                },
-              ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -446,7 +463,7 @@ class TeacherHomeView extends StatelessWidget {
       {
         'label': 'Attendance',
         'icon': Icons.how_to_reg_rounded,
-        'color': AppTheme.secondary,
+        'color': const Color(0xFF059669),
         'onTap': () => Navigator.push(
           ctx,
           MaterialPageRoute(
@@ -533,16 +550,22 @@ class TeacherHomeView extends StatelessWidget {
             children: actions.map((action) {
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: PremiumCard(
+                child: GestureDetector(
                   onTap: action['onTap'] as VoidCallback,
-                  padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: 92,
+                  child: Container(
+                    width: 100,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.borderLight),
+                      boxShadow: AppTheme.cardShadow,
+                    ),
                     child: Column(
                       children: [
                         Container(
-                          width: 42,
-                          height: 42,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: (action['color'] as Color).withOpacity(0.10),
                             borderRadius: BorderRadius.circular(12),
@@ -550,17 +573,18 @@ class TeacherHomeView extends StatelessWidget {
                           child: Icon(
                             action['icon'] as IconData,
                             color: action['color'] as Color,
+                            size: 22,
                           ),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           action['label'] as String,
-                          textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textPrimary,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -575,61 +599,69 @@ class TeacherHomeView extends StatelessWidget {
   }
 
   Widget _buildRecentActivity(BuildContext ctx) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizations.of(ctx)!.recentActivity,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderLight),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppLocalizations.of(ctx)!.recentActivity,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Latest class submissions and responses.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textSecondary,
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Latest class submissions and responses.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            TextButton(
-              onPressed: () => Navigator.push(
-                ctx,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      AssignmentAuditScreen(classId: selectedClassId ?? ''),
-                ),
+                ],
               ),
-              child: Text(AppLocalizations.of(ctx)!.viewAll),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('submissions')
-              .where('class_id', isEqualTo: selectedClassId)
-              .limit(10)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const PremiumCard(
-                child: Text(
-                  'Recent activity could not be loaded.',
-                  style: TextStyle(color: AppTheme.danger),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  ctx,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        AssignmentAuditScreen(classId: selectedClassId ?? ''),
+                  ),
                 ),
-              );
-            }
+                child: Text(AppLocalizations.of(ctx)!.viewAll),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('submissions')
+                .where('class_id', isEqualTo: selectedClassId)
+                .limit(10)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Center(
+                  child: Text(
+                    'Recent activity could not be loaded.',
+                    style: TextStyle(color: AppTheme.danger),
+                  ),
+                );
+              }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
               return const PremiumCard(
                 child: Text(

@@ -48,7 +48,9 @@ class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTi
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        child: Column(
         children: [
           _buildSearchBar(),
           _buildTabs(),
