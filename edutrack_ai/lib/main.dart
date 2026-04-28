@@ -10,7 +10,10 @@ import 'services/notification_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/analytics_provider.dart';
 import 'providers/gamification_provider.dart';
+import 'providers/language_provider.dart';
 import 'screens/auth/auth_wrapper.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'utils/app_theme.dart';
 
 void main() async {
@@ -42,14 +45,32 @@ class EduTrackApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
         ChangeNotifierProvider(create: (_) => GamificationProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
-      child: MaterialApp(
-        title: 'EduTrack AI',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        home: const AuthWrapper(),
+      child: Consumer<LanguageProvider>(
+        builder: (context, languageProvider, child) {
+          return MaterialApp(
+            title: 'EduTrack AI',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.system,
+            locale: languageProvider.locale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'), // English
+              Locale('hi'), // Hindi
+              Locale('mr'), // Marathi
+              Locale('gu'), // Gujarati
+            ],
+            home: const AuthWrapper(),
+          );
+        },
       ),
     );
   }

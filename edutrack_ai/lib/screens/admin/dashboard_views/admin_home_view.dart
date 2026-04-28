@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_theme.dart';
@@ -47,7 +48,7 @@ class AdminHomeView extends StatelessWidget {
             ),
             delegate: SliverChildListDelegate([
               _MetricBox(
-                label: 'Students',
+                label: AppLocalizations.of(context)!.students,
                 collection: 'users',
                 filterField: 'role',
                 filterValue: 'student',
@@ -142,9 +143,9 @@ class AdminHomeView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Administration',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.adminDashboard,
+                  style: const TextStyle(
                     color: AppTheme.textHint,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -282,9 +283,9 @@ class AdminHomeView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Administration Tools',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.quickActions,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,

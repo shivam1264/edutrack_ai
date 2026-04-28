@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
@@ -18,7 +19,7 @@ class ParentProfileView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(AppLocalizations.of(context)!.appSettings, style: const TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
@@ -73,7 +74,7 @@ class ParentProfileView extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     icon: const Icon(Icons.edit_rounded, size: 18),
-                    label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: Text(AppLocalizations.of(context)!.editProfile, style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -82,7 +83,7 @@ class ParentProfileView extends StatelessWidget {
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Profile Information', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+                Text(AppLocalizations.of(context)!.profileInformation, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
               ],
             ),
             const SizedBox(height: 16),
@@ -93,18 +94,18 @@ class ParentProfileView extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _infoTile('Guardian Name', parent?.name ?? 'Guardian', bottomPadding: 16),
-                    _infoTile('Email Address', parent?.email ?? 'N/A', bottomPadding: 16),
-                    _infoTile('Phone Number', parent?.phone ?? 'N/A', bottomPadding: 16),
-                    _infoTile('Relationship', parent?.relationship ?? 'Guardian', bottomPadding: 16),
-                    _infoTile('Home Address', parent?.address ?? 'No Address Provided', bottomPadding: 0),
+                    _infoTile(AppLocalizations.of(context)!.guardianName, parent?.name ?? 'Guardian', bottomPadding: 16),
+                    _infoTile(AppLocalizations.of(context)!.emailAddress, parent?.email ?? 'N/A', bottomPadding: 16),
+                    _infoTile(AppLocalizations.of(context)!.phoneNumber, parent?.phone ?? 'N/A', bottomPadding: 16),
+                    _infoTile(AppLocalizations.of(context)!.relationship, parent?.relationship ?? 'Guardian', bottomPadding: 16),
+                    _infoTile(AppLocalizations.of(context)!.homeAddress, parent?.address ?? 'No Address Provided', bottomPadding: 0),
                     const Divider(height: 32),
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.edit_note_rounded, color: AppTheme.parentColor, size: 18),
                         SizedBox(width: 8),
-                        Text('Edit Profile Information', style: TextStyle(color: AppTheme.parentColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(AppLocalizations.of(context)!.editProfileInfo, style: const TextStyle(color: AppTheme.parentColor, fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),
                   ],
@@ -112,43 +113,43 @@ class ParentProfileView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            const Text('Account', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+            Text(AppLocalizations.of(context)!.account, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),
             _prefItem(
               context,
               Icons.manage_accounts_outlined,
-              'Account Settings',
+              AppLocalizations.of(context)!.accountSettings,
               null,
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
             ),
             const SizedBox(height: 24),
-            const Text('Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+            Text(AppLocalizations.of(context)!.preferences, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),
             _prefItem(
               context,
               Icons.notifications_outlined,
-              'Notification Settings',
+              AppLocalizations.of(context)!.notificationSettings,
               null,
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen())),
             ),
             _prefItem(
               context,
               Icons.language_rounded,
-              'Language',
-              'English',
+              AppLocalizations.of(context)!.language,
+              Localizations.localeOf(context).languageCode == 'hi' ? 'हिन्दी' : 'English',
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen())),
             ),
             _prefItem(
               context,
               Icons.privacy_tip_outlined,
-              'Privacy Policy',
+              AppLocalizations.of(context)!.privacyPolicy,
               null,
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen())),
             ),
             _prefItem(
               context,
               Icons.help_outline_rounded,
-              'Help & Support',
+              AppLocalizations.of(context)!.helpSupport,
               null,
               () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen())),
             ),
@@ -159,7 +160,7 @@ class ParentProfileView extends StatelessWidget {
                 children: [
                   const Icon(Icons.logout_rounded, color: Colors.red),
                   const SizedBox(width: 12),
-                  const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(AppLocalizations.of(context)!.logout, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
                 ],
               ),
             ),

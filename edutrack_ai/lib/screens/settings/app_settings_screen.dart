@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
+import '../../providers/language_provider.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -12,14 +14,14 @@ class AppSettingsScreen extends StatefulWidget {
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
   bool _darkMode = false;
   bool _notifications = true;
-  String _language = 'English';
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('App Settings'),
+        title: Text(l10n.appSettings),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -30,11 +32,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('APPEARANCE'),
+            _buildSectionTitle(l10n.appearance),
             const SizedBox(height: 16),
             PremiumCard(
               child: SwitchListTile(
-                title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(l10n.darkMode, style: const TextStyle(fontWeight: FontWeight.bold)),
                 secondary: Icon(Icons.dark_mode_outlined, color: _darkMode ? Colors.amber : AppTheme.textSecondary),
                 value: _darkMode,
                 onChanged: (v) => setState(() => _darkMode = v),
@@ -42,7 +44,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            _buildSectionTitle('NOTIFICATIONS'),
+            _buildSectionTitle(l10n.notifications.toUpperCase()),
             const SizedBox(height: 16),
             PremiumCard(
               child: SwitchListTile(
@@ -54,13 +56,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            _buildSectionTitle('LANGUAGE'),
+            _buildSectionTitle(l10n.language.toUpperCase()),
             const SizedBox(height: 16),
-            _buildLanguageSelector(),
+            _buildLanguageSelector(context),
             const SizedBox(height: 48),
             Center(
               child: Text(
-                'Version 1.0.4 (Stable)',
+                '${l10n.version} 1.0.4 (Stable)',
                 style: TextStyle(color: AppTheme.textHint, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
@@ -74,16 +76,24 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     return Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.5, color: AppTheme.textHint));
   }
 
-  Widget _buildLanguageSelector() {
+  Widget _buildLanguageSelector(BuildContext context) {
+    final languageProvider = context.watch<LanguageProvider>();
+    final languages = [
+      {'name': 'English', 'code': 'en'},
+      {'name': 'Hindi', 'code': 'hi'},
+      {'name': 'Marathi', 'code': 'mr'},
+      {'name': 'Gujarati', 'code': 'gu'},
+    ];
+
     return PremiumCard(
       padding: const EdgeInsets.all(8),
       child: Column(
-        children: ['English', 'Hindi', 'Marathi', 'Gujarati'].map((lang) {
-          final isSelected = _language == lang;
+        children: languages.map((lang) {
+          final isSelected = languageProvider.locale.languageCode == lang['code'];
           return ListTile(
-            title: Text(lang, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppTheme.primary : AppTheme.textPrimary)),
+            title: Text(lang['name']!, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppTheme.primary : AppTheme.textPrimary)),
             trailing: isSelected ? const Icon(Icons.check_circle, color: AppTheme.primary) : null,
-            onTap: () => setState(() => _language = lang),
+            onTap: () => languageProvider.setLocale(Locale(lang['code']!)),
           );
         }).toList(),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
@@ -15,6 +16,7 @@ class StudentProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -26,23 +28,23 @@ class StudentProfileView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _buildListTile(context, Icons.person_outline_rounded, 'Personal Information', () {
+                _buildListTile(context, Icons.person_outline_rounded, l10n.personalInformation, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
                 }),
                 const SizedBox(height: 12),
-                _buildListTile(context, Icons.settings_suggest_rounded, 'Account Settings', () {
+                _buildListTile(context, Icons.settings_suggest_rounded, l10n.accountSettings, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountSettingsScreen()));
                 }),
                 const SizedBox(height: 12),
-                _buildListTile(context, Icons.auto_stories_rounded, 'Study Preferences', () {
+                _buildListTile(context, Icons.auto_stories_rounded, l10n.studyPreferences, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyPreferencesScreen()));
                 }),
                 const SizedBox(height: 12),
-                _buildListTile(context, Icons.app_settings_alt_rounded, 'App Settings', () {
+                _buildListTile(context, Icons.app_settings_alt_rounded, l10n.appSettings, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
                 }),
                 const SizedBox(height: 12),
-                _buildListTile(context, Icons.help_center_rounded, 'Help & Support', () {
+                _buildListTile(context, Icons.help_center_rounded, l10n.helpSupport, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
                 }),
                 const SizedBox(height: 12),
@@ -73,7 +75,7 @@ class StudentProfileView extends StatelessWidget {
             const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Profile Center', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                Text(AppLocalizations.of(context)!.profileCenter, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
               ],
             ),
             const SizedBox(height: 32),
@@ -132,7 +134,7 @@ class StudentProfileView extends StatelessWidget {
                             borderRadius: BorderRadius.circular(100),
                             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
                           ),
-                          child: const Text('Edit Profile', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.w800)),
+                          child: Text(AppLocalizations.of(context)!.editProfile, style: const TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.w800)),
                         ),
                       ),
                     ],
@@ -182,7 +184,7 @@ class StudentProfileView extends StatelessWidget {
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
           child: const Icon(Icons.logout_rounded, color: Colors.red, size: 22),
         ),
-        title: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.red)),
+        title: Text(AppLocalizations.of(context)!.logout, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.red)),
         onTap: () {
           showDialog(
             context: context,

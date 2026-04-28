@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:edutrack_ai/models/class_model.dart';
 import 'package:edutrack_ai/providers/analytics_provider.dart';
@@ -66,7 +67,7 @@ class _ParentHomeViewState extends State<ParentHomeView> {
                 _buildWellnessCard(context, childId),
                 const SizedBox(height: 28),
                 _buildSectionHeader(
-                  'Today at a Glance',
+                  AppLocalizations.of(context)!.todayAtGlance,
                   'Attendance, performance, and class standing.',
                   onTap: () {
                     if (childId != null) {
@@ -83,7 +84,7 @@ class _ParentHomeViewState extends State<ParentHomeView> {
                 _buildStatsGlance(childId),
                 const SizedBox(height: 28),
                 _buildSectionHeader(
-                  'Quick Access',
+                  AppLocalizations.of(context)!.quickActions,
                   'Common parent actions for this student.',
                 ),
                 const SizedBox(height: 16),
@@ -105,9 +106,9 @@ class _ParentHomeViewState extends State<ParentHomeView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Parent Dashboard',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.parentDashboard,
+                  style: const TextStyle(
                     color: AppTheme.textHint,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -401,14 +402,14 @@ class _ParentHomeViewState extends State<ParentHomeView> {
 
                 final stats = [
                   {
-                    'label': 'Attendance',
+                    'label': AppLocalizations.of(context)!.attendance,
                     'val': attendanceVal,
                     'sub': 'Present',
                     'icon': Icons.calendar_today_rounded,
                     'color': AppTheme.info,
                   },
                   {
-                    'label': 'Average',
+                    'label': AppLocalizations.of(context)!.average,
                     'val': avgScore,
                     'sub': 'Academic',
                     'icon': Icons.star_rounded,

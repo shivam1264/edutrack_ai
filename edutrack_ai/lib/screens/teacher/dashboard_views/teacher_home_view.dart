@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
@@ -100,9 +101,9 @@ class TeacherHomeView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Teacher Dashboard',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.teacherDashboard,
+                  style: const TextStyle(
                     color: AppTheme.textHint,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -110,7 +111,7 @@ class TeacherHomeView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Good morning, ${user?.name.split(' ').first ?? 'Teacher'}',
+                  '${_getGreeting(context)}, ${user?.name.split(' ').first ?? 'Teacher'}',
                   style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 22,
@@ -170,19 +171,18 @@ class TeacherHomeView extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Today at a Glance',
-                  style: TextStyle(
+                  AppLocalizations.of(context)!.todayAtGlance,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 4),
+                const Text(
                   'Class health and activity overview.',
                   style: TextStyle(
                     fontSize: 13,
@@ -213,7 +213,7 @@ class TeacherHomeView extends StatelessWidget {
                   final attendance = snapshot.data ?? 0.0;
                   return _buildStatCard(
                     '${attendance.toStringAsFixed(0)}%',
-                    'Attendance',
+                    AppLocalizations.of(context)!.attendance,
                     Icons.how_to_reg_rounded,
                     AppTheme.secondary,
                     () {
@@ -235,7 +235,7 @@ class TeacherHomeView extends StatelessWidget {
             Expanded(
               child: _buildStatCard(
                 '$students',
-                'Students',
+                AppLocalizations.of(context)!.students,
                 Icons.people_outline_rounded,
                 AppTheme.info,
                 () {
@@ -253,7 +253,7 @@ class TeacherHomeView extends StatelessWidget {
             Expanded(
               child: _buildStatCard(
                 '$pendingTasks',
-                'Pending',
+                AppLocalizations.of(context)!.pending,
                 Icons.assignment_late_outlined,
                 AppTheme.warning,
                 () {
@@ -271,7 +271,7 @@ class TeacherHomeView extends StatelessWidget {
             Expanded(
               child: _buildStatCard(
                 '$announcements',
-                'Updates',
+                AppLocalizations.of(context)!.updates,
                 Icons.campaign_outlined,
                 AppTheme.accent,
                 () {
@@ -343,9 +343,9 @@ class TeacherHomeView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Class Performance',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.classPerformance,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
@@ -509,9 +509,9 @@ class TeacherHomeView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.quickActions,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -580,19 +580,19 @@ class TeacherHomeView extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Recent Activity',
-                  style: TextStyle(
+                  AppLocalizations.of(context)!.recentActivity,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 4),
+                const Text(
                   'Latest class submissions and responses.',
                   style: TextStyle(
                     fontSize: 13,
@@ -609,7 +609,7 @@ class TeacherHomeView extends StatelessWidget {
                       AssignmentAuditScreen(classId: selectedClassId ?? ''),
                 ),
               ),
-              child: const Text('View All'),
+              child: Text(AppLocalizations.of(context)!.viewAll),
             ),
           ],
         ),
@@ -734,5 +734,13 @@ class TeacherHomeView extends StatelessWidget {
     if (difference.inHours > 0) return '${difference.inHours}h ago';
     if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
     return 'Just now';
+  }
+
+  String _getGreeting(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final l10n = AppLocalizations.of(context)!;
+    if (hour < 12) return l10n.goodMorning;
+    if (hour < 17) return l10n.goodAfternoon;
+    return l10n.goodEvening;
   }
 }

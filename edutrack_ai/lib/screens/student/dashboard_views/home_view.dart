@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:edutrack_ai/models/knowledge_node.dart';
 import 'package:edutrack_ai/providers/analytics_provider.dart';
@@ -22,6 +23,7 @@ class HomeView extends StatelessWidget {
     final user = auth.user;
     final gamify = context.watch<GamificationProvider>();
     final userId = user?.uid ?? '';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -47,9 +49,9 @@ class HomeView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionHeader(
-                    'Learning DNA',
-                    'See how your strengths are developing.',
-                    'Open Progress',
+                    l10n.learningDNA,
+                    l10n.seeStrengthsDeveloping,
+                    l10n.openProgress,
                     () {
                       Navigator.push(
                         context,
@@ -81,9 +83,9 @@ class HomeView extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
                   _buildSectionHeader(
-                    'Performance Summary',
-                    'Academic and assignment progress from recent activity.',
-                    'View Details',
+                    l10n.performanceSummary,
+                    l10n.academicAssignmentProgress,
+                    l10n.viewDetails,
                     () {
                       Navigator.push(
                         context,
@@ -95,9 +97,9 @@ class HomeView extends StatelessWidget {
                   _buildLearningDNA(context),
                   const SizedBox(height: 28),
                   _buildSectionHeader(
-                    'Pending Work',
-                    'Assignments that still need your attention.',
-                    'View Assignments',
+                    l10n.pendingWork,
+                    l10n.assignmentsNeedAttention,
+                    l10n.viewAssignments,
                     () {
                       Navigator.push(
                         context,
@@ -136,9 +138,9 @@ class HomeView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Student Dashboard',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.studentDashboard,
+                      style: const TextStyle(
                         color: AppTheme.textHint,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -146,7 +148,7 @@ class HomeView extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Welcome back, ${user?.name.split(' ').first ?? 'Student'}',
+                      '${AppLocalizations.of(context)!.welcomeBack}, ${user?.name.split(' ').first ?? 'Student'}',
                       style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 24,
@@ -154,8 +156,8 @@ class HomeView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Your daily overview is ready.',
+                    Text(
+                      AppLocalizations.of(context)!.dailyOverviewReady,
                       style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 14,
@@ -189,7 +191,7 @@ class HomeView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Level ${gamify.user?.level ?? 1}',
+                      '${AppLocalizations.of(context)!.level} ${gamify.user?.level ?? 1}',
                       style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontWeight: FontWeight.w700,
@@ -197,7 +199,7 @@ class HomeView extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${gamify.user?.xp ?? 0} / ${gamify.xpToNextLevel} XP',
+                      '${gamify.user?.xp ?? 0} / ${gamify.xpToNextLevel} ${AppLocalizations.of(context)!.xp}',
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -236,7 +238,7 @@ class HomeView extends StatelessWidget {
             final avg = (analytics.studentAnalytics?['avg_score'] as num?)
                 ?.toDouble();
             return _StatCard(
-              label: 'Average',
+              label: AppLocalizations.of(context)!.average,
               value: avg == null ? 'N/A' : '${avg.toStringAsFixed(0)}%',
               icon: Icons.track_changes_rounded,
               color: AppTheme.primary,
@@ -252,7 +254,7 @@ class HomeView extends StatelessWidget {
           builder: (context, snapshot) {
             final count = snapshot.data?.docs.length ?? 0;
             return _StatCard(
-              label: 'Tasks',
+              label: AppLocalizations.of(context)!.tasks,
               value: '$count',
               icon: Icons.assignment_outlined,
               color: AppTheme.secondary,
@@ -261,7 +263,7 @@ class HomeView extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         _StatCard(
-          label: 'Streak',
+          label: AppLocalizations.of(context)!.streak,
           value: '${gamify.user?.streak ?? 0}',
           icon: Icons.local_fire_department_rounded,
           color: AppTheme.warning,
@@ -324,12 +326,10 @@ class HomeView extends StatelessWidget {
 
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
-          return const PremiumCard(
             child: Text(
-              'You are all caught up for now.',
-              style: TextStyle(color: AppTheme.textSecondary),
+              AppLocalizations.of(context)!.caughtUp,
+              style: const TextStyle(color: AppTheme.textSecondary),
             ),
-          );
         }
 
         return Column(
@@ -392,9 +392,9 @@ class HomeView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Open',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      child: Text(
+                        AppLocalizations.of(context)!.open,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
@@ -418,14 +418,14 @@ class HomeView extends StatelessWidget {
       child: Column(
         children: [
           _buildMetricRow(
-            'Quiz average',
+            AppLocalizations.of(context)!.quizAverage,
             '${avg.toStringAsFixed(0)}%',
             avg / 100,
             AppTheme.primary,
           ),
           const SizedBox(height: 18),
           _buildMetricRow(
-            'Assignments progress',
+            AppLocalizations.of(context)!.assignmentsProgress,
             '${completion.toStringAsFixed(0)}%',
             completion / 100,
             AppTheme.secondary,

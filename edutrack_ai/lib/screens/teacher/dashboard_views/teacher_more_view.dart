@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_theme.dart';
@@ -20,7 +21,7 @@ class TeacherMoreView extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('More', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(AppLocalizations.of(context)!.more, style: const TextStyle(fontWeight: FontWeight.w900)),
         centerTitle: false,
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
@@ -30,18 +31,18 @@ class TeacherMoreView extends StatelessWidget {
         children: [
           _buildProfileHeader(context, user),
           const SizedBox(height: 32),
-          _buildSection('Account', [
-            _buildMenuItem(Icons.person_outline_rounded, 'Profile Settings', () {
+          _buildSection(AppLocalizations.of(context)!.account, [
+            _buildMenuItem(Icons.person_outline_rounded, AppLocalizations.of(context)!.profileSettings, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
             }),
-            _buildMenuItem(Icons.school_outlined, 'Class & Subject', () => _showAcademicSheet(context, user)),
-            _buildMenuItem(Icons.notifications_none_rounded, 'Notification Settings', () {
+            _buildMenuItem(Icons.school_outlined, AppLocalizations.of(context)!.classSubject, () => _showAcademicSheet(context, user)),
+            _buildMenuItem(Icons.notifications_none_rounded, AppLocalizations.of(context)!.notificationSettings, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
             }),
           ]),
           const SizedBox(height: 24),
-          _buildSection('Support', [
-            _buildMenuItem(Icons.help_outline_rounded, 'Help & Support', () {
+          _buildSection(AppLocalizations.of(context)!.support, [
+            _buildMenuItem(Icons.help_outline_rounded, AppLocalizations.of(context)!.helpSupport, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
             }),
             _buildMenuItem(Icons.feedback_outlined, 'Feedback', () {
@@ -49,9 +50,9 @@ class TeacherMoreView extends StatelessWidget {
             }),
           ]),
           const SizedBox(height: 24),
-          _buildSection('Other', [
-            _buildMenuItem(Icons.privacy_tip_outlined, 'Privacy Policy', () => _showPrivacyDialog(context)),
-            _buildMenuItem(Icons.logout_rounded, 'Logout', () => _showLogoutDialog(context), isDestructive: true),
+          _buildSection(AppLocalizations.of(context)!.other, [
+            _buildMenuItem(Icons.privacy_tip_outlined, AppLocalizations.of(context)!.privacyPolicy, () => _showPrivacyDialog(context)),
+            _buildMenuItem(Icons.logout_rounded, AppLocalizations.of(context)!.logout, () => _showLogoutDialog(context), isDestructive: true),
           ]),
           const SizedBox(height: 100),
         ],
@@ -138,16 +139,16 @@ class TeacherMoreView extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(AppLocalizations.of(context)!.logout),
+        content: Text(AppLocalizations.of(context)!.areYouSureLogout),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context)!.cancel)),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               context.read<AuthProvider>().logout();
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: Text(AppLocalizations.of(context)!.logout, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

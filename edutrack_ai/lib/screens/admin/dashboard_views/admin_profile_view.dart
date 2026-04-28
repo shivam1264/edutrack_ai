@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_theme.dart';
 import '../../settings/profile_screen.dart';
@@ -28,20 +29,20 @@ class AdminProfileView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _buildSectionTitle('General'),
-                _buildListTile(context, Icons.school_rounded, 'School Information', const SchoolAnalyticsScreen()),
-                _buildListTile(context, Icons.settings_suggest_rounded, 'Academic Settings', const SystemSettingsScreen()),
-                _buildListTile(context, Icons.calendar_month_rounded, 'Timetable Manager', const TimetableManagerScreen()),
+                _buildSectionTitle(AppLocalizations.of(context)!.general),
+                _buildListTile(context, Icons.school_rounded, AppLocalizations.of(context)!.schoolInformation, const SchoolAnalyticsScreen()),
+                _buildListTile(context, Icons.settings_suggest_rounded, AppLocalizations.of(context)!.academicSettings, const SystemSettingsScreen()),
+                _buildListTile(context, Icons.calendar_month_rounded, AppLocalizations.of(context)!.timetableManager, const TimetableManagerScreen()),
                 
                 const SizedBox(height: 24),
-                _buildSectionTitle('User Management'),
-                _buildListTile(context, Icons.admin_panel_settings_rounded, 'Manage Users', const UserManagementScreen()),
-                _buildListTile(context, Icons.security_rounded, 'Roles & Permissions', const PermissionsScreen()),
+                _buildSectionTitle(AppLocalizations.of(context)!.userManagement),
+                _buildListTile(context, Icons.admin_panel_settings_rounded, AppLocalizations.of(context)!.manageUsers, const UserManagementScreen()),
+                _buildListTile(context, Icons.security_rounded, AppLocalizations.of(context)!.rolesPermissions, const PermissionsScreen()),
                 
                 const SizedBox(height: 24),
-                _buildSectionTitle('System & Reports'),
-                _buildListTile(context, Icons.analytics_rounded, 'School Reports', const ReportsScreen()),
-                _buildListTile(context, Icons.storage_rounded, 'Data Management', const DataManagementScreen()),
+                _buildSectionTitle(AppLocalizations.of(context)!.systemReports),
+                _buildListTile(context, Icons.analytics_rounded, AppLocalizations.of(context)!.schoolReports, const ReportsScreen()),
+                _buildListTile(context, Icons.storage_rounded, AppLocalizations.of(context)!.dataManagement, const DataManagementScreen()),
                 
                 const SizedBox(height: 32),
                 _buildLogoutTile(context),
@@ -64,7 +65,7 @@ class AdminProfileView extends StatelessWidget {
         ),
         child: Column(
           children: [
-            const Text('Profile', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(AppLocalizations.of(context)!.profileCenter, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 32),
             Row(
               children: [
@@ -96,7 +97,7 @@ class AdminProfileView extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                           decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.blueAccent.withOpacity(0.3))),
-                          child: const Text('Edit Profile', style: TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w600)),
+                          child: Text(AppLocalizations.of(context)!.editProfile, style: const TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ],
@@ -141,7 +142,7 @@ class AdminProfileView extends StatelessWidget {
           children: [
             Icon(Icons.logout_rounded, color: Colors.red, size: 20),
             SizedBox(width: 12),
-            Text('Logout Command Center', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(AppLocalizations.of(context)!.logoutCommandCenter, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15)),
           ],
         ),
       ),
