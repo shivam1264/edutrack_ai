@@ -1,5 +1,6 @@
 import os
 import sys
+import ast
 
 # Force pure-Python implementation for Protobuf
 os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
@@ -74,6 +75,24 @@ def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistan
         print(f"❌ Groq Error: {e}")
         return f"AI Error: {str(e)}"
 
+
+def clean_ai_text(text):
+    cleaned = (text or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.replace("```json", "", 1).replace("```", "").strip()
+    return cleaned
+
+
+def parse_ai_json(text):
+    cleaned = clean_ai_text(text)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        parsed = ast.literal_eval(cleaned)
+        if isinstance(parsed, (dict, list)):
+            return parsed
+        raise
+
 if GROQ_API_KEY:
     print(f"✅ Groq configured with key: {GROQ_API_KEY[:8]}...")
 else:
@@ -114,6 +133,85 @@ def test_ai():
     except Exception as e:
         print(f"    [AI Error] {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/general-chat', methods=['POST'])
+def general_chat():
+    data = request.get_json(silent=True) or {}
+    message = data.get('message', '').strip()
+    context = data.get('context', 'student')
+
+    if not message:
+        return jsonify({'error': 'message is required'}), 400
+
+    system_instruction = (
+        f"You are EduTrack AI. Current role: {context}. "
+        "Reply in concise, practical language. Keep answers under 4 sentences."
+    )
+
+    try:
+        response_text = generate_with_groq(message, system_instruction=system_instruction)
+        return jsonify({'answer': response_text})
+    except Exception as e:
+        return jsonify({'answer': f'Connectivity issue: {str(e)}'})
+
+
+@app.route('/analyze-performance', methods=['POST'])
+def analyze_performance():
+    data = request.get_json(silent=True) or {}
+    task = data.get('task', 'analysis')
+
+    if task == 'wellness_analysis':
+        system_instruction = (
+            "You are an empathetic school counselor. Return ONLY raw JSON with keys: "
+            "risk_level, insights, recommendations, summary. "
+            "insights and recommendations must be arrays of short strings."
+        )
+    elif task == 'generate_study_plan':
+        system_instruction = (
+            "You are an academic planner. Return ONLY raw JSON with keys: "
+            "summary, insights, recommendations, risk_level. "
+            "Use recommendations as concrete study-plan steps."
+        )
+    else:
+        system_instruction = (
+            "You are a senior academic analyst. Return ONLY raw JSON with keys: "
+            "summary, insights, recommendations, risk_level."
+        )
+
+    try:
+        response_text = generate_with_groq(
+            json.dumps(data, ensure_ascii=False),
+            system_instruction=system_instruction,
+        )
+        parsed = parse_ai_json(response_text)
+        if task == 'wellness_analysis' and isinstance(parsed, dict):
+            insights = parsed.get('insights', [])
+            recommendations = parsed.get('recommendations', [])
+            parsed['insights'] = [
+                item if isinstance(item, dict) else {'title': str(item), 'sub': ''}
+                for item in insights
+            ]
+            parsed['recommendations'] = [
+                item if isinstance(item, dict) else {'title': str(item), 'sub': ''}
+                for item in recommendations
+            ]
+        if isinstance(parsed, dict):
+            return jsonify(parsed)
+        return jsonify({
+            'summary': 'Analysis completed.',
+            'insights': parsed if isinstance(parsed, list) else [],
+            'recommendations': [],
+            'risk_level': 'Low',
+        })
+    except Exception as e:
+        return jsonify({
+            'summary': 'Analysis is currently unavailable.',
+            'insights': ['Try again after the AI service recovers.'],
+            'recommendations': ['Review attendance and assignment completion manually.'],
+            'risk_level': 'Low',
+            'error': str(e),
+        })
 
 # ─── Grade Prediction (ML) ────────────────────────────────────────────────────
 @app.route('/predict', methods=['POST'])
@@ -288,9 +386,7 @@ def generate_quiz():
     
     try:
         response_text = generate_with_groq(prompt, system_instruction=system_instruction)
-        # Strip potential markdown code blocks
-        clean_json = response_text.replace('```json', '').replace('```', '').strip()
-        return jsonify(json.loads(clean_json))
+        return jsonify(parse_ai_json(response_text))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -336,14 +432,14 @@ def generate_flashcards():
     system_instruction = (
         "You are an AI Study Assistant. Your task is to summarize the provided academic content "
         "into short, highly effective Flashcards (Question on Front, Answer on Back). "
-        "Return the output STRICTLY as a JSON list of objects: [{'q': 'Short Question?', 'a': 'Short Answer'}]. "
+        'Return the output STRICTLY as a JSON list of objects using double quotes, for example: '
+        '[{"q": "Short Question?", "a": "Short Answer"}]. '
         "Generate 5 to 10 flashcards maximum. Keep answers concise."
     )
     
     try:
         response_text = generate_with_groq(f"Content:\n{content}", system_instruction=system_instruction)
-        clean_json = response_text.replace('```json', '').replace('```', '').strip()
-        flashcards = json.loads(clean_json)
+        flashcards = parse_ai_json(response_text)
         return jsonify({'flashcards': flashcards})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -396,8 +492,7 @@ def generate_mindmap():
     
     try:
         response_text = generate_with_groq(f"Content:\n{content}", system_instruction=system_instruction)
-        clean_json = response_text.replace('```json', '').replace('```', '').strip()
-        mindmap_data = json.loads(clean_json)
+        mindmap_data = parse_ai_json(response_text)
         return jsonify({'mindmap': mindmap_data})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -420,8 +515,7 @@ def check_originality():
     
     try:
         response_text = generate_with_groq(f"Content: {content}", system_instruction=system_instruction)
-        clean_json = response_text.replace('```json', '').replace('```', '').strip()
-        return jsonify(json.loads(clean_json))
+        return jsonify(parse_ai_json(response_text))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -444,8 +538,7 @@ def detect_burnout():
     
     try:
         response_text = generate_with_groq(prompt, system_instruction=system_instruction)
-        clean_json = response_text.replace('```json', '').replace('```', '').strip()
-        return jsonify(json.loads(clean_json))
+        return jsonify(parse_ai_json(response_text))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -473,27 +566,15 @@ def ai_viva():
         role = "Student: " if msg['role'] == 'user' else "Examiner: "
         formatted_prompt += f"{role}{msg['text']}\n"
     
-    contents_to_generate = []
-    
     if audio_b64:
-        # User spoke audio
-        audio_bytes = base64.b64decode(audio_b64)
-        contents_to_generate.append({
-            "mime_type": "audio/m4a", # Standard flutter recorder format
-            "data": audio_bytes
-        })
-        formatted_prompt += f"\nStudent: [Sent Audio Answer]\nExaminer: "
+        formatted_prompt += "\nStudent: [Audio answer received but transcription is unavailable in this build. Ask the student to type the answer.]\nExaminer: "
     else:
-        # Text based
         formatted_prompt += f"\nStudent: {message}\nExaminer: "
-        
-    contents_to_generate.append(formatted_prompt)
     
     try:
         response_text = generate_with_groq(
             formatted_prompt, 
             system_instruction=system_instruction,
-            image_data=audio_b64 if audio_b64 else None # Groq doesn't support raw audio yet, but we'll try vision if it was an image-based question
         )
         reply_text = response_text.strip()
         
@@ -552,9 +633,7 @@ def get_unified_wellness():
     
     try:
         response_text = generate_with_groq(prompt, system_instruction=system_instruction)
-        # Clean potential markdown
-        clean_json = response_text.replace('```json', '').replace('```', '').strip()
-        result = json.loads(clean_json)
+        result = parse_ai_json(response_text)
         return jsonify(result)
     except Exception as e:
         print(f"    [UNIFIED AI ERROR] {str(e)}")
@@ -621,8 +700,7 @@ def analyze_leave_doc():
             system_instruction=system_instruction,
             image_data=image_data
         )
-        clean_json = response_text.replace('```json', '').replace('```', '').strip()
-        return jsonify(json.loads(clean_json))
+        return jsonify(parse_ai_json(response_text))
     except Exception as e:
         print(f"    [LEAVE AI ERROR] {str(e)}")
         return jsonify({'error': str(e)}), 500

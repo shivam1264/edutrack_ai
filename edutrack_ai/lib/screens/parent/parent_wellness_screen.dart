@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/analytics_provider.dart';
 import '../../widgets/premium_card.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class ParentWellnessScreen extends StatelessWidget {
   final String? studentId;
@@ -13,10 +12,14 @@ class ParentWellnessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final aiData = context.watch<AnalyticsProvider>().aiPrediction;
     final riskLevel = aiData?['risk_level'] ?? 'Low';
-    final insights = aiData?['insights'] as List? ?? [
+    final insights = (aiData?['insights'] as List? ?? [
       {'title': 'Great Progress', 'sub': 'Continue regular reading habits.', 'icon': Icons.auto_awesome_rounded, 'color': Colors.green},
       {'title': 'Balance Screen Time', 'sub': 'Monitor recreational usage.', 'icon': Icons.timer_rounded, 'color': Colors.orange},
-    ];
+    ]).map(_normalizeInsight).toList();
+    final recommendations = (aiData?['recommendations'] as List? ?? [
+      {'title': 'Read 20 mins daily', 'sub': 'Improve focus & comprehension', 'icon': Icons.menu_book_rounded},
+      {'title': 'Practice Math', 'sub': '15 mins of daily practice', 'icon': Icons.calculate_rounded},
+    ]).map(_normalizeInsight).toList();
 
     final body = SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -36,10 +39,7 @@ class ParentWellnessScreen extends StatelessWidget {
           const SizedBox(height: 32),
           const Text('Personalized Recommendations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
           const SizedBox(height: 16),
-          ...(aiData?['recommendations'] as List? ?? [
-            {'title': 'Read 20 mins daily', 'sub': 'Improve focus & comprehension', 'icon': Icons.menu_book_rounded},
-            {'title': 'Practice Math', 'sub': '15 mins of daily practice', 'icon': Icons.calculate_rounded},
-          ]).map((rec) => _recommendationTile(
+          ...recommendations.map((rec) => _recommendationTile(
             rec['title'] ?? 'Action',
             rec['sub'] ?? '',
             Icons.auto_awesome_rounded,
@@ -133,5 +133,20 @@ class ParentWellnessScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Map<String, String> _normalizeInsight(dynamic value) {
+    if (value is Map) {
+      return {
+        'title': value['title']?.toString() ?? 'Insight',
+        'sub': value['sub']?.toString() ?? value['message']?.toString() ?? '',
+      };
+    }
+
+    final text = value?.toString() ?? 'Insight';
+    return {
+      'title': text,
+      'sub': '',
+    };
   }
 }

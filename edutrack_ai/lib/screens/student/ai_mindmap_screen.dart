@@ -34,11 +34,12 @@ class _AIMindMapScreenState extends State<AIMindMapScreen> {
   Future<void> _generateFromUrl(String url) async {
     _startLoading();
     try {
-      final analysis = await AIService().generateMindMap("Analyze this document: $url");
-      setState(() {
-        _mindMapData = analysis['mindmap'];
-        _isLoading = false;
-      });
+      final response = await http.post(
+        Uri.parse(Config.endpoint('/generate-mindmap')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'file_url': url}),
+      ).timeout(const Duration(seconds: 90));
+      _handleResponse(response.statusCode, response.body);
     } catch (e) {
       _showError(msg: 'Error analyzing document.');
     }

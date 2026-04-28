@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/user_model.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
+import 'student_teacher_chat_screen.dart';
 
 class MyBatchScreen extends StatelessWidget {
   const MyBatchScreen({super.key});
@@ -84,7 +85,7 @@ class MyBatchScreen extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
-                    const Text('Academic Year 2024-25', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                    Text(_academicYearLabel(), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                   ],
                 ),
               ),
@@ -127,7 +128,15 @@ class MyBatchScreen extends StatelessWidget {
                   trailing: IconButton(
                     icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20, color: AppTheme.primary),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Chat with ${teacher.name} coming soon!')));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StudentTeacherChatScreen(
+                            teacherId: teacher.uid,
+                            teacherName: teacher.name,
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -178,5 +187,12 @@ class MyBatchScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _academicYearLabel() {
+    final now = DateTime.now();
+    final startYear = now.month >= 4 ? now.year : now.year - 1;
+    final endYear = (startYear + 1).toString().substring(2);
+    return 'Academic Year $startYear-$endYear';
   }
 }

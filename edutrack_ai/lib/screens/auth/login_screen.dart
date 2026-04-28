@@ -305,12 +305,29 @@ class _LoginScreenState extends State<LoginScreen>
               child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
+              final email = emailCtrl.text.trim();
+              if (email.isEmpty || !email.contains('@')) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Enter a valid email first.')),
+                  );
+                }
+                return;
+              }
+
               Navigator.pop(ctx);
-              // TODO: call authService.sendPasswordResetEmail
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Password reset email sent!')),
-              );
+              try {
+                await context.read<AuthProvider>().sendPasswordResetEmail(email);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Password reset email sent to $email')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  _showError(e.toString());
+                }
+              }
             },
             child: const Text('Send Reset Link'),
           ),

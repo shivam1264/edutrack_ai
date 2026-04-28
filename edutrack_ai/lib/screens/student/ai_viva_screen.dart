@@ -1,9 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:async';
-import '../../utils/config.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/config.dart';
 
 class AIVivaScreen extends StatefulWidget {
   const AIVivaScreen({super.key});
@@ -15,55 +15,73 @@ class AIVivaScreen extends StatefulWidget {
 class _AIVivaScreenState extends State<AIVivaScreen> {
   final TextEditingController _msgController = TextEditingController();
   final List<Map<String, String>> _messages = [];
-  bool _isLoadingReply = false;
   final ScrollController _scrollController = ScrollController();
+  bool _isLoadingReply = false;
 
   @override
   void initState() {
     super.initState();
-    _messages.add({"role": "assistant", "text": "Hello! I am your AI Examiner. We are directly connected to the Backend now. Use your phone keyboard's Mic 🎤 to speak your answers!"});
+    _messages.add({
+      'role': 'assistant',
+      'text': 'Hello! I am your AI Examiner. Type your answers below and I will evaluate them one by one.'
+    });
+  }
+
+  @override
+  void dispose() {
+    _msgController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _sendMessage(String message) async {
     setState(() {
-      _messages.add({"role": "user", "text": message});
+      _messages.add({'role': 'user', 'text': message});
       _isLoadingReply = true;
     });
     _msgController.clear();
     _scrollToBottom();
 
     try {
-      final response = await http.post(
-        Uri.parse(Config.endpoint('/ai-viva')),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'message': message,
-          'history': _messages.map((m) => {'role': m['role'], 'text': m['text']}).toList(),
-          'topic': 'General Knowledge',
-          'use_tts': false,
-          'audio_base64': ''
-        }),
-      ).timeout(const Duration(seconds: 40));
+      final response = await http
+          .post(
+            Uri.parse(Config.endpoint('/ai-viva')),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'message': message,
+              'history': _messages.map((m) => {'role': m['role'], 'text': m['text']}).toList(),
+              'topic': 'General Knowledge',
+              'use_tts': false,
+              'audio_base64': '',
+            }),
+          )
+          .timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
         final reply = jsonDecode(response.body)['reply'] ?? 'I cannot evaluate that.';
         setState(() {
-          _messages.add({"role": "assistant", "text": reply});
+          _messages.add({'role': 'assistant', 'text': reply.toString()});
           _isLoadingReply = false;
         });
-        _scrollToBottom();
+      } else {
+        setState(() {
+          _messages.add({'role': 'assistant', 'text': 'The examiner is unavailable right now. Please try again.'});
+          _isLoadingReply = false;
+        });
       }
-    } catch (e) {
+    } on TimeoutException {
       setState(() {
+        _messages.add({'role': 'assistant', 'text': 'AI Examiner is taking too long to evaluate. Check connection.'});
         _isLoadingReply = false;
-        String errorMsg = "Network issue. Please try again.";
-        if (e is TimeoutException) {
-          errorMsg = "AI Examiner is taking too long to evaluate. Check connection.";
-        }
-        _messages.add({"role": "assistant", "text": errorMsg});
       });
-      _scrollToBottom();
+    } catch (_) {
+      setState(() {
+        _messages.add({'role': 'assistant', 'text': 'Network issue. Please try again.'});
+        _isLoadingReply = false;
+      });
     }
+
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -105,14 +123,13 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Dr. Llama (AI Examiner)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
-                      Text('Use keyboard mic to answer!', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                      Text('Type your answer to continue', style: TextStyle(color: Colors.black54, fontSize: 13)),
                     ],
                   ),
                 )
               ],
             ),
           ),
-          
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -140,13 +157,11 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
               },
             ),
           ),
-          
           if (_isLoadingReply)
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: CircularProgressIndicator(color: Colors.teal),
             ),
-            
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             decoration: const BoxDecoration(
@@ -160,7 +175,7 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
                     child: TextField(
                       controller: _msgController,
                       decoration: InputDecoration(
-                        hintText: 'Type answer or use Keyboard Mic...',
+                        hintText: 'Type your answer...',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
                         filled: true,
                         fillColor: Colors.grey.shade100,
@@ -178,10 +193,10 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
                         _sendMessage(_msgController.text.trim());
                       }
                     },
-                    child: CircleAvatar(
+                    child: const CircleAvatar(
                       radius: 25,
                       backgroundColor: Colors.teal,
-                      child: const Icon(Icons.send_rounded, color: Colors.white),
+                      child: Icon(Icons.send_rounded, color: Colors.white),
                     ),
                   ),
                 ],

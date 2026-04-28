@@ -12,9 +12,6 @@ class AIService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // API Keys - Strictly using Groq (Llama)
-  static const String _groqKey = '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'; 
-
   Future<List<Map<String, dynamic>>> generateQuiz({
     required String topic,
     required String subject,
@@ -22,73 +19,76 @@ class AIService {
     required String difficulty,
     required String type,
   }) async {
-    final systemInstruction = """
-You are an expert Teacher. Generate a high-quality quiz in valid JSON format.
-The response MUST be ONLY a JSON list of objects.
-
-Structure for 'MCQ' (type: "mcq"):
-[{"text": "Question?", "options": ["A", "B", "C", "D"], "correctOption": 0, "marks": 1, "type": "mcq"}]
-
-Structure for 'True/False' (type: "mcq"):
-[{"text": "Question?", "options": ["True", "False"], "correctOption": 0, "marks": 1, "type": "mcq"}]
-
-Structure for 'Short Answer' (type: "short"):
-[{"text": "Question?", "options": [], "correctOption": -1, "marks": 2, "type": "short"}]
-
-Difficulty: $difficulty. Topic: $topic. Subject: $subject.
-""";
-    return await _exhaustOptions(systemInstruction, "Generate $count questions of type $type.");
+    try {
+      final data = await _postBackendJson(
+        '/generate-quiz',
+        body: {
+          'topic': topic,
+          'subject': subject,
+          'count': count,
+          'difficulty': difficulty,
+          'type': type,
+        },
+      );
+      return _readList(data, preferredKeys: const ['questions']);
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> generateFlashcards(String content) async {
-    const systemInstruction = """
-You are an AI Study Assistant. Summarize content into Flashcards.
-Return STRICTLY as a JSON list: [{"q": "Question?", "a": "Answer"}].
-""";
-    return await _exhaustOptions(systemInstruction, "Content:\n$content");
+    try {
+      final data = await _postBackendJson(
+        '/generate-flashcards',
+        body: {'content': content},
+      );
+      return _readList(data, preferredKeys: const ['flashcards']);
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<Map<String, dynamic>> generateMindMap(String content) async {
-    const systemInstruction = """
-You are an AI Visualizer. Convert content into a hierarchical Mind Map structure.
-Return STRICTLY as a JSON object: {"mindmap": {"title": "Main Topic", "children": [{"title": "Subtopic 1", "children": [...]}]}}.
-""";
     try {
-      final res = await _requestGroq(systemInstruction, content);
-      return res.isNotEmpty ? res[0] : {'mindmap': {'title': 'Analysis Failed', 'children': []}};
-    } catch (e) {
+      final data = await _postBackendJson(
+        '/generate-mindmap',
+        body: {'content': content},
+      );
+      if (data['mindmap'] is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(data);
+      }
+      if (data['mindmap'] is Map) {
+        return {
+          'mindmap': Map<String, dynamic>.from(data['mindmap'] as Map),
+        };
+      }
+      return {'mindmap': {'title': 'Analysis Failed', 'children': []}};
+    } catch (_) {
       return {'mindmap': {'title': 'Error', 'children': []}};
     }
   }
 
   Future<Map<String, dynamic>> analyzePerformance(Map<String, dynamic> data) async {
-    const systemInstruction = """
-You are a Senior Academic Analyst. Analyze the provided class/student data.
-Return STRICTLY as a JSON object: {
-  "summary": "overall text",
-  "insights": ["insight 1", "insight 2"],
-  "recommendations": ["rec 1", "rec 2"],
-  "risk_level": "Low/Medium/High"
-}
-""";
     try {
-      final res = await _requestGroq(systemInstruction, jsonEncode(data));
-      return res.isNotEmpty ? res[0] : _getFallbackAnalysis();
-    } catch (e) {
+      return await _postBackendJson(
+        '/analyze-performance',
+        body: data,
+      );
+    } catch (_) {
       return _getFallbackAnalysis();
     }
   }
 
   Future<String> generateMonthlyReport(Map<String, dynamic> data) async {
-    const systemInstruction = """
-You are a Professional Academic Counselor. Generate a formal, detailed monthly progress report for a student.
-Include sections: Academic Summary, Consistency Protocol, and Strategic Advisory.
-Use a professional tone. Return as plain text.
-""";
     try {
-      return await _requestPlainGroq(systemInstruction, jsonEncode(data));
-    } catch (e) {
-      return "Unable to generate detailed report. Please review the dashboard metrics.";
+      final response = await _postBackendJson(
+        '/generate-monthly-report',
+        body: data,
+      );
+      return response['report']?.toString() ??
+          'Unable to generate detailed report. Please review the dashboard metrics.';
+    } catch (_) {
+      return 'Unable to generate detailed report. Please review the dashboard metrics.';
     }
   }
 
@@ -99,36 +99,15 @@ Use a professional tone. Return as plain text.
     if (isParentChat) {
       try {
         studentContext = await _buildAuthorizedParentStudentContext(studentId);
-      } catch (e) {
+      } catch (_) {
         return "I couldn't load the linked child data right now. Please try again in a moment.";
       }
 
       if (studentContext?['access'] != 'granted') {
         final reason = studentContext?['reason'] ?? 'Child access could not be verified.';
-        return "$reason Please contact the school admin if this looks incorrect.";
+        return '$reason Please contact the school admin if this looks incorrect.';
       }
     }
-
-    final systemInstruction = """
-You are an AI Education Assistant for EduTrack AI. Current Role: $context.
-Keep responses concise (max 3-4 sentences).
-${isParentChat ? """
-For parent chats, answer only about the authorized child data provided below.
-Do not reveal any other student's data. Do not invent marks, attendance, risk levels, deadlines, or teacher feedback.
-If the parent asks for unavailable data, say that it is not available in EduTrack yet and suggest where they can check in the app.
-Use the child's name when available and explain in simple parent-friendly language.
-""" : ""}
-""";
-
-    final userPrompt = studentContext == null
-        ? message
-        : """
-Authorized child data snapshot:
-${jsonEncode(_jsonSafe(studentContext))}
-
-Parent question:
-$message
-""";
 
     try {
       if (isParentChat && studentContext != null) {
@@ -137,8 +116,18 @@ $message
           studentContext: studentContext,
         );
       }
-      return await _requestPlainGroq(systemInstruction, userPrompt);
-    } catch (e) {
+
+      final response = await _postBackendJson(
+        '/general-chat',
+        body: {
+          'message': message,
+          'context': context,
+        },
+      );
+
+      return response['answer']?.toString() ??
+          "I'm processing your request. Please ask specifically about academic goals.";
+    } catch (_) {
       return "I'm processing your request. Please ask specifically about academic goals.";
     }
   }
@@ -417,16 +406,6 @@ $message
     return value;
   }
 
-  // Helper for JSON requests
-  Future<List<Map<String, dynamic>>> _exhaustOptions(String system, String user) async {
-    try {
-      return await _requestGroq(system, user);
-    } catch (e) {
-      print('Groq JSON Error: $e');
-      return [];
-    }
-  }
-
   Future<String> _requestParentChatBackend({
     required String query,
     required Map<String, dynamic> studentContext,
@@ -454,89 +433,57 @@ $message
     throw Exception('Parent chat backend error: ${response.statusCode}');
   }
 
-  Future<List<Map<String, dynamic>>> _requestGroq(String system, String user) async {
-    final response = await http.post(
-      Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_groqKey',
-      },
-      body: jsonEncode({
-        "model": "llama-3.3-70b-versatile",
-        "messages": [
-          {"role": "system", "content": system},
-          {"role": "user", "content": user}
-        ],
-        "temperature": 0.5,
-        // Removed response_format: json_object to allow list returns reliably
-      }),
-    ).timeout(const Duration(seconds: 30));
+  Future<Map<String, dynamic>> _postBackendJson(
+    String path, {
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse(Config.endpoint(path)),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 45));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      String text = data['choices'][0]['message']['content'];
-      
-      // Clean JSON string from potential markdown wrappers
-      final cleanedText = _cleanJson(text);
-      
-      try {
-        final decoded = jsonDecode(cleanedText);
-        if (decoded is List) return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-        if (decoded is Map && (decoded.containsKey('questions') || decoded.containsKey('flashcards'))) {
-           final list = (decoded['questions'] ?? decoded['flashcards']) as List;
-           return list.map((e) => Map<String, dynamic>.from(e)).toList();
-        }
-        return [Map<String, dynamic>.from(decoded)];
-      } catch (e) {
-        print('❌ AIService JSON Parse Error: $e\nOriginal Text: $text');
-        rethrow;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Backend error ${response.statusCode}: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    if (decoded is List) {
+      return {'items': decoded};
+    }
+    throw Exception('Unexpected backend response format');
+  }
+
+  List<Map<String, dynamic>> _readList(
+    Map<String, dynamic> data, {
+    List<String> preferredKeys = const [],
+  }) {
+    for (final key in preferredKeys) {
+      final value = data[key];
+      if (value is List) {
+        return value.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
     }
-    print('❌ Groq API Error: ${response.statusCode} - ${response.body}');
-    throw Exception('Groq Error: ${response.statusCode}');
-  }
 
-  String _cleanJson(String text) {
-    String cleaned = text.trim();
-    if (cleaned.startsWith('```')) {
-      // Remove opening block (e.g., ```json or just ```)
-      cleaned = cleaned.replaceFirst(RegExp(r'^```[a-z]*\n?'), '');
-      // Remove closing block
-      cleaned = cleaned.replaceFirst(RegExp(r'\n?```$'), '');
+    final items = data['items'];
+    if (items is List) {
+      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
-    return cleaned.trim();
-  }
 
-  Future<String> _requestPlainGroq(String system, String user) async {
-    final response = await http.post(
-      Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_groqKey',
-      },
-      body: jsonEncode({
-        "model": "llama-3.3-70b-versatile",
-        "messages": [
-          {"role": "system", "content": system},
-          {"role": "user", "content": user}
-        ],
-        "temperature": 0.6,
-      }),
-    ).timeout(const Duration(seconds: 30));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['choices'][0]['message']['content'];
-    }
-    throw Exception('Groq Error');
+    return [];
   }
 
   Map<String, dynamic> _getFallbackAnalysis() {
     return {
-      "summary": "Analysis is currently unavailable, but student engagement remains steady.",
-      "insights": ["Maintain regular attendance", "Complete pending assignments"],
-      "recommendations": ["Review recent quiz scores"],
-      "risk_level": "Low"
+      'summary': 'Analysis is currently unavailable, but student engagement remains steady.',
+      'insights': ['Maintain regular attendance', 'Complete pending assignments'],
+      'recommendations': ['Review recent quiz scores'],
+      'risk_level': 'Low'
     };
   }
 }
