@@ -207,24 +207,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                 title: Text(data['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0F172A))),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 4.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isActive ? "ACTIVE" : "SUSPENDED",
-                          style: TextStyle(color: isActive ? Colors.green : Colors.red, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 0.5),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                          child: Text(doc.id, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), overflow: TextOverflow.ellipsis)),
-                      ),
-                    ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isActive ? "ACTIVE" : "SUSPENDED",
+                      style: TextStyle(color: isActive ? Colors.green : Colors.red, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 0.5),
+                    ),
                   ),
                 ),
                 trailing: Row(
