@@ -98,6 +98,19 @@ class AssignmentService {
     String? note,
     File? file,
   }) async {
+    // Check if student already has a submission
+    final existingSubmission = await getStudentSubmission(
+      assignmentId: assignmentId,
+      studentId: studentId,
+    );
+
+    // If submission exists and resubmission not allowed, throw error
+    if (existingSubmission != null && 
+        existingSubmission.status != AssignmentStatus.pending &&
+        !existingSubmission.resubmissionAllowed) {
+      throw Exception('Assignment already submitted. Wait for teacher permission to resubmit.');
+    }
+
     String? fileUrl;
     if (file != null) {
       fileUrl = await uploadFile(
@@ -106,6 +119,33 @@ class AssignmentService {
       );
     }
 
+    // If resubmission, update existing submission
+    if (existingSubmission != null && existingSubmission.resubmissionAllowed) {
+      final updates = {
+        'content': content ?? note,
+        if (fileUrl != null) 'file_url': fileUrl,
+        'submitted_at': Timestamp.fromDate(DateTime.now()),
+        'status': AssignmentStatus.submitted.name,
+        'resubmission_allowed': false,  // Reset permission after resubmission
+        'resubmission_count': existingSubmission.resubmissionCount + 1,
+      };
+      
+      await _db.collection('submissions').doc(existingSubmission.id).update(updates);
+      
+      return SubmissionModel(
+        id: existingSubmission.id,
+        assignmentId: assignmentId,
+        studentId: studentId,
+        content: content ?? note,
+        fileUrl: fileUrl ?? existingSubmission.fileUrl,
+        submittedAt: DateTime.now(),
+        status: AssignmentStatus.submitted,
+        resubmissionAllowed: false,
+        resubmissionCount: existingSubmission.resubmissionCount + 1,
+      );
+    }
+
+    // New submission
     final id = _uuid.v4();
     final model = SubmissionModel(
       id: id,
@@ -115,10 +155,29 @@ class AssignmentService {
       fileUrl: fileUrl,
       submittedAt: DateTime.now(),
       status: AssignmentStatus.submitted,
+      resubmissionCount: 0,
     );
 
     await _db.collection('submissions').doc(id).set(model.toMap());
     return model;
+  }
+
+  // ─── Allow Resubmission (Teacher only) ─────────────────────────────────────
+  Future<void> allowResubmission(String submissionId) async {
+    await _db.collection('submissions').doc(submissionId).update({
+      'resubmission_allowed': true,
+    });
+  }
+
+  // ─── Save AI Scan Result ──────────────────────────────────────────────────
+  Future<void> saveAIScanResult({
+    required String submissionId,
+    required Map<String, dynamic> result,
+  }) async {
+    await _db.collection('submissions').doc(submissionId).update({
+      'ai_scan_result': result,
+      'ai_scan_timestamp': Timestamp.fromDate(DateTime.now()),
+    });
   }
 
   // ─── Get Submissions for Assignment ───────────────────────────────────────────

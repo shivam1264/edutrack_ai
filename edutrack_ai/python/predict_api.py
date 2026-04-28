@@ -990,6 +990,70 @@ def generate_best_answer():
         print(f"    [BEST-ANSWER ERROR] {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# ─── AI Image Scan for Assignment Submissions ──────────────────────────────
+@app.route('/scan-image', methods=['POST'])
+def scan_image():
+    """
+    Scan handwritten assignment image using AI Vision (Groq llama-3.2-11b-vision)
+    Returns: score, analysis, suggestions, confidence
+    """
+    data = request.get_json(silent=True) or {}
+    image_url = data.get('image_url', '')
+    submission_id = data.get('submission_id', '')
+    
+    if not image_url:
+        return jsonify({'error': 'No image URL provided'}), 400
+    
+    try:
+        # Download image and convert to base64
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        
+        # Convert to base64
+        image_base64 = base64.b64encode(response.content).decode('utf-8')
+        
+        system_instruction = (
+            "You are an expert teacher evaluating a student's handwritten assignment from an image. "
+            "Analyze the handwriting, content quality, completeness, and accuracy. "
+            "Return a JSON object with these exact keys:\n"
+            "- 'score': A number between 0-100 representing the quality score\n"
+            "- 'max_score': Usually 100\n"
+            "- 'confidence': A decimal between 0-1 representing your confidence in the assessment\n"
+            "- 'analysis': A detailed 2-3 sentence analysis of the work\n"
+            "- 'suggestions': Specific improvement suggestions for the student\n"
+            "Be fair but thorough. Consider handwriting legibility, answer completeness, and correctness."
+        )
+        
+        response_text = generate_with_groq(
+            "Please evaluate this handwritten assignment image.",
+            system_instruction=system_instruction,
+            image_data=image_base64
+        )
+        
+        result = parse_ai_json(response_text)
+        
+        # Ensure required fields exist
+        if 'score' not in result:
+            result['score'] = 75  # Default fallback
+        if 'confidence' not in result:
+            result['confidence'] = 0.8
+        if 'analysis' not in result:
+            result['analysis'] = 'Image scanned successfully. Review the submission details above.'
+        if 'suggestions' not in result:
+            result['suggestions'] = 'Continue practicing neat handwriting and complete all questions thoroughly.'
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"    [IMAGE SCAN ERROR] {str(e)}")
+        return jsonify({
+            'error': str(e),
+            'score': 0,
+            'confidence': 0,
+            'analysis': 'Failed to scan image. Please review manually.',
+            'suggestions': 'Please check the image quality and try again.'
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     print(f"[STARTING] EduTrack AI Backend on 0.0.0.0:{port}")

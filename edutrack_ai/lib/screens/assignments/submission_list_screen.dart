@@ -168,12 +168,108 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
       ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
-        setState(() => _aiResult = jsonDecode(response.body));
+        final result = jsonDecode(response.body);
+        setState(() => _aiResult = result);
+        // Save to Firestore
+        await AssignmentService().saveAIScanResult(
+          submissionId: widget.submission.id,
+          result: result,
+        );
       }
     } catch (e) {
       debugPrint('Originality Check Error: $e');
     }
     setState(() => _isChecking = false);
+  }
+
+  Future<void> _scanImageWithAI() async {
+    if (widget.submission.fileUrl == null) return;
+    
+    setState(() => _isChecking = true);
+    try {
+      final response = await http.post(
+        Uri.parse(Config.endpoint('/scan-image')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'image_url': widget.submission.fileUrl,
+          'submission_id': widget.submission.id,
+        }),
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        setState(() => _aiResult = result);
+        // Save to Firestore
+        await AssignmentService().saveAIScanResult(
+          submissionId: widget.submission.id,
+          result: result,
+        );
+      }
+    } catch (e) {
+      debugPrint('Image Scan Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image scan failed: $e'), backgroundColor: Colors.red),
+      );
+    }
+    setState(() => _isChecking = false);
+  }
+
+  Future<void> _allowResubmission() async {
+    try {
+      await AssignmentService().allowResubmission(widget.submission.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Student can now resubmit this assignment'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        widget.onGraded();  // Refresh the list
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _showResubmissionDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.refresh, color: AppTheme.secondary),
+            SizedBox(width: 12),
+            Text('Allow Resubmission?', style: TextStyle(fontWeight: FontWeight.w900)),
+          ],
+        ),
+        content: const Text(
+          'This will allow the student to submit this assignment again. Use this when you want the student to improve their work.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _allowResubmission();
+            },
+            icon: const Icon(Icons.check),
+            label: const Text('Allow'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.secondary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _openFile() async {
@@ -358,32 +454,140 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
             style: const TextStyle(fontSize: 13, height: 1.5, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 20),
+          // AI Scan Buttons
+          if (_aiResult == null) ...[
+            Row(
+              children: [
+                // Text AI Scan
+                if (widget.submission.content != null && widget.submission.content!.isNotEmpty)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isChecking ? null : _checkOriginality,
+                      icon: _isChecking 
+                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) 
+                        : const Icon(Icons.text_snippet_rounded, size: 16),
+                      label: const Text('Scan Text', style: TextStyle(fontSize: 11)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.secondary,
+                        side: const BorderSide(color: AppTheme.secondary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                if (widget.submission.content != null && widget.submission.content!.isNotEmpty && 
+                    widget.submission.fileUrl != null)
+                  const SizedBox(width: 8),
+                // Image AI Scan
+                if (widget.submission.fileUrl != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isChecking ? null : _scanImageWithAI,
+                      icon: _isChecking 
+                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) 
+                        : const Icon(Icons.document_scanner_rounded, size: 16),
+                      label: const Text('Scan Image', style: TextStyle(fontSize: 11)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accent,
+                        side: const BorderSide(color: AppTheme.accent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (_aiResult != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  _buildRiskBadge(_aiResult!['ai_probability'] ?? _aiResult!['confidence']),
+                  const SizedBox(width: 8),
+                  if (_aiResult!['score'] != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Score: ${_aiResult!['score']}/${_aiResult!['max_score'] ?? widget.maxMarks}',
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => setState(() => _aiResult = null),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    tooltip: 'Rescan',
+                  ),
+                ],
+              ),
+            ),
+          
+          // Action Buttons Row
           Row(
             children: [
-              if (widget.submission.content != null && widget.submission.content!.isNotEmpty && _aiResult == null)
+              // Allow Resubmission (only if graded)
+              if (isGraded && !widget.submission.resubmissionAllowed)
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _isChecking ? null : _checkOriginality,
-                    icon: _isChecking ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.bolt_rounded, size: 16),
-                    label: const Text('AI Scan', style: TextStyle(fontSize: 12)),
+                    onPressed: _showResubmissionDialog,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Allow Resubmit', style: TextStyle(fontSize: 11)),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.secondary,
-                      side: const BorderSide(color: AppTheme.secondary),
+                      foregroundColor: AppTheme.warning,
+                      side: const BorderSide(color: AppTheme.warning),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ),
-              if (_aiResult != null)
-                 Padding(
-                   padding: const EdgeInsets.only(right: 8),
-                   child: _buildRiskBadge(_aiResult!['ai_probability']),
-                 ),
-              const SizedBox(width: 8),
+              if (isGraded && !widget.submission.resubmissionAllowed)
+                const SizedBox(width: 8),
+              // Resubmission pending badge
+              if (widget.submission.resubmissionAllowed)
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Resubmit Allowed',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (widget.submission.resubmissionAllowed)
+                const SizedBox(width: 8),
+              // Grade Button
               Expanded(
+                flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: _showGradeDialog,
                   icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
-                  label: Text(isGraded ? 'Re-Evaluate' : 'Grade Mission', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                  label: Text(
+                    isGraded ? 'Re-Evaluate' : 'Grade Mission', 
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.secondary,
                     foregroundColor: Colors.white,
@@ -394,12 +598,54 @@ class _SubmissionListItemState extends State<_SubmissionListItem> {
               ),
             ],
           ),
-          if (_aiResult != null) ...[
+          if (_aiResult != null && _aiResult!['analysis'] != null) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(12)),
-              child: Text('AI Insights: ${_aiResult!['analysis']}', style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontStyle: FontStyle.italic)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'AI Analysis:',
+                    style: TextStyle(
+                      fontSize: 11, 
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _aiResult!['analysis'], 
+                    style: const TextStyle(
+                      fontSize: 11, 
+                      color: AppTheme.textSecondary, 
+                      fontStyle: FontStyle.italic,
+                      height: 1.4,
+                    ),
+                  ),
+                  if (_aiResult!['suggestions'] != null) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Suggestions:',
+                      style: TextStyle(
+                        fontSize: 11, 
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.warning,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _aiResult!['suggestions'], 
+                      style: const TextStyle(
+                        fontSize: 11, 
+                        color: AppTheme.warning, 
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ],

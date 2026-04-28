@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_model.dart';
+import 'brain_dna_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -82,6 +83,11 @@ class AuthService {
           .collection('users')
           .doc(user.uid)
           .set(userModel.toMap());
+
+      // Initialize Learning DNA for students
+      if (parsedRole == UserRole.student && subjects != null && subjects.isNotEmpty) {
+        await BrainDNAService.instance.initializeDNA(user.uid, subjects);
+      }
 
       return userModel;
     } on FirebaseAuthException catch (e) {

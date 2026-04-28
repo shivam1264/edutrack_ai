@@ -69,6 +69,10 @@ class SubmissionModel {
   final double? marks;
   final String? feedback;
   final AssignmentStatus status;
+  final bool resubmissionAllowed;  // Teacher can allow resubmission
+  final int resubmissionCount;     // Track number of resubmissions
+  final Map<String, dynamic>? aiScanResult;  // AI scan results
+  final DateTime? aiScanTimestamp;  // When AI scan was performed
 
   SubmissionModel({
     required this.id,
@@ -80,6 +84,10 @@ class SubmissionModel {
     this.marks,
     this.feedback,
     required this.status,
+    this.resubmissionAllowed = false,
+    this.resubmissionCount = 0,
+    this.aiScanResult,
+    this.aiScanTimestamp,
   });
 
   factory SubmissionModel.fromMap(String id, Map<String, dynamic> map) {
@@ -94,6 +102,10 @@ class SubmissionModel {
       marks: (map['marks'] as num?)?.toDouble(),
       feedback: map['feedback'],
       status: _parseStatus(map['status']),
+      resubmissionAllowed: map['resubmission_allowed'] ?? false,
+      resubmissionCount: map['resubmission_count'] ?? 0,
+      aiScanResult: map['ai_scan_result'] as Map<String, dynamic>?,
+      aiScanTimestamp: (map['ai_scan_timestamp'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -107,7 +119,19 @@ class SubmissionModel {
       if (marks != null) 'marks': marks,
       if (feedback != null) 'feedback': feedback,
       'status': status.name,
+      'resubmission_allowed': resubmissionAllowed,
+      'resubmission_count': resubmissionCount,
+      if (aiScanResult != null) 'ai_scan_result': aiScanResult,
+      if (aiScanTimestamp != null) 'ai_scan_timestamp': Timestamp.fromDate(aiScanTimestamp!),
     };
+  }
+
+  bool get canResubmit {
+    // Can resubmit if:
+    // 1. Never submitted before (resubmissionCount == 0 and status != submitted/graded)
+    // 2. Teacher allowed resubmission (resubmissionAllowed == true)
+    if (resubmissionCount == 0 && status == AssignmentStatus.pending) return true;
+    return resubmissionAllowed;
   }
 
   static AssignmentStatus _parseStatus(String? s) {

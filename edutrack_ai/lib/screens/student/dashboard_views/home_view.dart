@@ -61,24 +61,50 @@ class HomeView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   PremiumCard(
-                    padding: const EdgeInsets.all(20),
-                    child: SizedBox(
-                      height: 240,
-                      child: StreamBuilder<List<KnowledgeNode>>(
-                        stream: BrainDNAService.instance.getBrainDNA(userId),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-                          final nodes = snapshot.data ?? [];
-                          if (nodes.isEmpty) {
-                            return _buildEmptyDNA();
-                          }
-                          return Center(
-                            child: BrainDNAVisualizer(nodes: nodes, size: 220),
-                          );
-                        },
-                      ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 280,
+                          child: StreamBuilder<List<KnowledgeNode>>(
+                            stream: BrainDNAService.instance.getBrainDNA(userId),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircularProgressIndicator(),
+                                      SizedBox(height: 12),
+                                      Text(
+                                        'Loading your Learning DNA...',
+                                        style: TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                              final nodes = snapshot.data ?? [];
+                              if (nodes.isEmpty) {
+                                return _buildEmptyDNA();
+                              }
+                              return Center(
+                                child: BrainDNAVisualizer(
+                                  nodes: nodes,
+                                  size: 260,
+                                  enableInteractions: true,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Legend
+                        _buildDNALegend(),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -467,23 +493,114 @@ class HomeView extends StatelessWidget {
     );
   }
 
+  Widget _buildDNALegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceSubtle,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildLegendItem(const Color(0xFF10B981), 'Mastered', '≥80%'),
+          _buildLegendItem(const Color(0xFFF59E0B), 'Learning', '50-80%'),
+          _buildLegendItem(const Color(0xFFEF4444), 'Focus', '<50%'),
+          _buildLegendItem(Colors.grey, 'Review', 'Low'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label, String range) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.4),
+                blurRadius: 4,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            Text(
+              range,
+              style: TextStyle(
+                fontSize: 8,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildEmptyDNA() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.psychology_outlined,
-            size: 48,
-            color: AppTheme.textHint,
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primary.withOpacity(0.2),
+                  AppTheme.primary.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.psychology_outlined,
+              size: 40,
+              color: AppTheme.primary,
+            ),
           ),
-          SizedBox(height: 12),
-          Text(
-            'Start your first mission to build your learning profile.',
+          const SizedBox(height: 16),
+          const Text(
+            'Your Learning DNA is forming...',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Complete assignments and quizzes\nto build your knowledge profile.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+              height: 1.4,
             ),
           ),
         ],
