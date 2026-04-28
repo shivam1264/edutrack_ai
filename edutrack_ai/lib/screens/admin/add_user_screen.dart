@@ -32,8 +32,9 @@ class _AddUserScreenState extends State<AddUserScreen> {
   String? _selectedClassId; // for students
   List<String> _selectedAssignedClasses = []; // for teachers
   List<String> _selectedSubjects = []; // for teachers
-  final _parentOfController = TextEditingController();
-  String _searchQuery = ''; // For parent-child link display name
+  final List<Map<String, String>> _linkedStudents = []; // For parents
+  String _foundStudentName = '';
+  String _foundStudentId = '';
 
   bool _isLoading = false;
 
@@ -241,75 +242,113 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                     },
                                   ),
 
-                                if (_selectedRole == 'parent')
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('LINK CHILD ACCOUNT', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF64748B), fontSize: 10, letterSpacing: 1.2)),
-                                        const SizedBox(height: 12),
-                                        StreamBuilder<List<ClassModel>>(
-                                          stream: ClassService().getClasses(),
-                                          builder: (context, snapshot) {
-                                            final classes = snapshot.data ?? [];
-                                            return DropdownButtonFormField<String>(
-                                              value: _selectedClassId, // Reuse or add new state
-                                              decoration: InputDecoration(
-                                                labelText: 'Student Class',
-                                                prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
-                                                filled: true, fillColor: AppTheme.bgLight,
-                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                                              ),
-                                              items: classes.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.displayName))).toList(),
-                                              onChanged: (v) => setState(() => _selectedClassId = v),
-                                            );
-                                          }
-                                        ),
-                                        const SizedBox(height: 12),
-                                        _buildTextField(
-                                          controller: _rollNoController,
-                                          label: "Student Roll Number",
-                                          icon: Icons.numbers_rounded,
-                                          keyboardType: TextInputType.text,
-                                          onChanged: (v) async {
-                                            if (v.length >= 1 && _selectedClassId != null) {
-                                              final snap = await FirebaseFirestore.instance.collection('users')
-                                                .where('role', isEqualTo: 'student')
-                                                .where('class_id', isEqualTo: _selectedClassId)
-                                                .where('roll_no', isEqualTo: v)
-                                                .get();
-                                              
-                                              if (snap.docs.isNotEmpty) {
-                                                setState(() {
-                                                  _parentOfController.text = snap.docs.first.id;
-                                                  _searchQuery = snap.docs.first.get('name'); // Reuse searchQuery for display
-                                                });
-                                              } else {
-                                                setState(() {
-                                                  _parentOfController.text = '';
-                                                  _searchQuery = '';
-                                                });
-                                              }
-                                            }
-                                          },
-                                        ),
-                                        if (_searchQuery.isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 8.0, left: 4),
-                                            child: Row(
-                                              children: [
-                                                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
-                                                const SizedBox(width: 4),
-                                                Text('Linked to: $_searchQuery', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
-                                              ],
+                                  if (_selectedRole == 'parent')
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('LINK CHILDREN', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF64748B), fontSize: 10, letterSpacing: 1.2)),
+                                          const SizedBox(height: 12),
+                                          
+                                          // Display Linked Children
+                                          if (_linkedStudents.isNotEmpty) ...[
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
+                                              children: _linkedStudents.map((student) => Chip(
+                                                label: Text(student['name']!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                                backgroundColor: AppTheme.primary,
+                                                onDeleted: () => setState(() => _linkedStudents.remove(student)),
+                                                deleteIconColor: Colors.white70,
+                                              )).toList(),
                                             ),
+                                            const SizedBox(height: 16),
+                                          ],
+
+                                          StreamBuilder<List<ClassModel>>(
+                                            stream: ClassService().getClasses(),
+                                            builder: (context, snapshot) {
+                                              final classes = snapshot.data ?? [];
+                                              return DropdownButtonFormField<String>(
+                                                value: _selectedClassId,
+                                                isExpanded: true,
+                                                decoration: InputDecoration(
+                                                  labelText: 'Select Student Class',
+                                                  prefixIcon: const Icon(Icons.hub_rounded, color: AppTheme.primary, size: 20),
+                                                  filled: true, fillColor: AppTheme.bgLight,
+                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                                                ),
+                                                items: classes.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.displayName))).toList(),
+                                                onChanged: (v) => setState(() {
+                                                  _selectedClassId = v;
+                                                  _foundStudentName = '';
+                                                  _foundStudentId = '';
+                                                  _rollNoController.clear();
+                                                }),
+                                              );
+                                            }
                                           ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'System will automatically fetch UID using Class & Roll No.',
-                                          style: TextStyle(color: AppTheme.textHint, fontSize: 10, fontStyle: FontStyle.italic),
-                                        ),
-                                      ],
-                                    ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: _buildTextField(
+                                                  controller: _rollNoController,
+                                                  label: "Roll Number",
+                                                  icon: Icons.numbers_rounded,
+                                                  keyboardType: TextInputType.text,
+                                                  onChanged: (v) async {
+                                                    if (v.isNotEmpty && _selectedClassId != null) {
+                                                      final snap = await FirebaseFirestore.instance.collection('users')
+                                                        .where('role', isEqualTo: 'student')
+                                                        .where('class_id', isEqualTo: _selectedClassId)
+                                                        .where('roll_no', isEqualTo: v)
+                                                        .get();
+                                                      
+                                                      if (snap.docs.isNotEmpty) {
+                                                        setState(() {
+                                                          _foundStudentId = snap.docs.first.id;
+                                                          _foundStudentName = snap.docs.first.get('name');
+                                                        });
+                                                      } else {
+                                                        setState(() {
+                                                          _foundStudentId = '';
+                                                          _foundStudentName = '';
+                                                        });
+                                                      }
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                              if (_foundStudentName.isNotEmpty) ...[
+                                                const SizedBox(width: 8),
+                                                IconButton.filled(
+                                                  onPressed: () {
+                                                    if (!_linkedStudents.any((s) => s['id'] == _foundStudentId)) {
+                                                      setState(() {
+                                                        _linkedStudents.add({'id': _foundStudentId, 'name': _foundStudentName});
+                                                        _foundStudentName = '';
+                                                        _foundStudentId = '';
+                                                        _rollNoController.clear();
+                                                      });
+                                                    }
+                                                  },
+                                                  icon: const Icon(Icons.add_rounded),
+                                                  style: IconButton.styleFrom(
+                                                    backgroundColor: Colors.green,
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          if (_foundStudentName.isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 8, left: 4),
+                                              child: Text('Found: $_foundStudentName', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                                            ),
+                                          const SizedBox(height: 8),
+                                        ],
+                                      ),
                               ],
                             ),
                           ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
@@ -406,7 +445,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
         assignedClasses: _selectedRole == 'teacher' ? _selectedAssignedClasses : null,
         subjects: _selectedRole == 'teacher' ? _selectedSubjects : null,
         parentOf: _selectedRole == 'parent' 
-            ? _parentOfController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+            ? _linkedStudents.map((s) => s['id']!).toList()
             : null,
         rollNo: _selectedRole == 'student' ? _rollNoController.text.trim() : null,
       );

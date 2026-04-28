@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../utils/app_theme.dart';
 import '../../../widgets/premium_card.dart';
+import '../../../services/class_service.dart';
+import '../../../models/class_model.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AdminParentDetailScreen extends StatefulWidget {
@@ -33,9 +35,20 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
                 padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    Text('Linked Students', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Linked Students', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                        TextButton.icon(
+                          onPressed: () => _showLinkStudentDialog(data),
+                          icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                          label: const Text('Link Student', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: TextButton.styleFrom(foregroundColor: const Color(0xFF10B981)),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 16),
-                    _buildChildrenList(childrenIds),
+                    _buildChildrenList(childrenIds, widget.parentId),
                     const SizedBox(height: 32),
                     Text('Communication & Security', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                     const SizedBox(height: 16),
@@ -107,7 +120,7 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
     );
   }
 
-  Widget _buildChildrenList(List<String> childrenIds) {
+  Widget _buildChildrenList(List<String> childrenIds, String parentId) {
     if (childrenIds.isEmpty) {
       return const PremiumCard(
         padding: EdgeInsets.all(20),
@@ -131,12 +144,169 @@ class _AdminParentDetailScreenState extends State<AdminParentDetailScreen> {
                 leading: const Icon(Icons.face_rounded, color: Colors.blueAccent),
                 title: Text(data['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text('ID: ${id.substring(0, 8)} | Class: ${data['class_id'] ?? 'N/A'}'),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                trailing: IconButton(
+                  icon: const Icon(Icons.link_off_rounded, color: Colors.redAccent, size: 20),
+                  onPressed: () => _confirmUnlink(parentId, id, data['name'] ?? 'Student'),
+                ),
               ),
             ),
           );
         },
       )).toList(),
+    );
+  }
+
+  void _confirmUnlink(String parentId, String studentId, String studentName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unlink Student?'),
+        content: Text('Are you sure you want to unlink $studentName from this parent?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance.collection('users').doc(parentId).update({
+                'parent_of': FieldValue.arrayRemove([studentId])
+              });
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('Unlink', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLinkStudentDialog(Map<String, dynamic> parentData) {
+    String? selectedClassId;
+    String foundStudentName = '';
+    String foundStudentId = '';
+    final rollNoCtrl = TextEditingController();
+    bool isSearching = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text('Link New Student', style: TextStyle(fontWeight: FontWeight.w900)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  StreamBuilder<List<ClassModel>>(
+                    stream: ClassService().getClasses(),
+                    builder: (context, snapshot) {
+                      final classes = snapshot.data ?? [];
+                      return DropdownButtonFormField<String>(
+                        value: selectedClassId,
+                        isExpanded: true,
+                        decoration: _inputDecoration('Select Class', Icons.class_outlined),
+                        items: classes.map((c) => DropdownMenuItem<String>(value: c.id, child: Text(c.displayName))).toList(),
+                        onChanged: (v) => setState(() {
+                          selectedClassId = v;
+                          foundStudentName = '';
+                          foundStudentId = '';
+                          rollNoCtrl.clear();
+                        }),
+                      );
+                    }
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: rollNoCtrl,
+                    decoration: _inputDecoration('Roll Number', Icons.numbers_rounded),
+                    onChanged: (v) async {
+                      if (v.isNotEmpty && selectedClassId != null) {
+                        setState(() => isSearching = true);
+                        final snap = await FirebaseFirestore.instance.collection('users')
+                          .where('role', isEqualTo: 'student')
+                          .where('class_id', isEqualTo: selectedClassId)
+                          .where('roll_no', isEqualTo: v)
+                          .get();
+                        
+                        if (snap.docs.isNotEmpty) {
+                          setState(() {
+                            foundStudentId = snap.docs.first.id;
+                            foundStudentName = snap.docs.first.get('name');
+                            isSearching = false;
+                          });
+                        } else {
+                          setState(() {
+                            foundStudentId = '';
+                            foundStudentName = '';
+                            isSearching = false;
+                          });
+                        }
+                      }
+                    },
+                  ),
+                  if (isSearching)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  if (foundStudentName.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(foundStudentName, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)))),
+                          ],
+                        ),
+                      ),
+                    ).animate().fadeIn().scale(),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: foundStudentId.isEmpty ? null : () async {
+                  final existing = List<String>.from(parentData['parent_of'] ?? []);
+                  if (existing.contains(foundStudentId)) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student is already linked!')));
+                    return;
+                  }
+                  
+                  await FirebaseFirestore.instance.collection('users').doc(widget.parentId).update({
+                    'parent_of': FieldValue.arrayUnion([foundStudentId])
+                  });
+                  if (mounted) Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Link Student'),
+              ),
+            ],
+          );
+        }
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint, IconData icon) {
+    return InputDecoration(
+      labelText: hint,
+      prefixIcon: Icon(icon, color: const Color(0xFF10B981), size: 20),
+      filled: true, fillColor: const Color(0xFFF8FAFC),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5)),
     );
   }
 
