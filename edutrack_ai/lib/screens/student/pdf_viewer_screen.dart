@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 class PdfViewerScreen extends StatefulWidget {
@@ -48,9 +49,13 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         savePath,
         options: Options(
           headers: {
-            'Accept': 'application/pdf',
+            'Accept': 'application/pdf,application/octet-stream,*/*',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           },
-          receiveTimeout: const Duration(seconds: 30),
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          validateStatus: (status) => status != null && status < 500,
+          receiveTimeout: const Duration(seconds: 60),
         ),
         onReceiveProgress: (received, total) {
           if (total != -1) {
@@ -59,10 +64,15 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         },
       );
 
-      // Verify file was downloaded
+      // Verify file was downloaded and has content
       final file = File(savePath);
       if (!await file.exists()) {
         throw Exception('File was not downloaded successfully');
+      }
+      
+      final fileSize = await file.length();
+      if (fileSize == 0) {
+        throw Exception('Downloaded file is empty');
       }
 
       if (mounted) {
@@ -76,8 +86,37 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to load PDF: ${e.toString()}';
+          _errorMessage = _getUserFriendlyError(e);
         });
+      }
+    }
+  }
+
+  String _getUserFriendlyError(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    if (errorStr.contains('401')) {
+      return 'Access denied. The PDF link may have expired or requires authentication.';
+    } else if (errorStr.contains('403')) {
+      return 'Permission denied. Please check if you have access to this file.';
+    } else if (errorStr.contains('404')) {
+      return 'PDF not found. The file may have been moved or deleted.';
+    } else if (errorStr.contains('timeout') || errorStr.contains('connection')) {
+      return 'Connection timeout. Please check your internet connection and try again.';
+    } else if (errorStr.contains('certificate') || errorStr.contains('ssl')) {
+      return 'Security certificate error. Unable to establish secure connection.';
+    }
+    return 'Unable to load PDF. Please try opening in browser instead.';
+  }
+
+  Future<void> _openInBrowser() async {
+    final uri = Uri.parse(widget.pdfUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open browser')),
+        );
       }
     }
   }
@@ -158,6 +197,19 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _openInBrowser();
+                  Navigator.pop(context, false); // Return false to trigger fallback
+                },
+                icon: const Icon(Icons.open_in_browser),
+                label: const Text('Open in Browser'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2563EB),
+                  side: const BorderSide(color: Color(0xFF2563EB)),
                 ),
               ),
             ],

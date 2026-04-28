@@ -28,6 +28,11 @@ class HomeView extends StatelessWidget {
     final userId = user?.uid ?? '';
     final l10n = AppLocalizations.of(context)!;
 
+    // Check and generate Learning DNA if needed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndGenerateDNA(userId);
+    });
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       floatingActionButton: FloatingActionButton.extended(
@@ -796,5 +801,28 @@ class _StatCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Check if Learning DNA exists, if not generate from existing data
+  Future<void> _checkAndGenerateDNA(String userId) async {
+    if (userId.isEmpty) return;
+    
+    try {
+      // Check if DNA already exists
+      final dnaSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('brain_dna')
+          .limit(1)
+          .get();
+      
+      // If no DNA exists, generate from existing quiz/assignment data
+      if (dnaSnap.docs.isEmpty) {
+        debugPrint('No Learning DNA found for $userId, generating from existing data...');
+        await BrainDNAService.instance.generateDNAFromExistingData(userId);
+      }
+    } catch (e) {
+      debugPrint('Error checking/generating DNA: $e');
+    }
   }
 }

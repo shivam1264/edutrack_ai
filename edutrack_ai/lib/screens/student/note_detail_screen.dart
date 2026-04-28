@@ -117,15 +117,8 @@ class NoteDetailScreen extends StatelessWidget {
                               child: ElevatedButton.icon(
                                 onPressed: () {
                                   if (isPdf) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => PdfViewerScreen(
-                                          pdfUrl: note.fileUrl!,
-                                          title: note.fileName ?? 'PDF Document',
-                                        ),
-                                      ),
-                                    );
+                                    // Try internal viewer first, fallback to browser
+                                    _openPdfWithFallback(context, note.fileUrl!, note.fileName ?? 'PDF Document');
                                   } else {
                                     _openResource(note.fileUrl!, context);
                                   }
@@ -144,6 +137,19 @@ class NoteDetailScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            if (isPdf)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: TextButton.icon(
+                                  onPressed: () => _openResource(note.fileUrl!, context),
+                                  icon: const Icon(Icons.open_in_browser, size: 16),
+                                  label: const Text('Open in Browser instead'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.grey[600],
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -163,6 +169,38 @@ class NoteDetailScreen extends StatelessWidget {
         label: const Text('Edit Personal Note', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
+  }
+
+  Future<void> _openPdfWithFallback(BuildContext context, String url, String title) async {
+    // First try internal viewer
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PdfViewerScreen(
+          pdfUrl: url,
+          title: title,
+        ),
+      ),
+    );
+    
+    // If internal viewer returned false (failed), show snackbar with browser option
+    if (result == false && context.mounted) {
+      final snackBar = SnackBar(
+        content: const Text('Could not open PDF in app. Opening in browser...'),
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'OPEN NOW',
+          onPressed: () => _openResource(url, context),
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      
+      // Auto-open after delay
+      await Future.delayed(const Duration(seconds: 2));
+      if (context.mounted) {
+        _openResource(url, context);
+      }
+    }
   }
 
   Future<void> _openResource(String url, BuildContext context) async {

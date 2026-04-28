@@ -136,19 +136,54 @@ class _TeacherStudentsViewState extends State<TeacherStudentsView> with SingleTi
     final topCount = (analytics?['top5'] as List?)?.length ?? 0;
     final bottomCount = (analytics?['bottom5'] as List?)?.length ?? 0;
 
-    return TabBar(
-      controller: _tabController,
-      labelColor: AppTheme.secondary,
-      unselectedLabelColor: AppTheme.textHint,
-      indicatorColor: AppTheme.secondary,
-      indicatorSize: TabBarIndicatorSize.label,
-      dividerColor: Colors.transparent,
-      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-      tabs: [
-        const Tab(text: 'All'),
-        const Tab(text: 'Top'),
-        const Tab(text: 'Attention'),
-      ],
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        labelColor: Colors.white,
+        unselectedLabelColor: AppTheme.textHint,
+        indicator: BoxDecoration(
+          color: AppTheme.secondary,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.secondary.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        tabs: [
+          Tab(
+            child: Container(
+              alignment: Alignment.center,
+              child: const Text('All'),
+            ),
+          ),
+          Tab(
+            child: Container(
+              alignment: Alignment.center,
+              child: const Text('Top'),
+            ),
+          ),
+          Tab(
+            child: Container(
+              alignment: Alignment.center,
+              child: const Text('Attention'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

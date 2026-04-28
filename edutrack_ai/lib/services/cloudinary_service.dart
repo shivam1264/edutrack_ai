@@ -107,8 +107,19 @@ class CloudinaryService {
   String _getResourceType(String mimeType) {
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
-    if (mimeType == 'application/pdf') return 'image'; // Cloudinary handles PDFs as 'image' type documents
+    if (mimeType == 'application/pdf') return 'raw'; // PDFs as raw for direct access
     return 'raw'; // doc, ppt, etc.
+  }
+
+  /// Get direct download URL for raw files (PDFs, docs)
+  String getDirectDownloadUrl(String secureUrl) {
+    // For raw files, Cloudinary URL should work directly
+    // If URL has issues, we can add fl_attachment for force download
+    if (secureUrl.contains('/raw/upload/')) {
+      // Raw files are already accessible
+      return secureUrl;
+    }
+    return secureUrl;
   }
 }
 

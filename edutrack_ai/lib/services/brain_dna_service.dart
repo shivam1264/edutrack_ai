@@ -129,4 +129,84 @@ class BrainDNAService {
     }
     await batch.commit();
   }
+
+  // ─── Generate DNA from Existing Quiz & Assignment Data ───────────────────────
+  Future<void> generateDNAFromExistingData(String studentId) async {
+    try {
+      // Get student's subjects first
+      final userDoc = await _db.collection('users').doc(studentId).get();
+      final userData = userDoc.data();
+      final subjects = List<String>.from(userData?['subjects'] ?? []);
+      
+      if (subjects.isEmpty) {
+        debugPrint('No subjects found for student $studentId');
+        return;
+      }
+
+      // Initialize DNA structure first
+      await initializeDNA(studentId, subjects);
+
+      // Fetch all quiz results for this student
+      final quizResults = await _db
+          .collection('quiz_results')
+          .where('student_id', isEqualTo: studentId)
+          .get();
+
+      // Fetch all assignment submissions for this student
+      final submissions = await _db
+          .collection('submissions')
+          .where('student_id', isEqualTo: studentId)
+          .get();
+
+      // Process quiz data by subject
+      Map<String, List<double>> subjectScores = {};
+      
+      for (var doc in quizResults.docs) {
+        final data = doc.data();
+        final subject = data['subject'] as String? ?? 'General';
+        final score = (data['score'] as num?)?.toDouble() ?? 0;
+        final total = (data['total'] as num?)?.toDouble() ?? 1;
+        final percentage = total > 0 ? score / total : 0;
+        
+        subjectScores.putIfAbsent(subject, () => []);
+        subjectScores[subject]!.add(percentage);
+      }
+
+      // Process assignment grades by subject
+      for (var doc in submissions.docs) {
+        final data = doc.data();
+        final subject = data['subject'] as String? ?? 'General';
+        final marks = (data['marks'] as num?)?.toDouble();
+        final maxMarks = (data['max_marks'] as num?)?.toDouble() ?? 100;
+        
+        if (marks != null) {
+          final percentage = marks / maxMarks;
+          subjectScores.putIfAbsent(subject, () => []);
+          subjectScores[subject]!.add(percentage);
+        }
+      }
+
+      // Update DNA nodes based on calculated averages
+      for (var entry in subjectScores.entries) {
+        final subject = entry.key;
+        final scores = entry.value;
+        
+        if (scores.isNotEmpty) {
+          final avgScore = scores.reduce((a, b) => a + b) / scores.length;
+          
+          // Update the general topic for this subject
+          await updateNodeMastery(
+            studentId: studentId,
+            subject: subject,
+            topic: 'General Concepts',
+            performance: avgScore,
+          );
+        }
+      }
+
+      debugPrint('Learning DNA generated for student $studentId');
+    } catch (e) {
+      debugPrint('Error generating DNA: $e');
+    }
+  }
 }
