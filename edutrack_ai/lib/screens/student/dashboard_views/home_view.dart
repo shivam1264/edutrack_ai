@@ -17,8 +17,46 @@ import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:edutrack_ai/widgets/brain_dna_visualizer.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   const HomeView({super.key});
+
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  @override
+  void initState() {
+    super.initState();
+    // Check and generate Learning DNA after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      final userId = auth.user?.uid ?? '';
+      _checkAndGenerateDNA(userId);
+    });
+  }
+
+  Future<void> _checkAndGenerateDNA(String userId) async {
+    if (userId.isEmpty) return;
+    
+    try {
+      // Check if DNA already exists
+      final dnaSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('brain_dna')
+          .limit(1)
+          .get();
+      
+      // If no DNA exists, generate from existing quiz/assignment data
+      if (dnaSnap.docs.isEmpty) {
+        debugPrint('No Learning DNA found for $userId, generating from existing data...');
+        await BrainDNAService.instance.generateDNAFromExistingData(userId);
+      }
+    } catch (e) {
+      debugPrint('Error checking/generating DNA: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +65,6 @@ class HomeView extends StatelessWidget {
     final gamify = context.watch<GamificationProvider>();
     final userId = user?.uid ?? '';
     final l10n = AppLocalizations.of(context)!;
-
-    // Check and generate Learning DNA if needed
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndGenerateDNA(userId);
-    });
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -801,28 +834,5 @@ class _StatCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // Check if Learning DNA exists, if not generate from existing data
-  Future<void> _checkAndGenerateDNA(String userId) async {
-    if (userId.isEmpty) return;
-    
-    try {
-      // Check if DNA already exists
-      final dnaSnap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('brain_dna')
-          .limit(1)
-          .get();
-      
-      // If no DNA exists, generate from existing quiz/assignment data
-      if (dnaSnap.docs.isEmpty) {
-        debugPrint('No Learning DNA found for $userId, generating from existing data...');
-        await BrainDNAService.instance.generateDNAFromExistingData(userId);
-      }
-    } catch (e) {
-      debugPrint('Error checking/generating DNA: $e');
-    }
   }
 }
