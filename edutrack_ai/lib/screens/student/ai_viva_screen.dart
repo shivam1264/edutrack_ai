@@ -5,11 +5,15 @@ import 'package:http/http.dart' as http;
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/config.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/class_service.dart';
 
 class AIVivaScreen extends StatefulWidget {
-  const AIVivaScreen({super.key});
+  final String? initialTopic;
+  const AIVivaScreen({super.key, this.initialTopic});
 
   @override
   State<AIVivaScreen> createState() => _AIVivaScreenState();
@@ -20,7 +24,7 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
   final List<Map<String, String>> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingReply = false;
-  
+
   // Voice features
   final SpeechToText _speechToText = SpeechToText();
   final FlutterTts _flutterTts = FlutterTts();
@@ -28,15 +32,77 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
   bool _speechEnabled = false;
   bool _ttsEnabled = true;
 
+  // Topic & Grade
+  String _selectedTopic = 'General Knowledge';
+  String _studentGrade = '8';
+  String _classId = '';
+  final List<String> _askedQuestions = [];
+
+  // Available topics
+  final List<String> _topics = [
+    'General Knowledge',
+    'Mathematics',
+    'Science',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'History',
+    'Geography',
+    'English',
+    'Hindi',
+    'Computer Science',
+    'Social Studies',
+    'Environmental Science',
+  ];
+
+  // Topic keywords for natural language detection
+  final Map<String, List<String>> _topicKeywords = {
+    'Mathematics': ['math', 'mathematics', 'algebra', 'geometry', 'calculus', 'number', 'equation', 'formula'],
+    'Science': ['science', 'scientific', 'experiment', 'lab', 'laboratory'],
+    'Physics': ['physics', 'force', 'motion', 'energy', 'electricity', 'magnetism', 'light', 'optics', 'mechanics'],
+    'Chemistry': ['chemistry', 'chemical', 'reaction', 'element', 'compound', 'acid', 'base', 'atom', 'molecule'],
+    'Biology': ['biology', 'cell', 'organism', 'plant', 'animal', 'human body', 'life', 'living'],
+    'History': ['history', 'historical', 'ancient', 'medieval', 'modern', 'war', 'freedom', 'independence'],
+    'Geography': ['geography', 'map', 'earth', 'climate', 'weather', 'river', 'mountain', 'continent', 'country'],
+    'English': ['english', 'grammar', 'vocabulary', 'literature', 'poem', 'story', 'essay', 'language'],
+    'Hindi': ['hindi', 'हिंदी', 'vyakaran', 'kahani', 'kavita'],
+    'Computer Science': ['computer', 'programming', 'coding', 'software', 'hardware', 'algorithm', 'data', 'internet'],
+    'Social Studies': ['social', 'civics', 'polity', 'government', 'constitution', 'society', 'culture'],
+    'Environmental Science': ['environment', 'pollution', 'nature', 'climate', 'global warming', 'ecology', 'green'],
+  };
+
   @override
   void initState() {
     super.initState();
     _initSpeech();
     _initTts();
-    _messages.add({
-      'role': 'assistant',
-      'text': 'Hello! I am your AI Examiner. You can speak or type your answers below and I will evaluate them one by one.'
+    _selectedTopic = widget.initialTopic ?? 'General Knowledge';
+    _loadStudentGrade();
+  }
+
+  Future<void> _loadStudentGrade() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    if (user != null && user.classId != null) {
+      _classId = user.classId!;
+      // Fetch class details to get standard/grade
+      final classService = ClassService();
+      final classModel = await classService.getClassByIdFuture(_classId);
+      if (classModel != null) {
+        setState(() {
+          _studentGrade = classModel.standard;
+        });
+      }
+    }
+    // Add welcome message after loading
+    setState(() {
+      _messages.add({
+        'role': 'assistant',
+        'text': 'Hello! I am your AI Examiner for Grade $_studentGrade. \n\nCurrent Topic: $_selectedTopic\n\nTap the topic button above to change subjects, or start answering questions below!'
+      });
     });
+    // Ask first question automatically
+    _requestNewQuestion();
   }
 
   @override
@@ -47,7 +113,116 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
     super.dispose();
   }
 
+  Future<void> _requestNewQuestion() async {
+    setState(() => _isLoadingReply = true);
+    try {
+      final response = await http
+          .post(
+            Uri.parse(Config.endpoint('/ai-viva')),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'message': 'NEXT_QUESTION',
+              'history': _messages.map((m) => {'role': m['role'], 'text': m['text']}).toList(),
+              'topic': _selectedTopic,
+              'grade': _studentGrade,
+              'asked_questions': _askedQuestions,
+              'use_tts': false,
+              'audio_base64': '',
+            }),
+          )
+          .timeout(const Duration(seconds: 40));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final reply = data['reply'] ?? 'Let\'s continue with the next question.';
+        final question = data['question'];
+        final topicChanged = data['topic_changed'] ?? false;
+        final newTopic = data['new_topic'];
+        
+        // Update topic if backend detected a change
+        if (topicChanged && newTopic != null && newTopic != _selectedTopic) {
+          setState(() {
+            _selectedTopic = newTopic;
+            _askedQuestions.clear();
+          });
+        }
+        
+        if (question != null && question.isNotEmpty) {
+          _askedQuestions.add(question);
+        }
+        setState(() {
+          _messages.add({'role': 'assistant', 'text': reply.toString()});
+          _isLoadingReply = false;
+        });
+        if (_ttsEnabled) {
+          _speak(reply.toString());
+        }
+      }
+    } catch (_) {
+      setState(() => _isLoadingReply = false);
+    }
+    _scrollToBottom();
+  }
+
+  // Detect if user is requesting a topic change via natural language
+  String? _detectTopicFromMessage(String message) {
+    final lowerMessage = message.toLowerCase();
+    
+    // Check for explicit topic request patterns
+    final topicRequestPatterns = [
+      r'ask.*questions?.*(from|on|about).*',
+      r'pucho.*(question|sawal).*',
+      r'start.*quiz.*on',
+      r'change.*topic.*to',
+      r'switch.*to.*',
+      r'let.*do.*',
+      r'begin.*with',
+      r'start.*with',
+    ];
+    
+    bool isTopicRequest = topicRequestPatterns.any((pattern) => 
+      RegExp(pattern, caseSensitive: false).hasMatch(message)
+    );
+    
+    if (!isTopicRequest && !lowerMessage.contains('question') && 
+        !lowerMessage.contains('pucho') && !lowerMessage.contains('quiz')) {
+      return null;
+    }
+    
+    // Check for topic keywords
+    for (final entry in _topicKeywords.entries) {
+      for (final keyword in entry.value) {
+        if (lowerMessage.contains(keyword.toLowerCase())) {
+          return entry.key;
+        }
+      }
+    }
+    
+    return null;
+  }
+
   Future<void> _sendMessage(String message) async {
+    // Check if user is requesting a topic change
+    final detectedTopic = _detectTopicFromMessage(message);
+    if (detectedTopic != null && detectedTopic != _selectedTopic) {
+      setState(() {
+        _selectedTopic = detectedTopic;
+        _askedQuestions.clear();
+      });
+      
+      // Add system message about topic change
+      setState(() {
+        _messages.add({
+          'role': 'assistant',
+          'text': 'OK! I will now ask you Grade $_studentGrade level questions on $detectedTopic. Here is your first question:'
+        });
+      });
+      
+      // Request new question on new topic
+      _requestNewQuestion();
+      return;
+    }
+    
     setState(() {
       _messages.add({'role': 'user', 'text': message});
       _isLoadingReply = true;
@@ -63,7 +238,9 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
             body: jsonEncode({
               'message': message,
               'history': _messages.map((m) => {'role': m['role'], 'text': m['text']}).toList(),
-              'topic': 'General Knowledge',
+              'topic': _selectedTopic,
+              'grade': _studentGrade,
+              'asked_questions': _askedQuestions,
               'use_tts': false,
               'audio_base64': '',
             }),
@@ -71,12 +248,27 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
           .timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
-        final reply = jsonDecode(response.body)['reply'] ?? 'I cannot evaluate that.';
+        final data = jsonDecode(response.body);
+        final reply = data['reply'] ?? 'I cannot evaluate that.';
+        final question = data['question'];
+        final topicChanged = data['topic_changed'] ?? false;
+        final newTopic = data['new_topic'];
+        
+        // Update topic if backend detected a change
+        if (topicChanged && newTopic != null && newTopic != _selectedTopic) {
+          setState(() {
+            _selectedTopic = newTopic;
+            _askedQuestions.clear();
+          });
+        }
+        
+        if (question != null && question.isNotEmpty) {
+          _askedQuestions.add(question);
+        }
         setState(() {
           _messages.add({'role': 'assistant', 'text': reply.toString()});
           _isLoadingReply = false;
         });
-        // Speak the reply if TTS is enabled
         if (_ttsEnabled) {
           _speak(reply.toString());
         }
@@ -99,6 +291,48 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
     }
 
     _scrollToBottom();
+  }
+
+  void _showTopicSelector() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Select Topic for Viva', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _topics.length,
+                itemBuilder: (context, index) {
+                  final topic = _topics[index];
+                  final isSelected = topic == _selectedTopic;
+                  return ListTile(
+                    title: Text(topic),
+                    trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.teal) : null,
+                    onTap: () {
+                      setState(() {
+                        _selectedTopic = topic;
+                        _askedQuestions.clear();
+                        _messages.clear();
+                        _messages.add({
+                          'role': 'assistant',
+                          'text': 'Topic changed to: $topic\n\nI will now ask Grade $_studentGrade level questions on this topic.'
+                        });
+                      });
+                      Navigator.pop(context);
+                      _requestNewQuestion();
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _initSpeech() async {
@@ -202,26 +436,81 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
       ),
       body: Column(
         children: [
+          // Topic Selector & Grade Info
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: Colors.teal.shade50,
-            child: Row(
+            child: Column(
               children: [
-                CircleAvatar(
-                  radius: 35,
-                  backgroundColor: Colors.teal,
-                  child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 40),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _showTopicSelector,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.teal.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.topic, color: Colors.teal, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Topic: $_selectedTopic',
+                                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.teal),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down, color: Colors.teal),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.teal,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Grade $_studentGrade',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Dr. Llama (AI Examiner)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
-                      Text('Type your answer to continue', style: TextStyle(color: Colors.black54, fontSize: 13)),
-                    ],
-                  ),
-                )
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.teal,
+                      child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 32),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Dr. Llama (AI Examiner)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.teal)),
+                          Text('Questions are grade-appropriate', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    if (_askedQuestions.isNotEmpty)
+                      Chip(
+                        label: Text('${_askedQuestions.length} asked'),
+                        backgroundColor: Colors.white,
+                        side: BorderSide(color: Colors.teal.shade200),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

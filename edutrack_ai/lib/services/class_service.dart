@@ -24,6 +24,12 @@ class ClassService {
     });
   }
 
+  Future<ClassModel?> getClassByIdFuture(String id) async {
+    final doc = await _firestore.collection('classes').doc(id).get();
+    if (!doc.exists) return null;
+    return ClassModel.fromMap(doc.id, doc.data()!);
+  }
+
   Future<void> addClass(String standard, String? section, {
     String schoolId = 'SCH001',
     String? classTeacherId,

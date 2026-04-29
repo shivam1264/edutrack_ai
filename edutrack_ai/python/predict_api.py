@@ -760,6 +760,75 @@ def detect_burnout():
         return jsonify({'error': str(e)}), 500
 
 # ─── AI Voice Viva (Mock Examiner) ─────────────────────────────────────────
+# In-memory store for viva sessions (question tracking)
+_viva_sessions = {}
+
+def _get_grade_difficulty(grade: str) -> str:
+    """Determine difficulty level based on grade"""
+    try:
+        grade_num = int(grade)
+        if grade_num <= 2:
+            return "Very Basic - simple one-word or short phrase answers"
+        elif grade_num <= 5:
+            return "Beginner - basic concepts, simple definitions, easy questions"
+        elif grade_num <= 8:
+            return "Intermediate - conceptual understanding, short explanations"
+        elif grade_num <= 10:
+            return "Advanced - detailed explanations, problem solving, analysis"
+        else:
+            return "Expert - complex analysis, critical thinking, deep concepts"
+    except:
+        return "Intermediate"
+
+# Topic keywords for natural language detection
+_TOPIC_KEYWORDS = {
+    'Mathematics': ['math', 'mathematics', 'algebra', 'geometry', 'calculus', 'number', 'equation', 'formula', ' ganit'],
+    'Science': ['science', 'scientific', 'experiment', 'lab', 'laboratory', 'vigyan'],
+    'Physics': ['physics', 'force', 'motion', 'energy', 'electricity', 'magnetism', 'light', 'optics', 'mechanics', 'bhautiki'],
+    'Chemistry': ['chemistry', 'chemical', 'reaction', 'element', 'compound', 'acid', 'base', 'atom', 'molecule', 'rasayan'],
+    'Biology': ['biology', 'cell', 'organism', 'plant', 'animal', 'human body', 'life', 'living', 'jivan'],
+    'History': ['history', 'historical', 'ancient', 'medieval', 'modern', 'war', 'freedom', 'independence', 'itihaas'],
+    'Geography': ['geography', 'map', 'earth', 'climate', 'weather', 'river', 'mountain', 'continent', 'country', 'bhugol'],
+    'English': ['english', 'grammar', 'vocabulary', 'literature', 'poem', 'story', 'essay', 'language', 'angrezi'],
+    'Hindi': ['hindi', 'हिंदी', 'vyakaran', 'kahani', 'kavita'],
+    'Computer Science': ['computer', 'programming', 'coding', 'software', 'hardware', 'algorithm', 'data', 'internet', 'coding'],
+    'Social Studies': ['social', 'civics', 'polity', 'government', 'constitution', 'society', 'culture', 'samajik'],
+    'Environmental Science': ['environment', 'pollution', 'nature', 'climate', 'global warming', 'ecology', 'green', 'paryavaran'],
+}
+
+_TOPIC_PATTERNS = [
+    r'ask.*questions?.*(from|on|about)\s+(\w+)',
+    r'pucho.*(question|sawal|prashn).*',
+    r'start.*quiz.*on\s+(\w+)',
+    r'change.*topic.*to\s+(\w+)',
+    r'switch.*to\s+(\w+)',
+    r'let.*do\s+(\w+)',
+    r'begin.*with\s+(\w+)',
+    r'start.*with\s+(\w+)',
+]
+
+def _detect_topic_from_message(message: str, current_topic: str) -> str:
+    """Detect if user is requesting a topic change via natural language"""
+    if not message:
+        return current_topic
+    
+    lower_msg = message.lower()
+    
+    # Check if it's a topic request pattern
+    is_topic_request = any(re.search(pattern, message, re.IGNORECASE) for pattern in _TOPIC_PATTERNS)
+    
+    # Also check for explicit question/quiz/pucho keywords
+    if not is_topic_request and not any(word in lower_msg for word in ['question', 'pucho', 'quiz', 'sawal', 'prashn', 'test']):
+        return current_topic
+    
+    # Check for topic keywords
+    for topic, keywords in _TOPIC_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword.lower() in lower_msg:
+                return topic
+    
+    return current_topic
+
 @app.route('/ai-viva', methods=['POST'])
 def ai_viva():
     data = request.get_json(silent=True) or {}
@@ -767,48 +836,127 @@ def ai_viva():
     history = data.get('history', [])
     use_tts = data.get('use_tts', False)
     # Support both 'subject' and 'topic' from frontend
-    subject = data.get('subject') or data.get('topic', 'General')
+    original_topic = data.get('topic') or data.get('subject', 'General Knowledge')
+    grade = data.get('grade', '8')
+    asked_questions = data.get('asked_questions', [])
     
-    print(f"    [VIVA] Conversation for {subject}")
+    # Detect if user is requesting a topic change via natural language
+    detected_topic = _detect_topic_from_message(message, original_topic)
+    topic_changed = detected_topic != original_topic
+    topic = detected_topic if topic_changed else original_topic
+    
+    # Reset asked questions if topic changed
+    if topic_changed:
+        asked_questions = []
+        print(f"    [VIVA] Topic changed from '{original_topic}' to '{topic}'")
+
+    # Generate session ID from user history to track questions server-side
+    session_id = hash(str(history[:2])) if history else 'new_session'
+
+    print(f"    [VIVA] Grade {grade} | Topic: {topic} | Asked: {len(asked_questions)} questions")
     audio_b64 = data.get('audio_base64', '')
-    
-    system_instruction = (
-        f"You are a strict but fair School Teacher conducting an oral viva on the topic: {subject}. "
-        "The user will speak or type answers. Evaluate their answer briefly, then ask the NEXT question. "
-        "Keep your reply strictly under 3 sentences. If they are wrong, explain in 1 sentence and ask an easier question."
-    )
 
-    # Build conversation history only (no system instruction in the prompt)
-    formatted_prompt = ""
-    for msg in history[-4:]:
-        role = "Student: " if msg['role'] == 'user' else "Examiner: "
-        formatted_prompt += f"{role}{msg['text']}\n"
+    difficulty = _get_grade_difficulty(grade)
 
-    if audio_b64:
-        formatted_prompt += "\nStudent: [Audio answer received but transcription is unavailable in this build. Ask the student to type the answer.]\nExaminer: "
+    # Build asked questions list for AI to avoid
+    asked_list = "\n".join([f"- {q}" for q in asked_questions[-10:]]) if asked_questions else "None yet"
+
+    # Check if this is a request for a new question
+    is_new_question_request = message.upper() == 'NEXT_QUESTION' or len(history) <= 1 or topic_changed
+
+    if is_new_question_request:
+        # Generate a new question
+        topic_change_ack = f"The student wants to switch to {topic}. " if topic_changed else ""
+        system_instruction = (
+            f"You are an expert School Teacher conducting an oral viva exam for Grade {grade} students. "
+            f"Topic: {topic}. Difficulty Level: {difficulty}.\n\n"
+            f"{topic_change_ack}"
+            f"STRICT RULES:\n"
+            f"1. {'Acknowledge the topic change and ask' if topic_changed else 'Ask'} ONE clear, specific question suitable for Grade {grade} level.\n"
+            f"2. Do NOT repeat any of these previously asked questions:\n{asked_list}\n\n"
+            f"3. Question must be from the topic: {topic}.\n"
+            f"4. For Grade 1-5: Ask simple fact-based or definition questions.\n"
+            f"5. For Grade 6-8: Ask conceptual and explanatory questions.\n"
+            f"6. For Grade 9-12: Ask analytical, problem-solving, or application-based questions.\n"
+            f"7. Keep the question concise (1-2 sentences max).\n\n"
+            f"FORMAT YOUR RESPONSE AS JSON:\n"
+            f"{{'question': 'Your specific question here', 'reply': 'Full message including the question'}}"
+        )
+        formatted_prompt = f"Please generate a new question for this Grade {grade} student on the topic: {topic}."
     else:
-        formatted_prompt += f"\nStudent: {message}\nExaminer: "
-    
+        # Evaluate answer and ask next question
+        system_instruction = (
+            f"You are a strict but fair School Teacher conducting an oral viva on {topic} for Grade {grade}. "
+            f"Difficulty Level: {difficulty}.\n\n"
+            f"STRICT RULES:\n"
+            f"1. First, evaluate the student's answer in 1 sentence - correct or incorrect.\n"
+            f"2. If wrong, briefly explain the correct concept in 1 sentence.\n"
+            f"3. Then ask the NEXT question - must be different from these:\n{asked_list}\n\n"
+            f"4. The next question must match Grade {grade} difficulty: {difficulty}.\n"
+            f"5. Never ask the same question twice.\n\n"
+            f"FORMAT YOUR RESPONSE AS JSON:\n"
+            f"{{'question': 'Your next specific question', 'reply': 'Full response with evaluation and next question'}}"
+        )
+
+        # Build conversation history
+        formatted_prompt = ""
+        for msg in history[-4:]:
+            role = "Student: " if msg['role'] == 'user' else "Examiner: "
+            formatted_prompt += f"{role}{msg['text']}\n"
+
+        if audio_b64:
+            formatted_prompt += "\nStudent: [Audio answer received but transcription unavailable]\nExaminer: "
+        else:
+            formatted_prompt += f"\nStudent: {message}\nExaminer: "
+
     try:
         response_text = generate_with_groq(
-            formatted_prompt, 
+            formatted_prompt,
             system_instruction=system_instruction,
         )
-        reply_text = response_text.strip()
-        
-        resp_data = {'reply': reply_text}
-        
+
+        # Try to parse JSON response
+        try:
+            parsed = parse_ai_json(response_text)
+            if isinstance(parsed, dict):
+                question = parsed.get('question', '').strip()
+                reply = parsed.get('reply', response_text).strip()
+            else:
+                question = ''
+                reply = response_text.strip()
+        except:
+            # Fallback if not valid JSON
+            question = ''
+            reply = response_text.strip()
+
+        # Extract question from reply if not separate
+        if not question and reply:
+            # Try to find question marks
+            lines = reply.split('\n')
+            for line in lines:
+                if '?' in line and len(line) > 10:
+                    question = line.strip()
+                    break
+
+        resp_data = {'reply': reply}
+        if question:
+            resp_data['question'] = question
+        if topic_changed:
+            resp_data['topic_changed'] = True
+            resp_data['new_topic'] = topic
+
         # If frontend wants spoken audio back
         if use_tts:
-            tts = gTTS(text=reply_text, lang='en')
+            tts = gTTS(text=reply, lang='en')
             fp = io.BytesIO()
             tts.write_to_fp(fp)
             fp.seek(0)
             audio_response_b64 = base64.b64encode(fp.read()).decode('utf-8')
             resp_data['reply_audio_base64'] = audio_response_b64
-            
+
         return jsonify(resp_data)
     except Exception as e:
+        print(f"    [VIVA ERROR] {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ─── AI Parent Insights ────────────────────────────────────────────────────
