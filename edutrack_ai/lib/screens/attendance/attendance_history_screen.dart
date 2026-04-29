@@ -181,6 +181,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox();
         final classes = snapshot.data!.docs;
+        final classIds = classes.map((doc) => doc.id).toList();
+        final effectiveValue = classIds.contains(_selectedClassId) ? _selectedClassId : null;
+
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
@@ -188,30 +191,27 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
             borderRadius: BorderRadius.circular(15),
             border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
-              final classIds = classes.map((doc) => doc.id).toList();
-              final effectiveValue = classIds.contains(_selectedClassId) ? _selectedClassId : null;
-
-              return DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: effectiveValue,
-                  dropdownColor: AppTheme.secondary,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white),
-                  hint: const Text('Select a Class', style: TextStyle(color: Colors.white70)),
-                  isExpanded: true,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                  items: classes.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return DropdownMenuItem(
-                      value: doc.id,
-                      child: Text(data['name'] ?? doc.id),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() => _selectedClassId = val);
-                    _loadDates();
-                  },
-                ),
-              );
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: effectiveValue,
+              dropdownColor: AppTheme.secondary,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white),
+              hint: const Text('Select a Class', style: TextStyle(color: Colors.white70)),
+              isExpanded: true,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              items: classes.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return DropdownMenuItem(
+                  value: doc.id,
+                  child: Text(data['name'] ?? doc.id),
+                );
+              }).toList(),
+              onChanged: (val) {
+                setState(() => _selectedClassId = val);
+                _loadDates();
+              },
+            ),
+          ),
         );
       },
     );

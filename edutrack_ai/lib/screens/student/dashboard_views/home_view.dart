@@ -139,14 +139,14 @@ class _HomeViewState extends State<HomeView> {
                             stream: BrainDNAService.instance.getBrainDNA(userId),
                             builder: (context, snapshot) {
                               if (snapshot.connectionState == ConnectionState.waiting) {
-                                return const Center(
+                                return Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      CircularProgressIndicator(),
-                                      SizedBox(height: 12),
+                                      const CircularProgressIndicator(),
+                                      const SizedBox(height: 12),
                                       Text(
-                                        l10n.loadingYourLearningDNA,
+                                        AppLocalizations.of(context)!.loadingYourLearningDNA,
                                         style: const TextStyle(
                                           color: AppTheme.textSecondary,
                                           fontSize: 12,
@@ -407,6 +407,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildCalendarShortcut(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return PremiumCard(
       padding: const EdgeInsets.all(16),
       child: InkWell(
@@ -524,6 +525,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildContinueLearning(BuildContext context, String classId) {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('assignments')

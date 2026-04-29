@@ -335,7 +335,7 @@ class NoteDetailScreen extends StatelessWidget {
       // Open with system PDF app
       final result = await OpenFile.open(savePath);
       
-      if (result.type != ResultType.done && result.type != ResultType.fileOpenSuccess) {
+      if (result.type != ResultType.done) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Could not open PDF: ${result.message}. Trying browser...')),

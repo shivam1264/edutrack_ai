@@ -134,7 +134,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
     if (_localPath != null) {
       final result = await OpenFile.open(_localPath!);
-      if (result.type != ResultType.done && result.type != ResultType.fileOpenSuccess) {
+      if (result.type != ResultType.done) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Could not open PDF: ${result.message}')),
