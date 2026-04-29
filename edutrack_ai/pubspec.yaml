@@ -51,8 +51,8 @@ dependencies:
   url_launcher: ^6.3.1
   syncfusion_flutter_pdfviewer: ^33.2.4
   webview_flutter: ^4.4.2
-  # speech_to_text removed
-  # flutter_tts removed
+  speech_to_text: ^6.6.0
+  flutter_tts: ^3.8.5
   path_provider: ^2.1.2
 
   # Local Storage

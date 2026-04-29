@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/config.dart';
 
@@ -17,13 +19,22 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
   final List<Map<String, String>> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingReply = false;
+  
+  // Voice features
+  final SpeechToText _speechToText = SpeechToText();
+  final FlutterTts _flutterTts = FlutterTts();
+  bool _isListening = false;
+  bool _speechEnabled = false;
+  bool _ttsEnabled = true;
 
   @override
   void initState() {
     super.initState();
+    _initSpeech();
+    _initTts();
     _messages.add({
       'role': 'assistant',
-      'text': 'Hello! I am your AI Examiner. Type your answers below and I will evaluate them one by one.'
+      'text': 'Hello! I am your AI Examiner. You can speak or type your answers below and I will evaluate them one by one.'
     });
   }
 
@@ -31,6 +42,7 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
   void dispose() {
     _msgController.dispose();
     _scrollController.dispose();
+    _flutterTts.stop();
     super.dispose();
   }
 
@@ -63,6 +75,10 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
           _messages.add({'role': 'assistant', 'text': reply.toString()});
           _isLoadingReply = false;
         });
+        // Speak the reply if TTS is enabled
+        if (_ttsEnabled) {
+          _speak(reply.toString());
+        }
       } else {
         setState(() {
           _messages.add({'role': 'assistant', 'text': 'The examiner is unavailable right now. Please try again.'});
@@ -82,6 +98,68 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
     }
 
     _scrollToBottom();
+  }
+
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
+  }
+
+  void _initTts() async {
+    await _flutterTts.setLanguage('en-US');
+    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setPitch(1.0);
+  }
+
+  void _startListening() async {
+    if (!_speechEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Speech recognition not available')),
+      );
+      return;
+    }
+    
+    await _speechToText.listen(
+      onResult: (result) {
+        setState(() {
+          _msgController.text = result.recognizedWords;
+        });
+        if (result.finalResult) {
+          _stopListening();
+        }
+      },
+      listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(seconds: 3),
+      partialResults: true,
+      localeId: 'en_US',
+      listenMode: ListenMode.confirmation,
+      cancelOnError: true,
+    );
+    
+    setState(() {
+      _isListening = true;
+    });
+  }
+
+  void _stopListening() async {
+    await _speechToText.stop();
+    setState(() {
+      _isListening = false;
+    });
+  }
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.speak(text);
+  }
+
+  void _toggleTts() {
+    setState(() {
+      _ttsEnabled = !_ttsEnabled;
+    });
+    if (!_ttsEnabled) {
+      _flutterTts.stop();
+    }
   }
 
   void _scrollToBottom() {
@@ -104,6 +182,13 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
         title: const Text('AI Viva Simulator', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(_ttsEnabled ? Icons.volume_up : Icons.volume_off),
+            onPressed: _toggleTts,
+            tooltip: 'Toggle Voice Output',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -171,11 +256,24 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
             child: SafeArea(
               child: Row(
                 children: [
+                  // Microphone button for voice input
+                  GestureDetector(
+                    onTap: _isListening ? _stopListening : _startListening,
+                    child: CircleAvatar(
+                      radius: 25,
+                      backgroundColor: _isListening ? Colors.red : Colors.grey.shade300,
+                      child: Icon(
+                        _isListening ? Icons.mic : Icons.mic_none,
+                        color: _isListening ? Colors.white : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _msgController,
                       decoration: InputDecoration(
-                        hintText: 'Type your answer...',
+                        hintText: _isListening ? 'Listening...' : 'Type or speak your answer...',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
                         filled: true,
                         fillColor: Colors.grey.shade100,
