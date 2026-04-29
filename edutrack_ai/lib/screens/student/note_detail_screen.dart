@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:open_file/open_file.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../models/note_model.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
@@ -140,14 +144,38 @@ class NoteDetailScreen extends StatelessWidget {
                             if (isPdf)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8),
-                                child: TextButton.icon(
-                                  onPressed: () => _openResource(note.fileUrl!, context),
-                                  icon: const Icon(Icons.open_in_browser, size: 16),
-                                  label: const Text('Open in Browser instead'),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.grey[600],
-                                    textStyle: const TextStyle(fontSize: 12),
-                                  ),
+                                child: Column(
+                                  children: [
+                                    // Open in System PDF App button
+                                    ElevatedButton.icon(
+                                      onPressed: () => _openPdfInSystemApp(
+                                        note.fileUrl!,
+                                        note.fileName ?? 'document.pdf',
+                                        context,
+                                      ),
+                                      icon: const Icon(Icons.picture_as_pdf, size: 18),
+                                      label: const Text(
+                                        'Open in PDF App (Adobe, Drive, etc.)',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.redAccent,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // Open in Browser option
+                                    TextButton.icon(
+                                      onPressed: () => _openResource(note.fileUrl!, context),
+                                      icon: const Icon(Icons.open_in_browser, size: 16),
+                                      label: const Text('Open in Browser instead'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.grey[600],
+                                        textStyle: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                           ],
@@ -239,6 +267,69 @@ class NoteDetailScreen extends StatelessWidget {
             backgroundColor: AppTheme.danger,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _openPdfInSystemApp(String url, String fileName, BuildContext context) async {
+    if (kIsWeb) {
+      // On web, fallback to browser
+      _openResource(url, context);
+      return;
+    }
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Download PDF to temp directory
+      final dio = Dio();
+      final tempDir = await getTemporaryDirectory();
+      final safeFileName = fileName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+      final savePath = '${tempDir.path}/$safeFileName';
+
+      await dio.download(
+        url,
+        savePath,
+        options: Options(
+          headers: {
+            'Accept': 'application/pdf,application/octet-stream,*/*',
+          },
+          followRedirects: true,
+        ),
+      );
+
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Open with system PDF app
+      final result = await OpenFile.open(savePath);
+      
+      if (result.type != ResultType.done && result.type != ResultType.fileOpenSuccess) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open PDF: ${result.message}. Trying browser...')),
+          );
+          // Fallback to browser
+          _openResource(url, context);
+        }
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (context.mounted) Navigator.pop(context);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to download PDF: $e. Trying browser...')),
+        );
+        // Fallback to browser
+        _openResource(url, context);
       }
     }
   }

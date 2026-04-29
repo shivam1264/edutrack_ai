@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_file/open_file.dart';
 import 'dart:io';
 
 class PdfViewerScreen extends StatefulWidget {
@@ -121,6 +122,31 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
+  Future<void> _openInSystemApp() async {
+    if (_localPath == null) {
+      // If file not downloaded yet, try to download first
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+      await _loadPdf();
+    }
+
+    if (_localPath != null) {
+      final result = await OpenFile.open(_localPath!);
+      if (result.type != ResultType.done && result.type != ResultType.fileOpenSuccess) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open PDF: ${result.message}')),
+          );
+        }
+      }
+    } else {
+      // If still no local file, fallback to browser
+      await _openInBrowser();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,6 +223,25 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Primary option: Open in System PDF App
+              ElevatedButton.icon(
+                onPressed: _openInSystemApp,
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('Open in PDF App'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Opens in Adobe Reader, Google PDF Viewer, etc.',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 11,
                 ),
               ),
               const SizedBox(height: 12),
