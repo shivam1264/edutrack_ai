@@ -35,8 +35,12 @@ python/service_account.json
 .env.local
 .env.*
 
-# Large Build Files
+# Large Build & Debug Files
 android/.gradle/
+**/.gradle/
 **/executionHistory.bin
 **/fileHashes.bin
 **/last-build.bin
+*.hprof
+*.hprof.*
+java_pid*.hprof

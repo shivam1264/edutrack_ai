@@ -6,6 +6,9 @@ import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/widgets/glass_card.dart';
+import 'package:edutrack_ai/screens/student/learning_dna_screen.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class ProgressView extends StatefulWidget {
   const ProgressView({super.key});
@@ -34,9 +37,10 @@ class _ProgressViewState extends State<ProgressView> {
     final isLoading = analytics.isLoading;
     final data = analytics.studentAnalytics;
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.bgLight,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : AppTheme.bgLight,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -159,6 +163,8 @@ class _ProgressViewState extends State<ProgressView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildDNAHeader(context, data, l10n),
+          const SizedBox(height: 24),
           _buildMainStats(avgScore, (data['attendance'] as num?)?.toDouble() ?? 0.0, l10n),
           const SizedBox(height: 32),
           Text(
@@ -391,6 +397,54 @@ class _ProgressViewState extends State<ProgressView> {
           ),
           const SizedBox(height: 24),
           Text(l10n.keepPracticingToImproveYourScore, style: const TextStyle(color: AppTheme.textSecondary, fontStyle: FontStyle.italic)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDNAHeader(BuildContext context, Map<String, dynamic>? data, AppLocalizations l10n) {
+    final userId = context.read<AuthProvider>().user?.uid ?? '';
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      color: AppTheme.primary.withOpacity(0.1),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.psychology_rounded, color: AppTheme.primary, size: 30),
+          ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Learning DNA",
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                ),
+                Text(
+                  "AI-powered sequence of your academic profile",
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => LearningDNAScreen(studentId: userId)),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("Explore"),
+          ),
         ],
       ),
     );

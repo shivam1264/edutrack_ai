@@ -19,6 +19,7 @@ import 'package:edutrack_ai/services/brain_dna_service.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:edutrack_ai/widgets/brain_dna_visualizer.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/widgets/subject_radar_chart.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -69,8 +70,10 @@ class _HomeViewState extends State<HomeView> {
     final userId = user?.uid ?? '';
     final l10n = AppLocalizations.of(context)!;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: AppTheme.bgLight,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : AppTheme.bgLight,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
@@ -126,60 +129,41 @@ class _HomeViewState extends State<HomeView> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(l10n.syncingLearningDNA)),
                         );
-                        await BrainDNAService.instance.generateDNAFromExistingData(userId);
-                        setState(() {}); // Refresh UI
+                        await context.read<AnalyticsProvider>().loadStudentAnalytics(userId);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('DNA Synchronized! ✅')),
+                          );
+                        }
                       },
                       icon: const Icon(Icons.sync, color: AppTheme.primary, size: 20),
                       tooltip: l10n.syncDnaFromHistory,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  PremiumCard(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 280,
-                          child: StreamBuilder<List<KnowledgeNode>>(
-                            stream: BrainDNAService.instance.getBrainDNA(userId),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const CircularProgressIndicator(),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        AppLocalizations.of(context)!.loadingYourLearningDNA,
-                                        style: const TextStyle(
-                                          color: AppTheme.textSecondary,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                              final nodes = snapshot.data ?? [];
-                              if (nodes.isEmpty) {
-                                return _buildEmptyDNA(context);
-                              }
-                              return Center(
-                                child: BrainDNAVisualizer(
-                                  nodes: nodes,
-                                  size: 260,
-                                  enableInteractions: true,
-                                ),
-                              );
-                            },
-                          ),
+                  Consumer<AnalyticsProvider>(
+                    builder: (context, analytics, _) {
+                      final data = analytics.studentAnalytics;
+                      final subjectAvg = Map<String, double>.from(data?['subject_avg'] ?? {});
+                      
+                      return PremiumCard(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 300,
+                              child: subjectAvg.isEmpty && analytics.isLoading
+                                  ? const Center(child: CircularProgressIndicator())
+                                  : Center(
+                                      child: SubjectRadarChart(subjectAvg: subjectAvg),
+                                    ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildDNALegend(context),
+                          ],
                         ),
-                        const SizedBox(height: 12),
-                        // Legend
-                        _buildDNALegend(context),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 28),
                   _buildSectionHeader(
@@ -225,6 +209,7 @@ class _HomeViewState extends State<HomeView> {
     dynamic user,
     GamificationProvider gamify,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final progress = gamify.progressToNextLevel;
 
     return PremiumCard(
@@ -251,8 +236,8 @@ class _HomeViewState extends State<HomeView> {
                       '${AppLocalizations.of(context)!.welcomeBack}, ${user?.name.split(' ').first ?? 'Student'}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : AppTheme.textPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                       ),
@@ -261,7 +246,7 @@ class _HomeViewState extends State<HomeView> {
                     Text(
                       AppLocalizations.of(context)!.dailyOverviewReady,
                       style: TextStyle(
-                        color: AppTheme.textSecondary,
+                        color: isDark ? Colors.white70 : AppTheme.textSecondary,
                         fontSize: 14,
                       ),
                     ),
@@ -333,16 +318,16 @@ class _HomeViewState extends State<HomeView> {
                   children: [
                     Text(
                       '${AppLocalizations.of(context)!.level} ${gamify.user?.level ?? 1}',
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
                     Text(
                       '${gamify.user?.xp ?? 0} / ${gamify.xpToNextLevel} ${AppLocalizations.of(context)!.xp}',
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppTheme.textSecondary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),

@@ -49,18 +49,29 @@ class AnalyticsService {
     final graded =
         subSnap.docs.where((d) => d.data()['status'] == 'graded').length;
 
-    // Subject breakdown from submissions
+    // Combined breakdown from submissions AND quizzes
     final Map<String, List<double>> subjectScores = {};
-    final Map<String, Map<String, dynamic>> assignmentCache = {}; // Local cache to avoid N+1 reads
+    final Map<String, Map<String, dynamic>> assignmentCache = {};
 
+    // 1. Quizzes
+    for (final doc in quizSnap.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final subject = data['subject'] as String? ?? 'General';
+      final score = (data['score'] as num?)?.toDouble() ?? 0;
+      final total = (data['total'] as num?)?.toDouble() ?? 1;
+      if (total > 0) {
+        subjectScores.putIfAbsent(subject, () => []);
+        subjectScores[subject]!.add((score / total) * 100);
+      }
+    }
+
+    // 2. Graded Submissions
     for (final doc in subSnap.docs) {
       final data = doc.data();
       if (data['status'] == 'graded' && data['marks'] != null) {
         final assignId = data['assignment_id'] as String?;
         if (assignId != null) {
-          // Check cache first
           Map<String, dynamic>? aData = assignmentCache[assignId];
-          
           if (aData == null) {
             final aDoc = await _db.collection('assignments').doc(assignId).get();
             if (aDoc.exists) {

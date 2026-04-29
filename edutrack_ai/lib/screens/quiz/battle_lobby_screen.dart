@@ -62,6 +62,7 @@ class BattleLobbyScreen extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('battle_rooms')
                   .where('status', isEqualTo: 'waiting')
+                  .where('class_id', isEqualTo: user?.classId ?? '')
                   .orderBy('created_at', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -139,6 +140,7 @@ class BattleLobbyScreen extends StatelessWidget {
                       final roomId = await BattleService().createRoom(
                         hostId: user.uid,
                         hostName: user.name,
+                        classId: user.classId ?? '',
                         quizId: q.id,
                         quizTitle: q.title,
                       );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:edutrack_ai/providers/theme_provider.dart';
+import 'package:edutrack_ai/widgets/glass_card.dart';
 import 'package:edutrack_ai/l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
@@ -18,8 +20,10 @@ class StudentProfileView extends StatelessWidget {
     final user = context.watch<AuthProvider>().user;
     final l10n = AppLocalizations.of(context)!;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppTheme.bgLight,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : AppTheme.bgLight,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -43,6 +47,7 @@ class StudentProfileView extends StatelessWidget {
                 _buildListTile(context, Icons.app_settings_alt_rounded, l10n.appSettings, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
                 }),
+                _buildThemeTile(context),
                 const SizedBox(height: 12),
                 _buildListTile(context, Icons.help_center_rounded, l10n.helpSupport, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
@@ -150,23 +155,52 @@ class StudentProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildListTile(BuildContext context, IconData icon, String title, VoidCallback onTap) {
+  Widget _buildThemeTile(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.themeMode == ThemeMode.dark;
+    
+    return _buildListTile(
+      context, 
+      isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, 
+      "Appearance: ${isDark ? 'Dark' : 'Light'}", 
+      () => themeProvider.toggleTheme(),
+      trailing: Switch(
+        value: isDark,
+        onChanged: (_) => themeProvider.toggleTheme(),
+        activeColor: AppTheme.primary,
+      ),
+    );
+  }
+
+  Widget _buildListTile(BuildContext context, IconData icon, String title, VoidCallback onTap, {Widget? trailing}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderLight),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : AppTheme.borderLight),
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.05) : AppTheme.bgLight, 
+            borderRadius: BorderRadius.circular(12)
+          ),
           child: Icon(icon, color: AppTheme.primary, size: 22),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textPrimary)),
-        trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textHint),
+        title: Text(
+          title, 
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            fontSize: 15, 
+            color: isDark ? Colors.white : AppTheme.textPrimary
+          )
+        ),
+        trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white30 : AppTheme.textHint),
         onTap: onTap,
       ),
     );

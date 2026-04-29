@@ -8,6 +8,7 @@ class BattleService {
   Future<String> createRoom({
     required String hostId,
     required String hostName,
+    required String classId,
     required String quizId,
     required String quizTitle,
   }) async {
@@ -16,6 +17,7 @@ class BattleService {
       'id': roomId,
       'host_id': hostId,
       'host_name': hostName,
+      'class_id': classId,
       'quiz_id': quizId,
       'quiz_title': quizTitle,
       'players': [

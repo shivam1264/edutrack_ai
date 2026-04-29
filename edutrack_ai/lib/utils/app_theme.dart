@@ -183,20 +183,54 @@ class AppTheme {
     ),
   );
 
+  // Glassmorphism constants
+  static const Color glassWhite = Color(0x1AFFFFFF);
+  static const Color glassBlack = Color(0x1A000000);
+  static const double glassBlur = 12.0;
+
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,
+      secondary: secondary,
       brightness: Brightness.dark,
+      background: const Color(0xFF0F172A),
+      surface: const Color(0xFF1E293B),
     ),
-    scaffoldBackgroundColor: const Color(0xFF111827),
+    scaffoldBackgroundColor: const Color(0xFF0F172A),
     fontFamily: GoogleFonts.poppins().fontFamily,
     textTheme: GoogleFonts.poppinsTextTheme(
       ThemeData.dark().textTheme,
     ).copyWith(
-      bodyLarge: const TextStyle(color: Colors.white),
-      bodyMedium: const TextStyle(color: Colors.white70),
+      headlineLarge: GoogleFonts.poppins(
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+      titleLarge: GoogleFonts.poppins(
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
+      bodyLarge: GoogleFonts.poppins(
+        color: Colors.white,
+        fontSize: 16,
+      ),
+      bodyMedium: GoogleFonts.poppins(
+        color: Colors.white70,
+        fontSize: 14,
+      ),
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF1E293B),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: false,
+      foregroundColor: Colors.white,
+    ),
+    cardTheme: CardThemeData(
+      color: const Color(0xFF1E293B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
     ),
   );
 }

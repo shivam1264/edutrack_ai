@@ -5,6 +5,7 @@ import '../../models/study_plan_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/ai_service.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/analytics_provider.dart';
 
 class SmartPlannerScreen extends StatefulWidget {
   const SmartPlannerScreen({super.key});
@@ -266,7 +267,10 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
     setState(() => _isGenerating = true);
     
     try {
-      final tasks = await AIService().generateStudyPlan(userId);
+      final analytics = context.read<AnalyticsProvider>();
+      final studentData = analytics.studentAnalytics;
+      
+      final tasks = await AIService().generateStudyPlan(userId, studentData: studentData);
       
       if (tasks.isEmpty) {
         if (mounted) {

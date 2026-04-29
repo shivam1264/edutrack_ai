@@ -26,12 +26,12 @@ class PremiumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     final decoration = BoxDecoration(
       borderRadius: BorderRadius.circular(borderRadius),
       color: gradientColors == null
-          ? AppTheme.surfaceLight.withOpacity(
-              opacity.clamp(0.0, 1.0).toDouble(),
-            )
+          ? (isDark ? const Color(0xFF1E293B).withOpacity(0.8) : AppTheme.surfaceLight.withOpacity(opacity))
           : null,
       gradient: gradientColors == null
           ? null
@@ -41,11 +41,9 @@ class PremiumCard extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
       border: Border.all(
-        color: gradientColors == null
-            ? AppTheme.borderLight
-            : Colors.white.withOpacity(0.18),
+        color: isDark ? Colors.white.withOpacity(0.1) : (gradientColors == null ? AppTheme.borderLight : Colors.white.withOpacity(0.18)),
       ),
-      boxShadow: AppTheme.cardShadow,
+      boxShadow: isDark ? [] : AppTheme.cardShadow,
     );
 
     return Container(
