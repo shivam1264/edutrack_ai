@@ -101,21 +101,21 @@ class AppTheme {
       brightness: Brightness.light,
     ),
     scaffoldBackgroundColor: bgLight,
-    fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
-    textTheme: GoogleFonts.plusJakartaSansTextTheme().copyWith(
-      headlineLarge: GoogleFonts.plusJakartaSans(
-        fontWeight: FontWeight.w800,
-        color: textPrimary,
-      ),
-      titleLarge: GoogleFonts.plusJakartaSans(
+    fontFamily: GoogleFonts.poppins().fontFamily,
+    textTheme: GoogleFonts.poppinsTextTheme().copyWith(
+      headlineLarge: GoogleFonts.poppins(
         fontWeight: FontWeight.w700,
         color: textPrimary,
       ),
-      bodyLarge: GoogleFonts.plusJakartaSans(
+      titleLarge: GoogleFonts.poppins(
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+      ),
+      bodyLarge: GoogleFonts.poppins(
         color: textPrimary,
         fontSize: 16,
       ),
-      bodyMedium: GoogleFonts.plusJakartaSans(
+      bodyMedium: GoogleFonts.poppins(
         color: textSecondary,
         fontSize: 14,
       ),
@@ -127,10 +127,10 @@ class AppTheme {
       scrolledUnderElevation: 0,
       centerTitle: false,
       foregroundColor: textPrimary,
-      titleTextStyle: GoogleFonts.plusJakartaSans(
+      titleTextStyle: GoogleFonts.poppins(
         color: textPrimary,
         fontSize: 20,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
       ),
       iconTheme: const IconThemeData(
         color: textPrimary,
@@ -154,13 +154,13 @@ class AppTheme {
           ),
         ],
       ),
-      labelStyle: GoogleFonts.plusJakartaSans(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      ),
-      unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+      labelStyle: GoogleFonts.poppins(
         fontSize: 12,
         fontWeight: FontWeight.w600,
+      ),
+      unselectedLabelStyle: GoogleFonts.poppins(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
       ),
       dividerColor: Colors.transparent,
     ),
@@ -191,8 +191,8 @@ class AppTheme {
       brightness: Brightness.dark,
     ),
     scaffoldBackgroundColor: const Color(0xFF111827),
-    fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
-    textTheme: GoogleFonts.plusJakartaSansTextTheme(
+    fontFamily: GoogleFonts.poppins().fontFamily,
+    textTheme: GoogleFonts.poppinsTextTheme(
       ThemeData.dark().textTheme,
     ).copyWith(
       bodyLarge: const TextStyle(color: Colors.white),
