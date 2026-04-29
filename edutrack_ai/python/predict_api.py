@@ -241,6 +241,19 @@ def health():
         'timestamp': datetime.utcnow().isoformat()
     })
 
+@app.route('/debug-config', methods=['GET'])
+def debug_config():
+    """Debug endpoint to check which API keys are loaded"""
+    return jsonify({
+        'groq_keys_count': len(GROQ_KEYS),
+        'groq_keys_configured': len(GROQ_KEYS) > 0,
+        'gemini_configured': bool(GEMINI_API_KEY),
+        'gemini_key_present': bool(GEMINI_API_KEY),
+        'primary_ai': 'groq' if GROQ_KEYS else 'gemini' if GEMINI_API_KEY else 'none',
+        'groq_text_model': GROQ_TEXT_MODEL,
+        'groq_vision_model': GROQ_VISION_MODEL
+    })
+
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
     if not db_admin:
