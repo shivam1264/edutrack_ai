@@ -116,6 +116,17 @@ class _HomeViewState extends State<HomeView> {
                         MaterialPageRoute(builder: (_) => const ProgressView()),
                       );
                     },
+                    trailing: IconButton(
+                      onPressed: () async {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Syncing Learning DNA...')),
+                        );
+                        await BrainDNAService.instance.generateDNAFromExistingData(userId);
+                        setState(() {}); // Refresh UI
+                      },
+                      icon: const Icon(Icons.sync, color: AppTheme.primary, size: 20),
+                      tooltip: 'Sync DNA from history',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   PremiumCard(
@@ -477,21 +488,36 @@ class _HomeViewState extends State<HomeView> {
     String title,
     String subtitle,
     String actionLabel,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    Widget? trailing,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              if (subtitle.isNotEmpty)
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+            ],
           ),
         ),
+        if (trailing != null) trailing!,
         TextButton(onPressed: onTap, child: Text(actionLabel)),
       ],
     );
