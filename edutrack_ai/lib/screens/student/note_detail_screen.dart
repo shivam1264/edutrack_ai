@@ -116,66 +116,90 @@ class NoteDetailScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  if (isPdf) {
-                                    // Try internal viewer first, fallback to browser
-                                    _openPdfWithFallback(context, note.fileUrl!, note.fileName ?? 'PDF Document');
-                                  } else {
-                                    _openResource(note.fileUrl!, context);
-                                  }
-                                },
-                                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                                label: Text(
-                                  isPdf ? 'Open PDF' : 'Open Resource',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0F172A),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
-                            ),
                             if (isPdf)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Column(
-                                  children: [
-                                    // Open in System PDF App button
-                                    ElevatedButton.icon(
+                              Column(
+                                children: [
+                                  // Primary: Open in System PDF App (Most Reliable)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
                                       onPressed: () => _openPdfInSystemApp(
                                         note.fileUrl!,
                                         note.fileName ?? 'document.pdf',
                                         context,
                                       ),
-                                      icon: const Icon(Icons.picture_as_pdf, size: 18),
+                                      icon: const Icon(Icons.picture_as_pdf, size: 20),
                                       label: const Text(
-                                        'Open in PDF App (Adobe, Drive, etc.)',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        'Open in PDF App',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.redAccent,
                                         foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    // Open in Browser option
-                                    TextButton.icon(
-                                      onPressed: () => _openResource(note.fileUrl!, context),
-                                      icon: const Icon(Icons.open_in_browser, size: 16),
-                                      label: const Text('Open in Browser instead'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.grey[600],
-                                        textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Opens in Adobe Reader, Google PDF Viewer, etc.',
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Secondary: Try internal viewer
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _openPdfWithFallback(
+                                        context,
+                                        note.fileUrl!,
+                                        note.fileName ?? 'PDF Document',
+                                      ),
+                                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                                      label: const Text('Open in App Viewer'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF0F172A),
+                                        side: const BorderSide(color: Color(0xFF0F172A)),
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Tertiary: Browser option
+                                  TextButton.icon(
+                                    onPressed: () => _openResource(note.fileUrl!, context),
+                                    icon: const Icon(Icons.open_in_browser, size: 16),
+                                    label: const Text('Open in Browser'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.grey[600],
+                                      textStyle: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _openResource(note.fileUrl!, context),
+                                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                                  label: const Text(
+                                    'Open Resource',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0F172A),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
                                 ),
                               ),
                           ],
