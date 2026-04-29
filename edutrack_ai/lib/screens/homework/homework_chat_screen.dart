@@ -11,6 +11,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 
 class HomeworkChatScreen extends StatefulWidget {
   const HomeworkChatScreen({super.key});
@@ -101,8 +102,22 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
   }
 
   void _listen() async {
+    // Request permission explicitly first
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission is required for voice input.')),
+        );
+      }
+      return;
+    }
+
     if (!_isListening) {
-      bool available = await _speech.initialize();
+      bool available = await _speech.initialize(
+        onStatus: (val) => debugPrint('Speech Status: $val'),
+        onError: (val) => debugPrint('Speech Error: $val'),
+      );
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
@@ -388,34 +403,37 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
 
   Widget _buildWelcome() {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(gradient: AppTheme.meshGradient, shape: BoxShape.circle),
-            child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 60),
-          ).animate().scale(delay: 200.ms),
-          const SizedBox(height: 24),
-          const Text('How can I assist your learning?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: AppTheme.textPrimary)),
-          const SizedBox(height: 12),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
-            child: Text('Ask any homework problem. I provide logical steps, hints, and full solutions to master your subjects.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.5)),
-          ),
-          const SizedBox(height: 32),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            alignment: WrapAlignment.center,
-            children: [
-              'Solve x² + 5x + 6 = 0',
-              'What is photosynthesis?',
-              'Laws of motion?',
-              'Who wrote Hamlet?',
-            ].map((q) => _buildSuggestionChip(q)).toList(),
-          ),
-        ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(gradient: AppTheme.meshGradient, shape: BoxShape.circle),
+              child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 60),
+            ).animate().scale(delay: 200.ms),
+            const SizedBox(height: 24),
+            const Text('How can I assist your learning?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: AppTheme.textPrimary)),
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Text('Ask any homework problem. I provide logical steps, hints, and full solutions to master your subjects.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.5)),
+            ),
+            const SizedBox(height: 32),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                'Solve x² + 5x + 6 = 0',
+                'What is photosynthesis?',
+                'Laws of motion?',
+                'Who wrote Hamlet?',
+              ].map((q) => _buildSuggestionChip(q)).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }

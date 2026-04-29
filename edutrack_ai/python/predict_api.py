@@ -599,21 +599,28 @@ def generate_study_plan():
     
     print(f"    [PLAN] Generating rescue plan for {student_name}")
 
-    if not GROQ_KEYS:
-        return jsonify({'plan': 'AI Configuration missing on server.'})
-
+    system_instruction = (
+        "You are an AI Academic Strategist. Create a high-impact daily study plan for a student. "
+        "Return ONLY a JSON list of 6 tasks. Each task MUST have: "
+        "'title' (specific action), 'subject' (subject name), 'duration_minutes' (30, 45, or 60), 'type' ('Theory', 'Practice', 'Revision'). "
+        "Focus on these weak subjects: " + (", ".join(weak_subjects) if weak_subjects else "General improvement")
+    )
+    
+    prompt = f"Create a daily study plan for {student_name} who can study for {study_hours} hours. "
+    
     try:
-        prompt = (
-            f"Create a high-impact search study plan for {student_name}. "
-            f"Focus on weak subjects: {', '.join(weak_subjects) if weak_subjects else 'General improvement'}. "
-            f"The student can commit {study_hours} hours per day. "
-            f"Upcoming deadlines: {upcoming_deadlines if upcoming_deadlines else 'None immediately'}. "
-            f"Provide a structured, encouraging plan in Markdown."
-        )
-        response_text = generate_with_groq(prompt)
-        return jsonify({'plan': response_text})
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
+        tasks = parse_ai_json(response_text)
+        return jsonify({'tasks': tasks})
     except Exception as e:
-        return jsonify({'plan': f"Error: {str(e)}"})
+        print(f"    [PLAN ERROR] {str(e)}")
+        # Fallback tasks
+        fallback = [
+            {'title': 'Review weak topics', 'subject': weak_subjects[0] if weak_subjects else 'General', 'duration_minutes': 45, 'type': 'Revision'},
+            {'title': 'Practice previous questions', 'subject': 'Mathematics', 'duration_minutes': 60, 'type': 'Practice'},
+            {'title': 'Read next chapter', 'subject': 'Science', 'duration_minutes': 30, 'type': 'Theory'},
+        ]
+        return jsonify({'tasks': fallback})
 
 # ─── AI Topic Task Generator (Smart Planner) ─────────────────────────────
 @app.route('/generate-topic-tasks', methods=['POST'])
