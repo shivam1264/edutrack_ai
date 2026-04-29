@@ -283,8 +283,6 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
-
-  }
 }
 
 class _RoleChip extends StatelessWidget {

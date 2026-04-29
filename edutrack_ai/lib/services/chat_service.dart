@@ -70,10 +70,10 @@ class ChatService {
     try {
       final targetId = (senderId == teacherId) ? studentId : teacherId;
       if (targetId != null) {
-        await NotificationService.sendNotificationToUser(
+        await NotificationService.instance.sendNotification(
           userId: targetId,
           title: 'New Message from ${senderName ?? "Chat"}',
-          content: text,
+          body: text,
         );
       }
     } catch (e) {

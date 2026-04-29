@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
 import 'package:edutrack_ai/screens/parent/parent_ai_chat_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_assignments_screen.dart';
