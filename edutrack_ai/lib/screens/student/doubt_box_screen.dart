@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/doubt_model.dart';
+import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/premium_card.dart';
+import '../../utils/config.dart' as app_config;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
+import '../../services/cloudinary_service.dart';
 
 class DoubtBoxScreen extends StatefulWidget {
   const DoubtBoxScreen({super.key});
@@ -14,187 +20,262 @@ class DoubtBoxScreen extends StatefulWidget {
   State<DoubtBoxScreen> createState() => _DoubtBoxScreenState();
 }
 
-class _DoubtBoxScreenState extends State<DoubtBoxScreen> {
-  int _selectedTabIndex = 1;
-  final List<String> _tabs = ['Ask', 'My Doubts', 'Answered'];
-  final _formKey = GlobalKey<FormState>();
-  final _subjectController = TextEditingController();
-  final _questionController = TextEditingController();
+class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabCtrl;
+  final _questionCtrl = TextEditingController();
+  String _selectedSubject = 'Mathematics';
   bool _isSubmitting = false;
+  XFile? _selectedImage;
+
+  final List<String> _subjects = [
+    'Mathematics', 'Science', 'Physics', 'Chemistry',
+    'Biology', 'English', 'Hindi', 'History', 'Geography', 'Computer Science',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 3, vsync: this);
+  }
 
   @override
   void dispose() {
-    _subjectController.dispose();
-    _questionController.dispose();
+    _tabCtrl.dispose();
+    _questionCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImage = image;
+      });
+    }
+  }
+
+  Future<void> _submitDoubt() async {
+    if (_questionCtrl.text.trim().isEmpty && _selectedImage == null) return;
+    final user = context.read<AuthProvider>().user;
+    setState(() => _isSubmitting = true);
+    try {
+      String? imageUrl;
+      if (_selectedImage != null) {
+        final bytes = await _selectedImage!.readAsBytes();
+        final result = await CloudinaryService.instance.uploadBytes(bytes, _selectedImage!.name);
+        imageUrl = result?.secureUrl;
+      }
+
+      final docRef = await FirebaseFirestore.instance.collection('doubts').add({
+        'studentId': user?.uid,
+        'studentName': user?.name ?? 'Student',
+        'schoolId': user?.schoolId ?? '',
+        'school_id': user?.schoolId ?? '',
+        'classId': user?.classId ?? '',
+        'class_id': user?.classId ?? '',
+        'subject': _selectedSubject,
+        'question': _questionCtrl.text.trim(),
+        'imageUrl': imageUrl,
+        'status': 'pending',
+        'answer': '✨ Generating Best Answer for you...',
+        'answeredBy': 'EduTrack AI',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      final questionText = _questionCtrl.text.trim();
+      _questionCtrl.clear();
+      setState(() {
+        _selectedImage = null;
+      });
+      _generateAIBestAnswer(docRef.id, questionText, _selectedSubject, user?.classId ?? 'Grade 10');
+
+      if (mounted) {
+        _tabCtrl.animateTo(1);
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isSubmitting = false);
+  }
+
+  Future<void> _generateAIBestAnswer(String docId, String question, String subject, String grade) async {
+    try {
+      final res = await http.post(
+        Uri.parse(app_config.Config.endpoint('/generate-best-answer')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'question': question, 'subject': subject, 'grade': grade}),
+      ).timeout(const Duration(seconds: 40));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        await FirebaseFirestore.instance.collection('doubts').doc(docId).update({
+          'answer': data['answer'],
+          'status': 'ai_answered',
+          'isAI': true,
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.read<AuthProvider>().user?.uid ?? '';
-
     return Scaffold(
-      backgroundColor: AppTheme.bgLight,
+      backgroundColor: const Color(0xFFF8FAFF),
       appBar: AppBar(
-        title: const Text('Doubt Box'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: Text('Doubt Box', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 18)),
+        centerTitle: true,
       ),
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: _buildTabs(),
-              ),
-              Expanded(
-                child: _selectedTabIndex == 0
-                    ? _buildAskForm(userId)
-                    : StreamBuilder<List<DoubtModel>>(
-                    stream: FirebaseFirestore.instance
-                        .collection('doubts')
-                        .where('studentId', isEqualTo: userId)
-                        .snapshots()
-                        .map((snap) => snap.docs
-                            .map((doc) => DoubtModel.fromMap(doc.id, doc.data()))
-                            .toList()),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final doubts = snapshot.data ?? [];
-                    final filteredDoubts = doubts.where((d) {
-                      final status = d.status.toLowerCase();
-                      if (_selectedTabIndex == 1) return status == 'pending' || status == 'ai_answered';
-                      if (_selectedTabIndex == 2) return status == 'answered';
-                      return true;
-                    }).toList();
-
-                    return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                      child: Column(
-                        children: [
-                          if (filteredDoubts.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 40),
-                              child: Center(child: Text('No doubts found.', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold))),
-                            )
-                          else
-                            ...filteredDoubts.map((doubt) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _DoubtCard(
-                                  subject: doubt.subject,
-                                  question: doubt.question,
-                                  date: DateFormat('MMM dd, yyyy').format(doubt.createdAt),
-                                  status: doubt.status,
-                                  answer: doubt.answer,
-                                  icon: _getIconForSubject(doubt.subject),
-                                  color: _getColorForSubject(doubt.subject),
-                                ),
-                              );
-                            }),
-                          const SizedBox(height: 100), // padding for bottom button
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          // Only show floating button when NOT on Ask tab
-          if (_selectedTabIndex != 0)
-            Positioned(
-              bottom: 24,
-              left: 16,
-              right: 16,
-              child: ElevatedButton(
-                onPressed: () => setState(() => _selectedTabIndex = 0),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-                child: const Text('+ Ask a Doubt', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildTabItem(0, 'Ask'),
+                const SizedBox(width: 8),
+                _buildTabItem(1, 'My Doubts'),
+                const SizedBox(width: 8),
+                _buildTabItem(2, 'Answered'),
+              ],
             ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabCtrl,
+              children: [
+                _buildAskTab(),
+                _buildListTab('my'),
+                _buildListTab('answered'),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAskForm(String userId) {
+  Widget _buildTabItem(int index, String label) {
+    bool isSelected = _tabCtrl.index == index;
+    return GestureDetector(
+      onTap: () => setState(() => _tabCtrl.animateTo(index)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF6366F1) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? const Color(0xFF6366F1) : const Color(0xFFE2E8F0)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : const Color(0xFF64748B),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAskTab() {
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      child: Form(
-        key: _formKey,
+      padding: const EdgeInsets.all(20),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5))],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Subject', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _subjectController,
-              decoration: const InputDecoration(hintText: 'e.g. Mathematics, Science...'),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter a subject' : null,
-            ),
-            const SizedBox(height: 20),
-            const Text('Your Question', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _questionController,
-              maxLines: 5,
-              decoration: const InputDecoration(hintText: 'Describe your doubt in detail...'),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter your question' : null,
+            Text('Select Subject', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedSubject,
+                  isExpanded: true,
+                  items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 14)))).toList(),
+                  onChanged: (v) => setState(() => _selectedSubject = v!),
+                ),
+              ),
             ),
             const SizedBox(height: 24),
+            Text('Your Question', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _questionCtrl,
+              maxLines: 6,
+              decoration: InputDecoration(
+                hintText: 'I need help with linear equations...',
+                filled: true,
+                fillColor: const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0), style: BorderStyle.solid),
+                ),
+                child: Column(
+                  children: [
+                    Icon(_selectedImage != null ? Icons.image : Icons.add_photo_alternate, color: const Color(0xFF6366F1), size: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedImage != null ? 'Image Selected' : 'Attach Photo (Optional)',
+                      style: GoogleFonts.plusJakartaSans(color: const Color(0xFF64748B), fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_selectedImage != null) ...[
+              const SizedBox(height: 16),
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: kIsWeb
+                        ? Image.network(_selectedImage!.path, height: 120, width: double.infinity, fit: BoxFit.cover)
+                        : Image.file(File(_selectedImage!.path), height: 120, width: double.infinity, fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedImage = null),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                        child: const Icon(Icons.close, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
+              height: 54,
               child: ElevatedButton(
-                onPressed: _isSubmitting ? null : () async {
-                  if (!_formKey.currentState!.validate()) return;
-                  setState(() => _isSubmitting = true);
-                  
-                  try {
-                    final user = context.read<AuthProvider>().user;
-                    await FirebaseFirestore.instance.collection('doubts').add({
-                      'studentId': userId, // Matched with teacher panel
-                      'studentName': user?.name ?? 'Student',
-                      'classId': user?.classId ?? '',
-                      'schoolId': user?.schoolId ?? '',
-                      'subject': _subjectController.text.trim(),
-                      'question': _questionController.text.trim(),
-                      'status': 'pending', // Matched with teacher panel
-                      'createdAt': FieldValue.serverTimestamp(),
-                      'isAI': false,
-                    });
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Doubt submitted to teachers! ✅'), backgroundColor: Colors.green),
-                      );
-                      _subjectController.clear();
-                      _questionController.clear();
-                      setState(() { _isSubmitting = false; _selectedTabIndex = 1; });
-                    }
-                  } catch (e) {
-                    setState(() => _isSubmitting = false);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to submit doubt. Try again.')));
-                    }
-                  }
-                },
-                child: _isSubmitting
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Submit Doubt'),
+                onPressed: _isSubmitting ? null : _submitDoubt,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _isSubmitting ? const CircularProgressIndicator(color: Colors.white) : const Text('+ Ask a Doubt', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -203,180 +284,91 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> {
     );
   }
 
-  Widget _buildTabs() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderLight),
-      ),
-      child: Row(
-        children: List.generate(_tabs.length, (index) {
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedTabIndex = index),
-              child: _TabItem(_tabs[index], isSelected: _selectedTabIndex == index),
-            ),
-          );
-        }),
-      ),
-    );
-  }
+  Widget _buildListTab(String type) {
+    final uid = context.read<AuthProvider>().user?.uid ?? '';
+    var query = FirebaseFirestore.instance.collection('doubts').where('studentId', isEqualTo: uid);
 
-  IconData _getIconForSubject(String subject) {
-    switch (subject.toLowerCase()) {
-      case 'mathematics':
-      case 'math': return Icons.calculate;
-      case 'science': return Icons.science;
-      case 'english': return Icons.book;
-      case 'history': return Icons.history_edu;
-      case 'computer': return Icons.computer;
-      default: return Icons.help_outline;
-    }
-  }
+    return StreamBuilder<QuerySnapshot>(
+      stream: query.snapshots(),
+      builder: (context, snap) {
+        if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
+        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        
+        var docs = snap.data!.docs;
+        
+        // Filter in memory to avoid Firestore composite index requirement
+        if (type == 'answered') {
+          docs = docs.where((d) => (d.data() as Map<String, dynamic>)['status'] != 'pending').toList();
+        } else {
+          docs = docs.where((d) => (d.data() as Map<String, dynamic>)['status'] == 'pending').toList();
+        }
+        
+        // Sort by createdAt descending
+        docs.sort((a, b) {
+          final aTime = (a.data() as Map<String, dynamic>)['createdAt'];
+          final bTime = (b.data() as Map<String, dynamic>)['createdAt'];
+          if (aTime == null || bTime == null) return 0;
+          return bTime.compareTo(aTime);
+        });
 
-  Color _getColorForSubject(String subject) {
-    switch (subject.toLowerCase()) {
-      case 'mathematics':
-      case 'math': return Colors.blue;
-      case 'science': return Colors.green;
-      case 'english': return Colors.orange;
-      case 'history': return Colors.purple;
-      case 'computer': return Colors.teal;
-      default: return AppTheme.primary;
-    }
-  }
-}
+        if (docs.isEmpty) return const Center(child: Text('No doubts here'));
 
-class _TabItem extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-
-  const _TabItem(this.label, {this.isSelected = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryLight : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DoubtCard extends StatelessWidget {
-  final String subject;
-  final String question;
-  final String date;
-  final String status;
-  final String? answer;
-  final IconData icon;
-  final Color color;
-
-  const _DoubtCard({
-    required this.subject,
-    required this.question,
-    required this.date,
-    required this.status,
-    this.answer,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final normalizedStatus = status.toLowerCase();
-    final isPending = normalizedStatus == 'pending' || normalizedStatus == 'ai_answered';
-    final displayStatus = normalizedStatus == 'answered'
-        ? 'Answered'
-        : normalizedStatus == 'ai_answered'
-            ? 'AI Answered'
-            : 'Pending';
-    return PremiumCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
-                    Text(
-                      displayStatus,
-                      style: TextStyle(
-                        color: isPending ? Colors.blue : Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+        return ListView.separated(
+          padding: const EdgeInsets.all(20),
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (context, i) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            final isPending = data['status'] == 'pending';
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('${data['subject']} — ${data['isAI'] == true ? 'AI' : 'Teacher'}', 
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF6366F1))),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isPending ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          isPending ? 'Pending' : 'Answered',
+                          style: TextStyle(color: isPending ? Colors.orange : Colors.green, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(data['question'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  if (data['imageUrl'] != null && data['imageUrl'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(data['imageUrl'], height: 150, width: double.infinity, fit: BoxFit.cover),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(question, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-                if (!isPending && answer != null && answer!.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green.withOpacity(0.1)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.verified_user_rounded, color: Colors.green, size: 14),
-                            const SizedBox(width: 6),
-                            const Text(
-                              "Teacher's Expert Answer", 
-                              style: TextStyle(color: Colors.green, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          answer!, 
-                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, height: 1.4, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
+                  if (data['answer'] != null && data['answer'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    Text(data['answer'] ?? '', style: const TextStyle(color: Color(0xFF64748B), height: 1.5, fontSize: 13)),
+                  ],
                 ],
-                const SizedBox(height: 8),
-                Text(date, style: const TextStyle(color: AppTheme.textHint, fontSize: 12)),
-              ],
-            ),
-          ),
-        ],
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
