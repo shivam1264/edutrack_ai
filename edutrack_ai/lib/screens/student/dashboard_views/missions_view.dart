@@ -138,7 +138,7 @@ class _MissionsViewState extends State<MissionsView> {
                     _ActionItem('My Badges', Icons.workspace_premium, const Color(0xFFFFD700), 'Learn'),
                     _ActionItem('Study Plan', Icons.auto_graph, const Color(0xFFF43F5E), 'Learn'),
                   ]),
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 120),
                 ],
               ),
             ),
@@ -272,7 +272,7 @@ class _MissionsViewState extends State<MissionsView> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 1.6,
+            childAspectRatio: 1.4,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),

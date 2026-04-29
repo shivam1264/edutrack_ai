@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/assignment_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'cloudinary_service.dart';   // ← Cloudinary instead of Firebase Storage
+import 'notification_service.dart';
 
 class AssignmentService {
   static final AssignmentService _instance = AssignmentService._internal();
@@ -54,6 +55,15 @@ class AssignmentService {
     );
 
     await _db.collection('assignments').doc(id).set(model.toMap());
+
+    // --- SEND PUSH NOTIFICATION ---
+    await NotificationService.instance.sendClassNotification(
+      classId: classId,
+      title: 'New Assignment: $subject',
+      body: 'A new assignment "$title" has been posted. Due: ${dueDate.day}/${dueDate.month}',
+      type: 'assignment',
+    );
+
     return model;
   }
 

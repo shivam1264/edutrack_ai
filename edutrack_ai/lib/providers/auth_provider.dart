@@ -28,6 +28,9 @@ class AuthProvider extends ChangeNotifier {
         if (_user != null) {
           await NotificationService.instance
               .saveFcmToken(firebaseUser.uid);
+          if (_user!.classId != null && _user!.role == UserRole.student) {
+            await NotificationService.instance.subscribeToClass(_user!.classId!);
+          }
         }
       } else {
         _user = null;
@@ -47,6 +50,9 @@ class AuthProvider extends ChangeNotifier {
       if (_user != null) {
         await NotificationService.instance
             .saveFcmToken(_user!.uid);
+        if (_user!.classId != null && _user!.role == UserRole.student) {
+          await NotificationService.instance.subscribeToClass(_user!.classId!);
+        }
       }
     } catch (e) {
       _error = e.toString();

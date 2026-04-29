@@ -25,6 +25,41 @@ load_dotenv()
 app = Flask(__name__)
 db_admin = None
 
+# OneSignal Configuration
+ONESIGNAL_APP_ID = "d417e3e0-f416-4399-8f27-8180a8c566cc"
+ONESIGNAL_REST_KEY = "os_v2_app_2ql6hyhuczbztdzhqgakrrlgzrfnmsos4xgu3numyimxuzqdop27f4nqavupckbtrifb2pqqhgegx5lfbx4jn56zbwrjxhqpfsb6hui"
+
+def send_onesignal_notification(title, body, target_type="all", class_id=None, user_id=None):
+    """Sends a push notification via OneSignal REST API"""
+    url = "https://onesignal.com/api/v1/notifications"
+    headers = {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Authorization": f"Basic {ONESIGNAL_REST_KEY}"
+    }
+    
+    payload = {
+        "app_id": ONESIGNAL_APP_ID,
+        "headings": {"en": title},
+        "contents": {"en": body},
+    }
+
+    if target_type == "class" and class_id:
+        topic = f"class_{re.sub(r'[^a-zA-Z0-9]', '_', class_id)}"
+        payload["filters"] = [{"field": "tag", "key": "class_topic", "relation": "=", "value": topic}]
+    elif target_type == "user" and user_id:
+        # Note: Requires users to be tagged with their external_id/user_id in OneSignal
+        payload["include_external_user_ids"] = [user_id]
+    else:
+        payload["included_segments"] = ["All"]
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        print(f"[OneSignal] Sent: {response.status_code} - {response.text}")
+        return response.status_code == 200
+    except Exception as e:
+        print(f"[OneSignal] Error: {str(e)}")
+        return False
+
 def sanitize_data(data):
     if isinstance(data, list):
         return [sanitize_data(i) for i in data]
@@ -420,6 +455,35 @@ def predict_grade():
     perf = (attendance * 0.3 + avg_score * 0.35 + submissions * 0.2 + quiz_avg * 0.15)
     risk = 'low' if perf >= 75 else ('medium' if perf >= 55 else 'high')
     
+    # --- Trigger Notification for High Risk ---
+    if risk == 'high' and db_admin:
+        student_id = data.get('student_id')
+        student_name = data.get('student_name', 'Student')
+        class_id = data.get('class_id')
+        
+        if student_id:
+            msg_body = f"AI Alert: {student_name} is at HIGH academic risk (Score: {round(perf, 1)}%). Intervention recommended."
+            
+            # 1. Save to Firestore notifications
+            db_admin.collection('notifications').add({
+                'user_id': student_id,
+                'title': "🚨 Academic Risk Alert",
+                'body': msg_body,
+                'type': 'ai_risk',
+                'is_read': False,
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'data': {'risk_level': 'high', 'score': str(round(perf, 1))}
+            })
+
+            # 2. Send Push Notification to Class (Teachers) or Global
+            if class_id:
+                send_onesignal_notification(
+                    title="🚨 High Risk Detected",
+                    body=msg_body,
+                    target_type="class",
+                    class_id=class_id
+                )
+
     if perf >= 90: grade = 'A+'
     elif perf >= 80: grade = 'A'
     elif perf >= 70: grade = 'B'

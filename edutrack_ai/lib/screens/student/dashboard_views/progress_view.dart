@@ -177,7 +177,7 @@ class _ProgressViewState extends State<ProgressView> {
             const SizedBox(height: 16),
             _buildMasteryCard(selectedSubject, avgScore, l10n),
           ],
-          const SizedBox(height: 100),
+          const SizedBox(height: 120),
         ],
       ),
     );

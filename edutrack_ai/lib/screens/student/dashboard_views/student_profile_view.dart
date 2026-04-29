@@ -107,7 +107,9 @@ class StudentProfileView extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance.collection('classes').doc(user?.classId ?? '').snapshots(),
+                        stream: (user?.classId != null && user!.classId.isNotEmpty)
+                            ? FirebaseFirestore.instance.collection('classes').doc(user.classId).snapshots()
+                            : null,
                         builder: (context, snapshot) {
                           final classData = snapshot.data?.data() as Map<String, dynamic>?;
                           String className = 'Loading...';

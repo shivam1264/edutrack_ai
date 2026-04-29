@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../models/quiz_model.dart';
+import 'notification_service.dart';
 
 class QuizService {
   static final QuizService _instance = QuizService._internal();
@@ -36,6 +37,15 @@ class QuizService {
       createdAt: DateTime.now(),
     );
     await _db.collection('quizzes').doc(id).set(quiz.toMap());
+
+    // --- SEND PUSH NOTIFICATION ---
+    await NotificationService.instance.sendClassNotification(
+      classId: classId,
+      title: 'New Quiz: $subject',
+      body: 'A new quiz "$title" has been scheduled for ${startTime.day}/${startTime.month}.',
+      type: 'quiz',
+    );
+
     return quiz;
   }
 

@@ -9,6 +9,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'admin_student_detail_screen.dart';
 import 'admin_teacher_detail_screen.dart';
 import 'admin_parent_detail_screen.dart';
+import 'bulk_import_screen.dart';
+import 'add_user_screen.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -44,6 +46,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         foregroundColor: const Color(0xFF0F172A),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.group_add_rounded),
+            tooltip: 'Bulk Import Students',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BulkImportScreen())),
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            tooltip: 'Add Single User',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddUserScreen())),
+          ),
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
             onPressed: () {

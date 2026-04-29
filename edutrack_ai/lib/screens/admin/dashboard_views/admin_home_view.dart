@@ -14,6 +14,7 @@ import '../ai_risk_report_screen.dart';
 import '../announcement_screen.dart';
 import '../class_management_screen.dart';
 import '../user_management_screen.dart';
+import '../bulk_import_screen.dart';
 
 class AdminHomeView extends StatelessWidget {
   const AdminHomeView({super.key});
@@ -247,6 +248,12 @@ class AdminHomeView extends StatelessWidget {
         'icon': Icons.person_add_rounded,
         'color': AppTheme.primary,
         'screen': const AddStudentScreen(),
+      },
+      {
+        'label': 'Bulk Import',
+        'icon': Icons.group_add_rounded,
+        'color': AppTheme.primary,
+        'screen': const BulkImportScreen(),
       },
       {
         'label': 'Add Teacher',

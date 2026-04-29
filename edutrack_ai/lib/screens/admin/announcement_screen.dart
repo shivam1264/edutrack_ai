@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/notification_service.dart';
 import '../../utils/app_theme.dart';
 
 class AnnouncementScreen extends StatefulWidget {
@@ -209,6 +210,25 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
 
       if (count > 0) {
         await batch.commit();
+      }
+
+      // --- SEND REAL PUSH NOTIFICATION VIA ONESIGNAL ---
+      if (_target == 'all') {
+        await NotificationService.instance.sendGlobalNotification(
+          title: _titleController.text,
+          body: _messageController.text,
+          type: 'announcement',
+        );
+      } else if (_target == 'class' && _selectedClassId != null) {
+        await NotificationService.instance.sendClassNotification(
+          classId: _selectedClassId!,
+          title: _titleController.text,
+          body: _messageController.text,
+          type: 'announcement',
+        );
+      } else if (_target == 'teachers') {
+        // We can send to teachers segment if defined, or just use the batch logic above
+        // For now, OneSignal REST API can also filter by role if we tag users with role
       }
 
 

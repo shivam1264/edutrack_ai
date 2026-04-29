@@ -36,6 +36,18 @@ class AIService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> generateStudyPlan(String userId) async {
+    try {
+      final data = await _postBackendJson(
+        '/generate-study-plan',
+        body: {'userId': userId},
+      );
+      return _readList(data, preferredKeys: const ['tasks', 'plan']);
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<Map<String, dynamic>>> generateFlashcards(String content) async {
     try {
       final data = await _postBackendJson(

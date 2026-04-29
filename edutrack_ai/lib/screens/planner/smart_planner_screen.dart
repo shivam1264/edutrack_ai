@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/study_plan_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/ai_service.dart';
 import '../../utils/app_theme.dart';
 
 class SmartPlannerScreen extends StatefulWidget {
@@ -14,6 +15,7 @@ class SmartPlannerScreen extends StatefulWidget {
 
 class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
   int _selectedTabIndex = 0;
+  bool _isGenerating = false;
   final List<String> _tabs = ['Today', 'This Week', 'This Month'];
 
   @override
@@ -24,6 +26,16 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         title: const Text('Study Plan'),
+        actions: [
+          if (_isGenerating)
+            const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: CircularProgressIndicator(strokeWidth: 2)))
+          else
+            IconButton(
+              icon: const Icon(Icons.auto_awesome, color: AppTheme.primary),
+              onPressed: () => _generateAIPlan(context),
+              tooltip: 'Generate AI Study Plan',
+            ),
+        ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -216,6 +228,57 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
         }),
       ),
     );
+  }
+
+  Future<void> _generateAIPlan(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final userId = auth.user?.uid ?? '';
+    if (userId.isEmpty) return;
+
+    setState(() => _isGenerating = true);
+    
+    try {
+      final tasks = await AIService().generateStudyPlan(userId);
+      
+      if (tasks.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not generate plan. Please try again later.'))
+          );
+        }
+        return;
+      }
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final task in tasks) {
+        final docRef = FirebaseFirestore.instance.collection('study_tasks').doc();
+        batch.set(docRef, {
+          'userId': userId,
+          'title': task['title'] ?? 'Study Session',
+          'subject': task['subject'] ?? 'General',
+          'duration_minutes': task['duration_minutes'] ?? 30,
+          'is_completed': false,
+          'type': task['type'] ?? 'AI Suggested',
+          'created_at': FieldValue.serverTimestamp(),
+        });
+      }
+      
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI Study Plan generated and added! 🚀'))
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'))
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
   }
 }
 

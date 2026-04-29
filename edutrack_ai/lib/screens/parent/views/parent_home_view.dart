@@ -59,7 +59,7 @@ class _ParentHomeViewState extends State<ParentHomeView> {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 _buildChildCard(context, childId),

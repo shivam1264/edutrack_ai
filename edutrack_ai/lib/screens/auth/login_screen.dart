@@ -5,6 +5,7 @@ import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import '../../widgets/glass_button.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -224,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen>
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
-                                onPressed: _showForgotPassword,
+                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
                                 child: Text(
                                   'Forgot Key?',
                                   style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700),
@@ -283,57 +284,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  void _showForgotPassword() {
-    final emailCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Reset Password'),
-        content: TextField(
-          controller: emailCtrl,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: 'Email Address',
-            prefixIcon: Icon(Icons.email_outlined),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final email = emailCtrl.text.trim();
-              if (email.isEmpty || !email.contains('@')) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Enter a valid email first.')),
-                  );
-                }
-                return;
-              }
-
-              Navigator.pop(ctx);
-              try {
-                await context.read<AuthProvider>().sendPasswordResetEmail(email);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Password reset email sent to $email')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  _showError(e.toString());
-                }
-              }
-            },
-            child: const Text('Send Reset Link'),
-          ),
-        ],
-      ),
-    );
   }
 }
 

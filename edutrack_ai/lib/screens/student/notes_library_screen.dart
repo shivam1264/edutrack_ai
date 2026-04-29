@@ -74,7 +74,10 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('notes')
-                  .where('class_id', isEqualTo: classId ?? '')
+                  .where(Filter.or(
+                    Filter('class_id', isEqualTo: classId ?? ''),
+                    Filter('student_id', isEqualTo: user?.uid ?? ''),
+                  ))
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {

@@ -11,6 +11,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/class_model.dart';
 import '../../services/class_service.dart';
 import '../../models/note_model.dart';
+import '../../services/notification_service.dart';
 import '../student/note_detail_screen.dart';
 
 class UploadNotesScreen extends StatefulWidget {
@@ -95,6 +96,14 @@ class _UploadNotesScreenState extends State<UploadNotesScreen> {
         'class_id': widget.classId,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // --- SEND PUSH NOTIFICATION ---
+      await NotificationService.instance.sendClassNotification(
+        classId: widget.classId,
+        title: 'New Study Notes: $_selectedSubject',
+        body: 'Teacher ${user?.name ?? ""} has uploaded new notes: ${_titleCtrl.text.trim()}',
+        type: 'notes',
+      );
 
       _titleCtrl.clear();
       _descCtrl.clear();

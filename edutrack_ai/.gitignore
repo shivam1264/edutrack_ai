@@ -29,3 +29,14 @@ venv/
 python/.env
 python/models/
 python/service_account.json
+
+# Environment Secrets
+.env
+.env.local
+.env.*
+
+# Large Build Files
+android/.gradle/
+**/executionHistory.bin
+**/fileHashes.bin
+**/last-build.bin

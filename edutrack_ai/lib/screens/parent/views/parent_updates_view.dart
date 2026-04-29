@@ -101,7 +101,7 @@ class ParentUpdatesView extends StatelessWidget {
                 });
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                   itemCount: sortedDocs.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, i) {

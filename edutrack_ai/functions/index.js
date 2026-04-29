@@ -63,6 +63,29 @@ async function getParentId(studentId) {
   return snap.empty ? null : snap.docs[0].id;
 }
 
+// ── Helper: Send Topic Notification ──────────────────────────────────────────
+async function sendTopicNotification({ topic, title, body, type, data = {} }) {
+  try {
+    await messaging.send({
+      topic,
+      notification: { title, body },
+      data: { type, ...Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k, String(v)])
+      )},
+      android: {
+        priority: "high",
+        notification: { channel_id: "edutrack_channel" },
+      },
+      apns: {
+        payload: { aps: { badge: 1, sound: "default" } },
+      },
+    });
+    console.log(`✅ Topic notification sent to ${topic}: ${title}`);
+  } catch (error) {
+    console.error(`❌ Failed to notify topic ${topic}:`, error);
+  }
+}
+
 // ── 1. onAttendanceAbsent ─────────────────────────────────────────────────────
 exports.onAttendanceCreated = functions.firestore
   .document("attendance/{docId}")
@@ -72,15 +95,15 @@ exports.onAttendanceCreated = functions.firestore
 
     if (status !== "absent") return null;
 
-    // Get student info
     const studentDoc = await db.collection("users").doc(student_id).get();
-    const studentName = studentDoc.data()?.name || "Your child";
+    const studentData = studentDoc.data();
+    const studentName = studentData?.name || "Your child";
+    const classId = studentData?.class_id;
 
-    // Format date
     const dateObj = date.toDate();
     const dateStr = dateObj.toLocaleDateString("en-IN");
 
-    // Notify parent
+    // Notify parent individually
     const parentId = await getParentId(student_id);
     if (parentId) {
       await sendNotification({
@@ -92,7 +115,7 @@ exports.onAttendanceCreated = functions.firestore
       });
     }
 
-    // Also notify student
+    // Notify student individually
     await sendNotification({
       userId: student_id,
       title: "📅 Attendance Recorded",
@@ -104,7 +127,7 @@ exports.onAttendanceCreated = functions.firestore
     return null;
   });
 
-// ── 2. onGradeDrop ────────────────────────────────────────────────────────────
+// ── 2. onQuizResultCreated ────────────────────────────────────────────────────
 exports.onQuizResultCreated = functions.firestore
   .document("quiz_results/{resultId}")
   .onCreate(async (snap) => {
@@ -114,7 +137,7 @@ exports.onQuizResultCreated = functions.firestore
     if (!total || total === 0) return null;
     const percentage = (score / total) * 100;
 
-    if (percentage >= 60) return null; // Only notify for poor performance
+    if (percentage >= 60) return null;
 
     const studentDoc = await db.collection("users").doc(student_id).get();
     const studentName = studentDoc.data()?.name || "Your child";
@@ -123,7 +146,6 @@ exports.onQuizResultCreated = functions.firestore
     const quizTitle = quizDoc.data()?.title || "Quiz";
 
     const parentId = await getParentId(student_id);
-
     if (parentId) {
       await sendNotification({
         userId: parentId,
@@ -137,79 +159,81 @@ exports.onQuizResultCreated = functions.firestore
     return null;
   });
 
-// ── 3. onAssignmentDue ────────────────────────────────────────────────────────
-exports.checkAssignmentDeadlines = functions.pubsub
-  .schedule("every 24 hours")
-  .onRun(async () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0));
-    const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999));
+// ── 3. onAssignmentCreated ────────────────────────────────────────────────────
+exports.onAssignmentCreated = functions.firestore
+  .document("assignments/{id}")
+  .onCreate(async (snap) => {
+    const data = snap.data();
+    const { class_id, title, subject } = data;
+    const topic = `class_${class_id.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-    const assignmentsSnap = await db.collection("assignments")
-      .where("due_date", ">=", admin.firestore.Timestamp.fromDate(tomorrowStart))
-      .where("due_date", "<=", admin.firestore.Timestamp.fromDate(tomorrowEnd))
-      .get();
-
-    for (const assignDoc of assignmentsSnap.docs) {
-      const assign = assignDoc.data();
-      const { class_id, title } = assign;
-
-      // Get all students in class
-      const studentsSnap = await db.collection("users")
-        .where("class_id", "==", class_id)
-        .where("role", "==", "student")
-        .get();
-
-      for (const studentDoc of studentsSnap.docs) {
-        // Check if student already submitted
-        const subSnap = await db.collection("submissions")
-          .where("assignment_id", "==", assignDoc.id)
-          .where("student_id", "==", studentDoc.id)
-          .limit(1)
-          .get();
-
-        if (!subSnap.empty) continue; // Already submitted
-
-        await sendNotification({
-          userId: studentDoc.id,
-          title: "⏰ Assignment Due Tomorrow!",
-          body: `'${title}' is due tomorrow. Submit it now!`,
-          type: "assignment",
-          data: { assignment_id: assignDoc.id, title },
-        });
-      }
-    }
-
-    return null;
+    await sendTopicNotification({
+      topic,
+      title: "📚 New Assignment",
+      body: `A new assignment '${title}' has been posted for ${subject}.`,
+      type: "assignment",
+      data: { assignment_id: snap.id, class_id },
+    });
   });
 
-// ── 4. onQuizPublished ────────────────────────────────────────────────────────
+// ── 4. onAnnouncementCreated ──────────────────────────────────────────────────
+exports.onAnnouncementCreated = functions.firestore
+  .document("announcements/{id}")
+  .onCreate(async (snap) => {
+    const data = snap.data();
+    const { target_class, title, content } = data;
+
+    if (target_class === "All" || !target_class) {
+      await sendTopicNotification({
+        topic: "all_users",
+        title: `📢 ${title}`,
+        body: content,
+        type: "announcement",
+      });
+    } else {
+      const topic = `class_${target_class.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      await sendTopicNotification({
+        topic,
+        title: `📢 ${title}`,
+        body: content,
+        type: "announcement",
+      });
+    }
+  });
+
+// ── 5. onNoteCreated ──────────────────────────────────────────────────────────
+exports.onNoteCreated = functions.firestore
+  .document("notes/{id}")
+  .onCreate(async (snap) => {
+    const data = snap.data();
+    const { class_id, title, subject } = data;
+    const topic = `class_${class_id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    await sendTopicNotification({
+      topic,
+      title: "📝 New Study Notes",
+      body: `New notes for ${subject} are available: ${title}`,
+      type: "notes",
+      data: { note_id: snap.id, class_id },
+    });
+  });
+
+// ── 6. onQuizCreated ──────────────────────────────────────────────────────────
 exports.onQuizCreated = functions.firestore
   .document("quizzes/{quizId}")
   .onCreate(async (snap) => {
     const quiz = snap.data();
     const { class_id, title, subject, start_time } = quiz;
-
     const startDate = start_time.toDate().toLocaleDateString("en-IN");
+    const topic = `class_${class_id.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-    // Notify all students in class
-    const studentsSnap = await db.collection("users")
-      .where("class_id", "==", class_id)
-      .where("role", "==", "student")
-      .get();
-
-    for (const studentDoc of studentsSnap.docs) {
-      await sendNotification({
-        userId: studentDoc.id,
-        title: `📝 New Quiz: ${subject}`,
-        body: `${title} starts on ${startDate}. Prepare now!`,
-        type: "quiz",
-        data: { quiz_id: snap.id, title, subject },
-      });
-    }
-
-    return null;
+    await sendTopicNotification({
+      topic,
+      title: `📝 New Quiz: ${subject}`,
+      body: `${title} starts on ${startDate}. Prepare now!`,
+      type: "quiz",
+      data: { quiz_id: snap.id, title, subject },
+    });
   });
 
 // ── 5. onAtRiskDetected ───────────────────────────────────────────────────────

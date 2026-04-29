@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:edutrack_ai/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
+
 
 import 'package:edutrack_ai/models/knowledge_node.dart';
 import 'package:edutrack_ai/providers/analytics_provider.dart';
@@ -95,7 +97,10 @@ class _HomeViewState extends State<HomeView> {
                   const SizedBox(height: 20),
                   _buildOverview(gamify, context),
                   const SizedBox(height: 20),
+                  _buildAnnouncements(context, user?.classId ?? ''),
+                  const SizedBox(height: 20),
                   _buildCalendarShortcut(context),
+
                 ],
               ),
             ),
@@ -696,6 +701,73 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  Widget _buildAnnouncements(BuildContext context, String classId) {
+    if (classId.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('announcements')
+          .where(Filter.or(
+            Filter('class_id', isEqualTo: classId),
+            Filter('target', isEqualTo: 'all'),
+          ))
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final d = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+        final time = d['created_at'] as Timestamp?;
+        final dateStr = time != null ? DateFormat('dd MMM, hh:mm a').format(time.toDate()) : 'Recently';
+
+        return PremiumCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.campaign_rounded, color: Colors.blue, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Latest Announcement',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                  ),
+                  const Spacer(),
+                  Text(
+                    dateStr,
+                    style: const TextStyle(color: AppTheme.textHint, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                d['teacher_name'] ?? 'School Admin',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                d['message'] ?? d['content'] ?? '',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildDNALegend(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
@@ -875,4 +947,6 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
+
 }
+
