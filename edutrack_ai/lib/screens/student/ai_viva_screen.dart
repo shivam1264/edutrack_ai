@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/config.dart';
 
@@ -113,6 +114,15 @@ class _AIVivaScreenState extends State<AIVivaScreen> {
   }
 
   void _startListening() async {
+    // Request microphone permission first
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission is required for voice input')),
+      );
+      return;
+    }
+    
     if (!_speechEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Speech recognition not available')),

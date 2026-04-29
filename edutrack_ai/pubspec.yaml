@@ -64,6 +64,7 @@ dependencies:
 
   # Charts / Progress
   percent_indicator: ^4.2.3
+  permission_handler: ^11.3.1
 
   # Other utilities
   uuid: ^4.4.2
