@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:edutrack_ai/l10n/app_localizations.dart';
 import 'package:edutrack_ai/providers/analytics_provider.dart';
 import 'package:edutrack_ai/providers/auth_provider.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
@@ -15,7 +16,6 @@ class ProgressView extends StatefulWidget {
 
 class _ProgressViewState extends State<ProgressView> {
   int _selectedTabIndex = 0;
-  final List<String> _tabs = ['All', 'Mathematics', 'Science', 'English', 'History', 'Computer'];
 
   @override
   void initState() {
@@ -33,24 +33,25 @@ class _ProgressViewState extends State<ProgressView> {
     final analytics = context.watch<AnalyticsProvider>();
     final isLoading = analytics.isLoading;
     final data = analytics.studentAnalytics;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildSliverAppBar(),
+          _buildSliverAppBar(context),
           SliverToBoxAdapter(
             child: Column(
               children: [
-                _buildTabs(data),
+                _buildTabs(data, l10n),
                 if (isLoading)
                   const Padding(
                     padding: EdgeInsets.all(40),
                     child: CircularProgressIndicator(),
                   )
                 else
-                  _buildContent(data),
+                  _buildContent(data, l10n),
               ],
             ),
           ),
@@ -59,7 +60,8 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildSliverAppBar() {
+  Widget _buildSliverAppBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SliverAppBar(
       expandedHeight: 104,
       floating: false,
@@ -68,9 +70,9 @@ class _ProgressViewState extends State<ProgressView> {
       surfaceTintColor: Colors.transparent,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
-        title: const Text(
-          'Performance Overview',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        title: Text(
+          l10n.performanceOverview,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
         ),
         background: Container(
           decoration: const BoxDecoration(
@@ -84,9 +86,9 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildTabs(Map<String, dynamic>? data) {
+  Widget _buildTabs(Map<String, dynamic>? data, AppLocalizations l10n) {
     final subjectAvg = data?['subject_avg'] as Map<String, dynamic>? ?? {};
-    final dynamicTabs = ['All', ...subjectAvg.keys];
+    final dynamicTabs = [l10n.all, ...subjectAvg.keys];
 
     return Container(
       height: 52,
@@ -127,18 +129,18 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildContent(Map<String, dynamic>? data) {
-    if (data == null) return const Center(child: Text('No performance data available.'));
+  Widget _buildContent(Map<String, dynamic>? data, AppLocalizations l10n) {
+    if (data == null) return Center(child: Text(l10n.noPerformanceDataAvailable));
 
     final subjectAvg = data['subject_avg'] as Map<String, dynamic>? ?? {};
-    final dynamicTabs = ['All', ...subjectAvg.keys];
+    final dynamicTabs = [l10n.all, ...subjectAvg.keys];
     
-    final selectedSubject = _selectedTabIndex < dynamicTabs.length ? dynamicTabs[_selectedTabIndex] : 'All';
+    final selectedSubject = _selectedTabIndex < dynamicTabs.length ? dynamicTabs[_selectedTabIndex] : l10n.all;
     double avgScore = 0.0;
     List<double> last5Scores = [];
 
     if (_selectedTabIndex == 0) {
-      // 'All' view
+      // All view
       avgScore = (data['avg_score'] as num?)?.toDouble() ?? 0.0;
       last5Scores = (data['last_5_scores'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? [];
     } else {
@@ -153,23 +155,23 @@ class _ProgressViewState extends State<ProgressView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMainStats(avgScore, (data['attendance'] as num?)?.toDouble() ?? 0.0),
+          _buildMainStats(avgScore, (data['attendance'] as num?)?.toDouble() ?? 0.0, l10n),
           const SizedBox(height: 32),
           Text(
-            _selectedTabIndex == 0 ? 'Learning Velocity (Overall)' : 'Learning Trend',
+            _selectedTabIndex == 0 ? l10n.learningVelocityOverall : l10n.learningTrend,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
           ),
           const SizedBox(height: 16),
-          _buildScoreChart(last5Scores),
+          _buildScoreChart(last5Scores, l10n),
           const SizedBox(height: 32),
           if (_selectedTabIndex == 0) ...[
-            const Text('Subject Breakdown', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+            Text(l10n.subjectBreakdown, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
             const SizedBox(height: 16),
-            _buildSubjectPerformance(subjectAvg),
+            _buildSubjectPerformance(subjectAvg, l10n),
           ] else ...[
-            const Text('Mastery Goals', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+            Text(l10n.masteryGoals, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
             const SizedBox(height: 16),
-            _buildMasteryCard(selectedSubject, avgScore),
+            _buildMasteryCard(selectedSubject, avgScore, l10n),
           ],
           const SizedBox(height: 100),
         ],
@@ -177,7 +179,7 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildMainStats(double avgScore, double attendance) {
+  Widget _buildMainStats(double avgScore, double attendance, AppLocalizations l10n) {
     return Row(
       children: [
         Expanded(
@@ -186,9 +188,9 @@ class _ProgressViewState extends State<ProgressView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Average Score',
-                  style: TextStyle(
+                Text(
+                  l10n.averageScore,
+                  style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 12,
                   ),
@@ -209,9 +211,9 @@ class _ProgressViewState extends State<ProgressView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Attendance',
-                  style: TextStyle(
+                Text(
+                  l10n.attendance,
+                  style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 12,
                   ),
@@ -229,7 +231,7 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildScoreChart(List<double> scores) {
+  Widget _buildScoreChart(List<double> scores, AppLocalizations l10n) {
     if (scores.isEmpty) {
       return Container(
         height: 220,
@@ -238,7 +240,7 @@ class _ProgressViewState extends State<ProgressView> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppTheme.borderLight),
         ),
-        child: const Center(child: Text('Complete more quizzes to see trend!')),
+        child: Center(child: Text(l10n.completeMoreQuizzesToSeeTrend)),
       );
     }
     
@@ -262,7 +264,7 @@ class _ProgressViewState extends State<ProgressView> {
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index >= 0 && index < scores.length) {
-                    return Text('Q${index + 1}', style: const TextStyle(color: AppTheme.textHint, fontSize: 10, fontWeight: FontWeight.bold));
+                    return Text('${l10n.q}${index + 1}', style: const TextStyle(color: AppTheme.textHint, fontSize: 10, fontWeight: FontWeight.bold));
                   }
                   return const Text('');
                 },
@@ -300,11 +302,11 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildSubjectPerformance(Map<String, dynamic> subjectAvg) {
+  Widget _buildSubjectPerformance(Map<String, dynamic> subjectAvg, AppLocalizations l10n) {
     if (subjectAvg.isEmpty) {
-      return const PremiumCard(
-        padding: EdgeInsets.all(20),
-        child: Center(child: Text('No subject data available yet.')),
+      return PremiumCard(
+        padding: const EdgeInsets.all(20),
+        child: Center(child: Text(l10n.noSubjectDataAvailableYet)),
       );
     }
 
@@ -342,7 +344,7 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
-  Widget _buildMasteryCard(String subject, double mastery) {
+  Widget _buildMasteryCard(String subject, double mastery, AppLocalizations l10n) {
     final target = ((mastery + 10).clamp(75, 100)).toInt();
     return PremiumCard(
       padding: const EdgeInsets.all(24),
@@ -351,7 +353,7 @@ class _ProgressViewState extends State<ProgressView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$subject Mastery', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('$subject ${l10n.mastery}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -359,8 +361,8 @@ class _ProgressViewState extends State<ProgressView> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  'Target: $target%',
-                  style: TextStyle(
+                  '${l10n.target}: $target%',
+                  style: const TextStyle(
                     color: AppTheme.primary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -384,7 +386,7 @@ class _ProgressViewState extends State<ProgressView> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Keep practicing to improve your score!', style: TextStyle(color: AppTheme.textSecondary, fontStyle: FontStyle.italic)),
+          Text(l10n.keepPracticingToImproveYourScore, style: const TextStyle(color: AppTheme.textSecondary, fontStyle: FontStyle.italic)),
         ],
       ),
     );

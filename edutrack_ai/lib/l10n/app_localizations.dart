@@ -6,7 +6,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_gu.dart';
 import 'app_localizations_hi.dart';
+import 'app_localizations_mr.dart';
 
 // ignore_for_file: type=lint
 
@@ -95,7 +97,9 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('hi')
+    Locale('gu'),
+    Locale('hi'),
+    Locale('mr')
   ];
 
   /// No description provided for @profile.
@@ -637,6 +641,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logout Command Center'**
   String get logoutCommandCenter;
+
+  /// No description provided for @search.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get search;
+
+  /// No description provided for @syncingLearningDNA.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing Learning DNA...'**
+  String get syncingLearningDNA;
+
+  /// No description provided for @syncDnaFromHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync DNA from history'**
+  String get syncDnaFromHistory;
+
+  /// No description provided for @loadingYourLearningDNA.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your Learning DNA...'**
+  String get loadingYourLearningDNA;
+
+  /// No description provided for @academicCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Academic Calendar'**
+  String get academicCalendar;
+
+  /// No description provided for @viewAllAssignmentsQuizzesNotesByDate.
+  ///
+  /// In en, this message translates to:
+  /// **'View all assignments, quizzes & notes by date'**
+  String get viewAllAssignmentsQuizzesNotesByDate;
+
+  /// No description provided for @allCaughtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up!'**
+  String get allCaughtUp;
+
+  /// No description provided for @assignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Assignment'**
+  String get assignment;
+
+  /// No description provided for @subject.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get subject;
+
+  /// No description provided for @mastered.
+  ///
+  /// In en, this message translates to:
+  /// **'Mastered'**
+  String get mastered;
+
+  /// No description provided for @learning.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning'**
+  String get learning;
+
+  /// No description provided for @focus.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get focus;
+
+  /// No description provided for @review.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get review;
+
+  /// No description provided for @yourLearningDNAIsForming.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Learning DNA is forming...'**
+  String get yourLearningDNAIsForming;
+
+  /// No description provided for @completeAssignmentsAndQuizzesToBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete assignments and quizzes\\nto build your knowledge profile.'**
+  String get completeAssignmentsAndQuizzesToBuild;
+
+  /// No description provided for @performanceOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance Overview'**
+  String get performanceOverview;
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// No description provided for @mathematics.
+  ///
+  /// In en, this message translates to:
+  /// **'Mathematics'**
+  String get mathematics;
+
+  /// No description provided for @science.
+  ///
+  /// In en, this message translates to:
+  /// **'Science'**
+  String get science;
+
+  /// No description provided for @english.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get english;
+
+  /// No description provided for @history.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get history;
+
+  /// No description provided for @computer.
+  ///
+  /// In en, this message translates to:
+  /// **'Computer'**
+  String get computer;
+
+  /// No description provided for @noPerformanceDataAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No performance data available.'**
+  String get noPerformanceDataAvailable;
+
+  /// No description provided for @learningVelocityOverall.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Velocity (Overall)'**
+  String get learningVelocityOverall;
+
+  /// No description provided for @learningTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Trend'**
+  String get learningTrend;
+
+  /// No description provided for @subjectBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject Breakdown'**
+  String get subjectBreakdown;
+
+  /// No description provided for @masteryGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Goals'**
+  String get masteryGoals;
+
+  /// No description provided for @averageScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Average Score'**
+  String get averageScore;
+
+  /// No description provided for @completeMoreQuizzesToSeeTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete more quizzes to see trend!'**
+  String get completeMoreQuizzesToSeeTrend;
+
+  /// No description provided for @q.
+  ///
+  /// In en, this message translates to:
+  /// **'Q'**
+  String get q;
+
+  /// No description provided for @noSubjectDataAvailableYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No subject data available yet.'**
+  String get noSubjectDataAvailableYet;
+
+  /// No description provided for @mastery.
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery'**
+  String get mastery;
+
+  /// No description provided for @target.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get target;
+
+  /// No description provided for @keepPracticingToImproveYourScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep practicing to improve your score!'**
+  String get keepPracticingToImproveYourScore;
 }
 
 class _AppLocalizationsDelegate
@@ -650,7 +858,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'hi'].contains(locale.languageCode);
+      <String>['en', 'gu', 'hi', 'mr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -661,8 +869,12 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'gu':
+      return AppLocalizationsGu();
     case 'hi':
       return AppLocalizationsHi();
+    case 'mr':
+      return AppLocalizationsMr();
   }
 
   throw FlutterError(

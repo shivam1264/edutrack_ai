@@ -70,6 +70,16 @@ class EduTrackApp extends StatelessWidget {
               Locale('mr'), // Marathi
               Locale('gu'), // Gujarati
             ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              // Fallback to English if locale is null or not supported
+              if (locale == null) return const Locale('en');
+              for (var supportedLocale in supportedLocales) {
+                if (supportedLocale.languageCode == locale.languageCode) {
+                  return supportedLocale;
+                }
+              }
+              return const Locale('en');
+            },
             home: const AuthWrapper(),
           );
         },

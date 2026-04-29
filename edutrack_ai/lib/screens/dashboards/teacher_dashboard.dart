@@ -50,13 +50,19 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         final myClasses = allAvailableClasses.where((c) => assignedIds.contains(c.id)).toList();
         
         final Map<String, String> classMap = { for (var c in myClasses) c.id : c.displayName };
-        final currentClassName = classMap[_selectedClassId] ?? (_selectedClassId != null ? 'Loading...' : 'N/A');
+        
+        // Ensure _selectedClassId is valid for the Dropdown items
+        final String? effectiveSelectedId = classMap.containsKey(_selectedClassId) 
+            ? _selectedClassId 
+            : (myClasses.isNotEmpty ? myClasses.first.id : null);
+            
+        final currentClassName = classMap[effectiveSelectedId] ?? (effectiveSelectedId != null ? 'Loading...' : 'N/A');
 
         final List<Widget> tabs = [
-          TeacherHomeView(selectedClassId: _selectedClassId, currentClassName: currentClassName),
-          TeacherClassroomView(selectedClassId: _selectedClassId, currentClassName: currentClassName),
-          TeacherStudentsView(selectedClassId: _selectedClassId),
-          TeacherReportsView(selectedClassId: _selectedClassId),
+          TeacherHomeView(selectedClassId: effectiveSelectedId, currentClassName: currentClassName),
+          TeacherClassroomView(selectedClassId: effectiveSelectedId, currentClassName: currentClassName),
+          TeacherStudentsView(selectedClassId: effectiveSelectedId),
+          TeacherReportsView(selectedClassId: effectiveSelectedId),
           const TeacherMoreView(),
         ];
 
@@ -82,7 +88,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       isExpanded: true,
-                      value: _selectedClassId,
+                      value: effectiveSelectedId,
                       dropdownColor: Colors.white,
                       icon: const Icon(
                         Icons.keyboard_arrow_down_rounded,

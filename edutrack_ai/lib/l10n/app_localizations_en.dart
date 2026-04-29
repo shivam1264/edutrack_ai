@@ -279,4 +279,110 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logoutCommandCenter => 'Logout Command Center';
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get syncingLearningDNA => 'Syncing Learning DNA...';
+
+  @override
+  String get syncDnaFromHistory => 'Sync DNA from history';
+
+  @override
+  String get loadingYourLearningDNA => 'Loading your Learning DNA...';
+
+  @override
+  String get academicCalendar => 'Academic Calendar';
+
+  @override
+  String get viewAllAssignmentsQuizzesNotesByDate =>
+      'View all assignments, quizzes & notes by date';
+
+  @override
+  String get allCaughtUp => 'All caught up!';
+
+  @override
+  String get assignment => 'Assignment';
+
+  @override
+  String get subject => 'Subject';
+
+  @override
+  String get mastered => 'Mastered';
+
+  @override
+  String get learning => 'Learning';
+
+  @override
+  String get focus => 'Focus';
+
+  @override
+  String get review => 'Review';
+
+  @override
+  String get yourLearningDNAIsForming => 'Your Learning DNA is forming...';
+
+  @override
+  String get completeAssignmentsAndQuizzesToBuild =>
+      'Complete assignments and quizzes\\nto build your knowledge profile.';
+
+  @override
+  String get performanceOverview => 'Performance Overview';
+
+  @override
+  String get all => 'All';
+
+  @override
+  String get mathematics => 'Mathematics';
+
+  @override
+  String get science => 'Science';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get history => 'History';
+
+  @override
+  String get computer => 'Computer';
+
+  @override
+  String get noPerformanceDataAvailable => 'No performance data available.';
+
+  @override
+  String get learningVelocityOverall => 'Learning Velocity (Overall)';
+
+  @override
+  String get learningTrend => 'Learning Trend';
+
+  @override
+  String get subjectBreakdown => 'Subject Breakdown';
+
+  @override
+  String get masteryGoals => 'Mastery Goals';
+
+  @override
+  String get averageScore => 'Average Score';
+
+  @override
+  String get completeMoreQuizzesToSeeTrend =>
+      'Complete more quizzes to see trend!';
+
+  @override
+  String get q => 'Q';
+
+  @override
+  String get noSubjectDataAvailableYet => 'No subject data available yet.';
+
+  @override
+  String get mastery => 'Mastery';
+
+  @override
+  String get target => 'Target';
+
+  @override
+  String get keepPracticingToImproveYourScore =>
+      'Keep practicing to improve your score!';
 }

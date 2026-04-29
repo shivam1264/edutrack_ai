@@ -178,13 +178,17 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            '${widget.className} Roll Call', 
-                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${widget.className} Roll Call', 
+                                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Row(

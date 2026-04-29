@@ -78,9 +78,9 @@ class _HomeViewState extends State<HomeView> {
         },
         backgroundColor: AppTheme.primary,
         icon: const Icon(Icons.search, color: Colors.white),
-        label: const Text(
-          'Search',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        label: Text(
+          l10n.search,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: CustomScrollView(
@@ -119,13 +119,13 @@ class _HomeViewState extends State<HomeView> {
                     trailing: IconButton(
                       onPressed: () async {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Syncing Learning DNA...')),
+                          SnackBar(content: Text(l10n.syncingLearningDNA)),
                         );
                         await BrainDNAService.instance.generateDNAFromExistingData(userId);
                         setState(() {}); // Refresh UI
                       },
                       icon: const Icon(Icons.sync, color: AppTheme.primary, size: 20),
-                      tooltip: 'Sync DNA from history',
+                      tooltip: l10n.syncDnaFromHistory,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -146,8 +146,8 @@ class _HomeViewState extends State<HomeView> {
                                       CircularProgressIndicator(),
                                       SizedBox(height: 12),
                                       Text(
-                                        'Loading your Learning DNA...',
-                                        style: TextStyle(
+                                        l10n.loadingYourLearningDNA,
+                                        style: const TextStyle(
                                           color: AppTheme.textSecondary,
                                           fontSize: 12,
                                         ),
@@ -158,7 +158,7 @@ class _HomeViewState extends State<HomeView> {
                               }
                               final nodes = snapshot.data ?? [];
                               if (nodes.isEmpty) {
-                                return _buildEmptyDNA();
+                                return _buildEmptyDNA(context);
                               }
                               return Center(
                                 child: BrainDNAVisualizer(
@@ -172,7 +172,7 @@ class _HomeViewState extends State<HomeView> {
                         ),
                         const SizedBox(height: 12),
                         // Legend
-                        _buildDNALegend(),
+                        _buildDNALegend(context),
                       ],
                     ),
                   ),
@@ -447,9 +447,9 @@ class _HomeViewState extends State<HomeView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Academic Calendar',
-                    style: TextStyle(
+                  Text(
+                    l10n.academicCalendar,
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       color: AppTheme.textPrimary,
@@ -457,8 +457,8 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'View all assignments, quizzes & notes by date',
-                    style: TextStyle(
+                    l10n.viewAllAssignmentsQuizzesNotesByDate,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
                     ),
@@ -540,10 +540,10 @@ class _HomeViewState extends State<HomeView> {
 
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
-              'All caught up!',
-              style: TextStyle(color: AppTheme.textSecondary),
+              l10n.allCaughtUp,
+              style: const TextStyle(color: AppTheme.textSecondary),
             ),
           );
         }
@@ -574,7 +574,7 @@ class _HomeViewState extends State<HomeView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            data['title'] ?? 'Assignment',
+                            data['title'] ?? l10n.assignment,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
@@ -583,7 +583,7 @@ class _HomeViewState extends State<HomeView> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            data['subject'] ?? 'Subject',
+                            data['subject'] ?? l10n.subject,
                             style: const TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 12,
@@ -694,7 +694,8 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildDNALegend() {
+  Widget _buildDNALegend(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -704,10 +705,10 @@ class _HomeViewState extends State<HomeView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildLegendItem(const Color(0xFF10B981), 'Mastered', '≥80%'),
-          _buildLegendItem(const Color(0xFFF59E0B), 'Learning', '50-80%'),
-          _buildLegendItem(const Color(0xFFEF4444), 'Focus', '<50%'),
-          _buildLegendItem(Colors.grey, 'Review', 'Low'),
+          _buildLegendItem(const Color(0xFF10B981), l10n.mastered, '≥80%'),
+          _buildLegendItem(const Color(0xFFF59E0B), l10n.learning, '50-80%'),
+          _buildLegendItem(const Color(0xFFEF4444), l10n.focus, '<50%'),
+          _buildLegendItem(Colors.grey, l10n.review, 'Low'),
         ],
       ),
     );
@@ -758,7 +759,8 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildEmptyDNA() {
+  Widget _buildEmptyDNA(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -784,20 +786,20 @@ class _HomeViewState extends State<HomeView> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Your Learning DNA is forming...',
+          Text(
+            l10n.yourLearningDNAIsForming,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.textPrimary,
               fontWeight: FontWeight.w700,
               fontSize: 14,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Complete assignments and quizzes\nto build your knowledge profile.',
+          Text(
+            l10n.completeAssignmentsAndQuizzesToBuild,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.textSecondary,
               fontWeight: FontWeight.w500,
               fontSize: 12,

@@ -346,8 +346,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                     stream: ClassService().getClasses(),
                     builder: (context, snapshot) {
                       final classes = snapshot.data ?? [];
+                      final classIds = classes.map((c) => c.id).toList();
+                      final effectiveValue = (selectedClasses.isNotEmpty && classIds.contains(selectedClasses.first))
+                          ? selectedClasses.first
+                          : null;
+
                       return DropdownButtonFormField<String>(
-                        value: selectedClasses.isNotEmpty ? selectedClasses.first : null,
+                        value: effectiveValue,
                         decoration: InputDecoration(
                           hintText: 'Select Class',
                           filled: true, fillColor: Colors.grey[50],

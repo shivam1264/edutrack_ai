@@ -37,7 +37,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final themeProvider = context.watch<ThemeProvider>();
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 

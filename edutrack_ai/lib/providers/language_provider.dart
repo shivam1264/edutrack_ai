@@ -14,7 +14,7 @@ class LanguageProvider extends ChangeNotifier {
   Future<void> _loadSelectedLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     final String? languageCode = prefs.getString(_prefKey);
-    if (languageCode != null) {
+    if (languageCode != null && ['en', 'hi', 'mr', 'gu'].contains(languageCode)) {
       _locale = Locale(languageCode);
       notifyListeners();
     }
@@ -28,6 +28,13 @@ class LanguageProvider extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefKey, locale.languageCode);
+  }
+
+  Future<void> resetToDefault() async {
+    _locale = const Locale('en');
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKey);
   }
 
   void clearLocale() async {

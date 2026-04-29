@@ -280,4 +280,111 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get logoutCommandCenter => 'लॉगआउट कमांड सेंटर';
+
+  @override
+  String get search => 'खोजें';
+
+  @override
+  String get syncingLearningDNA => 'लर्निंग DNA सिंक हो रहा है...';
+
+  @override
+  String get syncDnaFromHistory => 'इतिहास से DNA सिंक करें';
+
+  @override
+  String get loadingYourLearningDNA => 'आपका लर्निंग DNA लोड हो रहा है...';
+
+  @override
+  String get academicCalendar => 'शैक्षणिक कैलेंडर';
+
+  @override
+  String get viewAllAssignmentsQuizzesNotesByDate =>
+      'तारीख के अनुसार सभी असाइनमेंट, क्विज और नोट्स देखें';
+
+  @override
+  String get allCaughtUp => 'सब कुछ अद्यतित है!';
+
+  @override
+  String get assignment => 'असाइनमेंट';
+
+  @override
+  String get subject => 'विषय';
+
+  @override
+  String get mastered => 'मास्टर किया';
+
+  @override
+  String get learning => 'सीख रहे हैं';
+
+  @override
+  String get focus => 'ध्यान दें';
+
+  @override
+  String get review => 'समीक्षा';
+
+  @override
+  String get yourLearningDNAIsForming => 'आपका लर्निंग DNA बन रहा है...';
+
+  @override
+  String get completeAssignmentsAndQuizzesToBuild =>
+      'अपना ज्ञान प्रोफाइल बनाने के लिए\\nअसाइनमेंट और क्विज पूरा करें।';
+
+  @override
+  String get performanceOverview => 'प्रदर्शन अवलोकन';
+
+  @override
+  String get all => 'सभी';
+
+  @override
+  String get mathematics => 'गणित';
+
+  @override
+  String get science => 'विज्ञान';
+
+  @override
+  String get english => 'अंग्रेजी';
+
+  @override
+  String get history => 'इतिहास';
+
+  @override
+  String get computer => 'कंप्यूटर';
+
+  @override
+  String get noPerformanceDataAvailable => 'कोई प्रदर्शन डेटा उपलब्ध नहीं है।';
+
+  @override
+  String get learningVelocityOverall => 'सीखने की गति (समग्र)';
+
+  @override
+  String get learningTrend => 'सीखने का रुझान';
+
+  @override
+  String get subjectBreakdown => 'विषय विश्लेषण';
+
+  @override
+  String get masteryGoals => 'मास्टरी लक्ष्य';
+
+  @override
+  String get averageScore => 'औसत स्कोर';
+
+  @override
+  String get completeMoreQuizzesToSeeTrend =>
+      'रुझान देखने के लिए और क्विज़ पूरा करें!';
+
+  @override
+  String get q => 'प्रश्न';
+
+  @override
+  String get noSubjectDataAvailableYet =>
+      'अभी तक कोई विषय डेटा उपलब्ध नहीं है।';
+
+  @override
+  String get mastery => 'मास्टरी';
+
+  @override
+  String get target => 'लक्ष्य';
+
+  @override
+  String get keepPracticingToImproveYourScore =>
+      'अपने स्कोर में सुधार के लिए अभ्यास करते रहें!';
 }
