@@ -46,10 +46,11 @@ class ParentUpdatesView extends StatelessWidget {
   }
 
   Widget _buildUpdatesList(String? filterType) {
-    return Consumer<AuthProvider>(
-      builder: (context, auth, _) {
+    return Consumer2<AuthProvider, AnalyticsProvider>(
+      builder: (context, auth, analytics, _) {
         final user = auth.user;
-        final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '';
+        final childId = analytics.selectedStudentId ?? 
+            ((user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '');
 
         if (childId.isEmpty) return const Center(child: Text('No student linked'));
 

@@ -131,6 +131,8 @@ class TeacherHomeView extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   user?.name.split(' ').first ?? 'Teacher',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -752,6 +754,8 @@ class TeacherHomeView extends StatelessWidget {
                                   const SizedBox(height: 2),
                                   Text(
                                     'By $studentName',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: AppTheme.textSecondary,

@@ -11,7 +11,10 @@ class ParentChildView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '';
+    final analytics = context.watch<AnalyticsProvider>();
+    
+    final childId = analytics.selectedStudentId ?? 
+        ((user?.parentOf != null && user!.parentOf!.isNotEmpty) ? user.parentOf!.first : '');
 
     if (childId.isEmpty) return const Scaffold(body: Center(child: Text('No student linked')));
 

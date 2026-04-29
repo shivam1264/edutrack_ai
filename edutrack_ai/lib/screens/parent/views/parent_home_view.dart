@@ -43,10 +43,11 @@ class _ParentHomeViewState extends State<ParentHomeView> {
   @override
   Widget build(BuildContext context) {
     final parent = context.watch<AuthProvider>().user;
+    final analytics = context.watch<AnalyticsProvider>();
     final linkedChildren = parent?.parentOf ?? [];
-    final childId = linkedChildren.contains(_selectedChildId)
-        ? _selectedChildId
-        : (linkedChildren.isNotEmpty ? linkedChildren.first : null);
+    
+    final childId = analytics.selectedStudentId ?? 
+        (linkedChildren.isNotEmpty ? linkedChildren.first : null);
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -194,6 +195,8 @@ class _ParentHomeViewState extends State<ParentHomeView> {
                   children: [
                     Text(
                       name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -585,8 +588,9 @@ class _ParentHomeViewState extends State<ParentHomeView> {
                     data?['roll_no'] == null ? id : 'Roll No. ${data!['roll_no']}',
                   ),
                   onTap: () {
-                    setState(() => _selectedChildId = id);
-                    context.read<AnalyticsProvider>().loadStudentAnalytics(id);
+                    final analytics = context.read<AnalyticsProvider>();
+                    analytics.setSelectedStudentId(id);
+                    analytics.loadStudentAnalytics(id);
                     Navigator.pop(context);
                   },
                 );

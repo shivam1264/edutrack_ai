@@ -23,8 +23,8 @@ class NoteDetailScreen extends StatelessWidget {
     final isImage = (note.fileType != null && ['jpg', 'jpeg', 'png', 'webp'].contains(note.fileType!.toLowerCase())) ||
                      (note.fileUrl != null && ['jpg', 'jpeg', 'png', 'webp'].any((ext) => note.fileUrl!.toLowerCase().contains(ext)));
     final isPdf = (note.fileType != null &&
-            note.fileType!.toLowerCase() == 'pdf') ||
-        (note.fileUrl != null && note.fileUrl!.toLowerCase().contains('.pdf'));
+            note.fileType!.toLowerCase().contains('pdf')) ||
+        (note.fileUrl != null && note.fileUrl!.toLowerCase().contains('pdf'));
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -268,17 +268,22 @@ class NoteDetailScreen extends StatelessWidget {
     }
 
     try {
-      final launched = await launchUrl(
+      bool launched = await launchUrl(
         uri,
-        mode: kIsWeb
-            ? LaunchMode.platformDefault
-            : LaunchMode.externalApplication,
+        mode: LaunchMode.externalApplication,
       );
+      
+      if (!launched) {
+        launched = await launchUrl(
+          uri,
+          mode: LaunchMode.platformDefault,
+        );
+      }
       
       if (!launched && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not open resource. No compatible app found.'),
+            content: Text('Could not open resource. Try copying the link manually.'),
             backgroundColor: AppTheme.danger,
           ),
         );

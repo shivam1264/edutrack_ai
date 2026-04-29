@@ -249,6 +249,8 @@ class _HomeViewState extends State<HomeView> {
                     const SizedBox(height: 6),
                     Text(
                       '${AppLocalizations.of(context)!.welcomeBack}, ${user?.name.split(' ').first ?? 'Student'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 24,

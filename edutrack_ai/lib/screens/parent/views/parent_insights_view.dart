@@ -16,9 +16,12 @@ class ParentInsightsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final childId = (user?.parentOf != null && user!.parentOf!.isNotEmpty)
-        ? user.parentOf!.first
-        : null;
+    final analytics = context.watch<AnalyticsProvider>();
+    
+    final childId = analytics.selectedStudentId ?? 
+        ((user?.parentOf != null && user!.parentOf!.isNotEmpty)
+            ? user.parentOf!.first
+            : null);
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,

@@ -8,6 +8,7 @@ class AnalyticsProvider extends ChangeNotifier {
   Map<String, dynamic>? _studentAnalytics;
   Map<String, dynamic>? _classAnalytics;
   Map<String, dynamic>? _aiPrediction;
+  String? _selectedStudentId;
   bool _isLoading = false;
 
   // Wellness States (Optimization)
@@ -17,8 +18,14 @@ class AnalyticsProvider extends ChangeNotifier {
   Map<String, dynamic>? get studentAnalytics => _studentAnalytics;
   Map<String, dynamic>? get classAnalytics => _classAnalytics;
   Map<String, dynamic>? get aiPrediction => _aiPrediction;
+  String? get selectedStudentId => _selectedStudentId;
   bool get isLoading => _isLoading;
   bool get isWellnessLoading => _isWellnessLoading;
+
+  void setSelectedStudentId(String id) {
+    _selectedStudentId = id;
+    notifyListeners();
+  }
 
   Map<String, dynamic>? wellnessFor(String studentId) => _wellnessCache[studentId];
 
