@@ -119,11 +119,15 @@ def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistan
                 _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
                 continue
 
+            # Log response status for debugging
+            print(f"🔍 Groq Key {_current_groq_key_index + 1} - Status: {response.status_code}")
+
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
 
         except Exception as e:
             print(f"❌ Groq Error with Key {_current_groq_key_index + 1}: {e}")
+            print(f"   Key prefix: {current_key[:10]}...{current_key[-4:]}")
             # For other errors, also try rotating
             _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
             continue
