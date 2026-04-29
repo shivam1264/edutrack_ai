@@ -1,6 +1,7 @@
 import os
 import sys
 import ast
+import re
 
 # Force pure-Python implementation for Protobuf
 os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
@@ -62,26 +63,75 @@ def log_request_info():
     if request.is_json:
         print(f"    Payload: {request.get_json()}")
 
-# ─── Groq Setup (NEW HIGH-SPEED AI) ───────────────────────────────────────────
-GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+# ─── AI Providers Setup ───────────────────────────────────────────────────────
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GROQ_KEYS = [
+    os.getenv('GROQ_API_KEY_1', ''),
+    os.getenv('GROQ_API_KEY_2', ''),
+    os.getenv('GROQ_API_KEY_3', ''),
+    os.getenv('GROQ_API_KEY', '') # Legacy support
+]
+GROQ_KEYS = [k for k in GROQ_KEYS if k] # Filter out empty keys
+
+# Configure Gemini
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        print("✅ Gemini AI configured.")
+    except Exception as e:
+        print(f"❌ Gemini Configuration Error: {e}")
+
 GROQ_TEXT_MODEL = "llama-3.3-70b-versatile"
 GROQ_VISION_MODEL = "llama-3.2-11b-vision-preview"
 
-def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None):
-    if not GROQ_API_KEY:
-        return "AI Error: API Key missing."
-    
+# Current key tracker for rotation
+_current_groq_key_index = 0
+
+def generate_with_gemini(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None):
+    """Fallback generation using Google Gemini 1.5 Flash"""
+    if not GEMINI_API_KEY:
+        return None
     try:
+        print("🔄 Falling back to Gemini 1.5 Flash...")
+        model_name = 'gemini-1.5-flash'
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            system_instruction=system_instruction
+        )
+        
+        if image_data:
+            # Convert base64 to image bytes
+            img_bytes = base64.b64decode(image_data)
+            img = Image.open(io.BytesIO(img_bytes))
+            response = model.generate_content([prompt, img])
+        else:
+            response = model.generate_content(prompt)
+            
+        return response.text
+    except Exception as e:
+        print(f"❌ Gemini Error: {e}")
+        return f"AI Error (Gemini): {str(e)}"
+
+def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None, max_retries=None):
+    """Unified AI Generation with Groq Key Rotation and Gemini Fallback"""
+    global _current_groq_key_index
+    
+    if not GROQ_KEYS:
+        # If no Groq keys, try Gemini immediately
+        return generate_with_gemini(prompt, system_instruction, image_data)
+
+    # Try each Groq key in the list
+    for _ in range(len(GROQ_KEYS)):
+        current_key = GROQ_KEYS[_current_groq_key_index]
         model = GROQ_VISION_MODEL if image_data else GROQ_TEXT_MODEL
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Authorization": f"Bearer {current_key}",
             "Content-Type": "application/json"
         }
         
         content_parts = [{"type": "text", "text": prompt}]
         if image_data:
-            # image_data is expected as base64 string
             content_parts.append({
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}
@@ -97,12 +147,28 @@ def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistan
             "max_tokens": 2048
         }
         
-        response = requests.post(url, headers=headers, json=payload, timeout=25)
-        response.raise_for_status()
-        return response.json()['choices'][0]['message']['content']
-    except Exception as e:
-        print(f"❌ Groq Error: {e}")
-        return f"AI Error: {str(e)}"
+        throttle_groq_request()
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=25)
+            
+            # If rate limited, rotate to next key and try again
+            if response.status_code == 429:
+                print(f"⚠️ Groq Key {_current_groq_key_index + 1} rate limited (429). Rotating...")
+                _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
+                continue
+            
+            response.raise_for_status()
+            return response.json()['choices'][0]['message']['content']
+            
+        except Exception as e:
+            print(f"❌ Groq Error with Key {_current_groq_key_index + 1}: {e}")
+            # For other errors, also try rotating
+            _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
+            continue
+            
+    # If all Groq keys fail, fallback to Gemini
+    return generate_with_gemini(prompt, system_instruction, image_data) or "AI Error: All providers exhausted."
 
 
 def clean_ai_text(text):
@@ -122,10 +188,10 @@ def parse_ai_json(text):
             return parsed
         raise
 
-if GROQ_API_KEY:
-    print(f"[OK] Groq configured with key: {GROQ_API_KEY[:8]}...")
+if GROQ_KEYS:
+    print(f"✅ Groq configured with {len(GROQ_KEYS)} keys.")
 else:
-    print("[ERROR] GROQ_API_KEY not found in environment!")
+    print("❌ WARNING: No Groq API keys found. Will use Gemini fallback if available.")
 
 # ─── Simple in-memory rate limiter ────────────────────────────────────────────
 _rate_store = defaultdict(list)
@@ -141,6 +207,20 @@ def check_rate_limit(student_id: str) -> bool:
     _rate_store[student_id].append(now)
     return True
 
+# ─── Request throttler to prevent Groq rate limiting ──────────────────────────
+_groq_last_request_time = 0
+_groq_min_delay = 0.5  # Minimum 500ms between requests to Groq
+
+def throttle_groq_request():
+    """Ensure minimum delay between Groq API calls to avoid rate limits"""
+    global _groq_last_request_time
+    now = time.time()
+    elapsed = now - _groq_last_request_time
+    if elapsed < _groq_min_delay:
+        sleep_time = _groq_min_delay - elapsed
+        time.sleep(sleep_time)
+    _groq_last_request_time = time.time()
+
 # ─── Health check + Gemini Test ─────────────────────────────────────────────
 @app.route('/', methods=['GET'])
 def index():
@@ -153,7 +233,7 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health():
-    ai_status = 'ok' if GROQ_API_KEY else 'missing_key'
+    ai_status = 'ok' if (GROQ_KEYS or GEMINI_API_KEY) else 'missing_key'
     return jsonify({
         'status': 'ok',
         'ai_status': ai_status,
@@ -428,7 +508,7 @@ def homework_help():
     if not check_rate_limit(student_id):
         return jsonify({'error': 'Rate limit reached'}), 429
 
-    if not GROQ_API_KEY:
+    if not GROQ_KEYS and not GEMINI_API_KEY:
         return jsonify({'answer': _fallback_answer(question, subject), 'generated_by': 'fallback'})
 
     try:
@@ -480,7 +560,7 @@ def generate_study_plan():
     
     print(f"    [PLAN] Generating rescue plan for {student_name}")
 
-    if not GROQ_API_KEY:
+    if not GROQ_KEYS and not GEMINI_API_KEY:
         return jsonify({'plan': 'AI Configuration missing on server.'})
 
     try:
