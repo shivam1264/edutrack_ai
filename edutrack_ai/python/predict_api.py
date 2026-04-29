@@ -142,6 +142,15 @@ def check_rate_limit(student_id: str) -> bool:
     return True
 
 # ─── Health check + Gemini Test ─────────────────────────────────────────────
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        'status': 'online',
+        'message': 'EduTrack AI Backend is running',
+        'health_check': '/health',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
 @app.route('/health', methods=['GET'])
 def health():
     ai_status = 'ok' if GROQ_API_KEY else 'missing_key'
