@@ -34,62 +34,12 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   }
 
   Future<void> _loadPdf() async {
-    if (kIsWeb) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    try {
-      final dio = Dio();
-      final tempDir = await getTemporaryDirectory();
-      final fileName = 'pdf_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final savePath = '${tempDir.path}/$fileName';
-
-      await dio.download(
-        widget.pdfUrl,
-        savePath,
-        options: Options(
-          headers: {
-            'Accept': 'application/pdf,application/octet-stream,*/*',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          },
-          responseType: ResponseType.bytes,
-          followRedirects: true,
-          validateStatus: (status) => status != null && status < 500,
-          receiveTimeout: const Duration(seconds: 60),
-        ),
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            debugPrint('Downloading: ${(received / total * 100).toStringAsFixed(0)}%');
-          }
-        },
-      );
-
-      // Verify file was downloaded and has content
-      final file = File(savePath);
-      if (!await file.exists()) {
-        throw Exception('File was not downloaded successfully');
-      }
-      
-      final fileSize = await file.length();
-      if (fileSize == 0) {
-        throw Exception('Downloaded file is empty');
-      }
-
-      if (mounted) {
-        setState(() {
-          _localPath = savePath;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('PDF Download Error: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = _getUserFriendlyError(e);
-        });
-      }
+    // For network loading, we don't need manual download anymore on SfPdfViewer
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _localPath = null; // We'll use network directly
+      });
     }
   }
 
@@ -263,23 +213,21 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       );
     }
 
-    if (kIsWeb) {
-      // Use WebView for web
-      return WebViewWidget(
-        controller: WebViewController()
-          ..loadRequest(Uri.parse(widget.pdfUrl)),
-      );
-    }
-
-    if (_localPath != null) {
-      // Use Syncfusion PDF Viewer for mobile
-      return SfPdfViewer.file(
-        File(_localPath!),
-        canShowScrollHead: true,
-        canShowScrollStatus: true,
-        pageSpacing: 4,
-      );
-    }
+    // Use Syncfusion PDF Viewer for mobile/web directly from network
+    return SfPdfViewer.network(
+      widget.pdfUrl,
+      canShowScrollHead: true,
+      canShowScrollStatus: true,
+      pageSpacing: 4,
+      onDocumentLoadFailed: (details) {
+        debugPrint('PDF Network Load Failed: ${details.description}');
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Unable to load PDF directly from network. Please use the browser instead.';
+          });
+        }
+      },
+    );
 
     return const Center(
       child: Text('Unable to load PDF'),
