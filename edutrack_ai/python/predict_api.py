@@ -777,12 +777,13 @@ def ai_viva():
         "The user will speak or type answers. Evaluate their answer briefly, then ask the NEXT question. "
         "Keep your reply strictly under 3 sentences. If they are wrong, explain in 1 sentence and ask an easier question."
     )
-    
-    formatted_prompt = f"{system_instruction}\n\n"
+
+    # Build conversation history only (no system instruction in the prompt)
+    formatted_prompt = ""
     for msg in history[-4:]:
         role = "Student: " if msg['role'] == 'user' else "Examiner: "
         formatted_prompt += f"{role}{msg['text']}\n"
-    
+
     if audio_b64:
         formatted_prompt += "\nStudent: [Audio answer received but transcription is unavailable in this build. Ask the student to type the answer.]\nExaminer: "
     else:
