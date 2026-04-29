@@ -6,6 +6,7 @@ import ast
 os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
 
 import json
+import flask
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from collections import defaultdict
@@ -19,10 +20,38 @@ from PIL import Image
 from gtts import gTTS
 import PyPDF2
 import requests
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 load_dotenv()
 
 app = Flask(__name__)
+db_admin = None
+
+def sanitize_data(data):
+    if isinstance(data, list):
+        return [sanitize_data(i) for i in data]
+    if isinstance(data, dict):
+        return {k: sanitize_data(v) for k, v in data.items()}
+    if isinstance(data, datetime):
+        return data.isoformat()
+    return data
+
+def init_firebase_admin():
+    global db_admin
+    try:
+        service_account_path = os.path.join(os.path.dirname(__file__), 'service_account.json')
+        if os.path.exists(service_account_path):
+            cred = credentials.Certificate(service_account_path)
+            firebase_admin.initialize_app(cred)
+            db_admin = firestore.client()
+            print("[OK] Firebase Admin initialized for Backend CRUD.")
+        else:
+            print("[WARNING] service_account.json not found. Backend CRUD will be disabled.")
+    except Exception as e:
+        print(f"[ERROR] Failed to init Firebase Admin: {str(e)}")
+
+init_firebase_admin()
 
 # Explicit CORS configuration for Flutter Web
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -94,9 +123,9 @@ def parse_ai_json(text):
         raise
 
 if GROQ_API_KEY:
-    print(f"✅ Groq configured with key: {GROQ_API_KEY[:8]}...")
+    print(f"[OK] Groq configured with key: {GROQ_API_KEY[:8]}...")
 else:
-    print("❌ ERROR: GROQ_API_KEY not found in environment!")
+    print("[ERROR] GROQ_API_KEY not found in environment!")
 
 # ─── Simple in-memory rate limiter ────────────────────────────────────────────
 _rate_store = defaultdict(list)
@@ -122,6 +151,105 @@ def health():
         'engine': 'groq-llama3',
         'timestamp': datetime.utcnow().isoformat()
     })
+
+@app.route('/api/predictions', methods=['GET'])
+def get_predictions():
+    if not db_admin:
+        return jsonify({'error': 'Database connection not initialized'}), 500
+    try:
+        pred_ref = db_admin.collection('ai_predictions')
+        docs = pred_ref.stream()
+        pred_list = [doc.to_dict() for doc in docs]
+        return jsonify(pred_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/system-status', methods=['GET'])
+def system_status():
+    return jsonify({
+        'status': 'online',
+        'backend': 'Flask',
+        'database': 'Firestore (Admin API)' if db_admin else 'Firestore (Disconnected)',
+        'architecture': 'Client-Server (REST)',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+# ─── Data Endpoints (CRUD) ───────────────────────────────────────────────────
+@app.route('/api/students', methods=['GET'])
+def get_students():
+    if not db_admin:
+        return jsonify({'error': 'Database connection not initialized'}), 500
+    try:
+        students_ref = db_admin.collection('users').where('role', '==', 'student')
+        docs = students_ref.stream()
+        students_list = [sanitize_data({**doc.to_dict(), 'id': doc.id}) for doc in docs]
+        return jsonify(students_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users', methods=['GET'])
+def get_all_users():
+    if not db_admin:
+        return jsonify({'error': 'Database connection not initialized'}), 500
+    try:
+        users_ref = db_admin.collection('users')
+        docs = users_ref.stream()
+        users_list = [sanitize_data({**doc.to_dict(), 'id': doc.id}) for doc in docs]
+        return jsonify(users_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/classes', methods=['GET'])
+def get_classes():
+    if not db_admin:
+        return jsonify({'error': 'Database connection not initialized'}), 500
+    try:
+        classes_ref = db_admin.collection('classes')
+        docs = classes_ref.stream()
+        classes_list = [sanitize_data({**doc.to_dict(), 'id': doc.id}) for doc in docs]
+        return jsonify(classes_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/assignments', methods=['GET'])
+def get_assignments():
+    if not db_admin:
+        return jsonify({'error': 'Database connection not initialized'}), 500
+    try:
+        assign_ref = db_admin.collection('assignments')
+        docs = assign_ref.stream()
+        assign_list = [sanitize_data({**doc.to_dict(), 'id': doc.id}) for doc in docs]
+        return jsonify(assign_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/attendance', methods=['POST'])
+def mark_attendance():
+    if not db_admin:
+        return jsonify({'error': 'Database connection not initialized'}), 500
+    try:
+        data = request.get_json()
+        student_id = data.get('student_id')
+        class_id = data.get('class_id')
+        status = data.get('status')
+        date_str = data.get('date_string')
+        marked_by = data.get('marked_by', 'API-System')
+
+        if not all([student_id, class_id, status, date_str]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        att_id = f"{class_id}_{student_id}_{date_str}"
+        db_admin.collection('attendance').document(att_id).set({
+            'student_id': student_id,
+            'class_id': class_id,
+            'date_string': date_str,
+            'status': status,
+            'marked_by': marked_by,
+            'timestamp': firestore.SERVER_TIMESTAMP
+        })
+        return jsonify({'status': 'success', 'id': att_id})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/test-ai', methods=['GET'])
 def test_ai():
@@ -863,6 +991,6 @@ def generate_best_answer():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 8080))
-    print(f"🚀 EduTrack AI Backend listening on 0.0.0.0:{port}")
+    port = int(os.getenv('PORT', 5000))
+    print(f"[STARTING] EduTrack AI Backend on 0.0.0.0:{port}")
     app.run(host='0.0.0.0', port=port, debug=False)
