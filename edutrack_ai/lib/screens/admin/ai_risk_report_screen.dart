@@ -37,8 +37,10 @@ class AIRiskReportScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Text('AI Risk Monitor', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
-                          const Spacer(),
+                          const Expanded(
+                            child: Text('AI Risk Monitor', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                          ),
+                          const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.redAccent.withOpacity(0.3))),

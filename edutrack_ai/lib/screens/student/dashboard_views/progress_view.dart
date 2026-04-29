@@ -70,9 +70,13 @@ class _ProgressViewState extends State<ProgressView> {
       surfaceTintColor: Colors.transparent,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 16),
-        title: Text(
-          l10n.performanceOverview,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        title: Expanded(
+          child: Text(
+            l10n.performanceOverview,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         background: Container(
           decoration: const BoxDecoration(

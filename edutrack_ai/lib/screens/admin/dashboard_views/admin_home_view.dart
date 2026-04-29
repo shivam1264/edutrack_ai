@@ -337,6 +337,8 @@ class AdminHomeView extends StatelessWidget {
                   Text(
                     action['label']! as String,
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

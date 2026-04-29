@@ -700,12 +700,15 @@ class _HomeViewState extends State<HomeView> {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: AppTheme.surfaceSubtle,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
         children: [
           _buildLegendItem(const Color(0xFF10B981), l10n.mastered, '≥80%'),
           _buildLegendItem(const Color(0xFFF59E0B), l10n.learning, '50-80%'),
@@ -736,26 +739,32 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         const SizedBox(width: 6),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
               ),
-            ),
-            Text(
-              range,
-              style: TextStyle(
-                fontSize: 8,
-                color: AppTheme.textSecondary,
+              Text(
+                range,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 8,
+                  color: AppTheme.textSecondary,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

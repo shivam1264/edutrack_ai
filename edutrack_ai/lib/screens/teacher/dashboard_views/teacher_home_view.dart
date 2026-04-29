@@ -304,6 +304,8 @@ class TeacherHomeView extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 11,
               color: AppTheme.textSecondary,
@@ -349,6 +351,8 @@ class TeacherHomeView extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 11,
               color: AppTheme.textSecondary,

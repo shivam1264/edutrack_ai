@@ -215,12 +215,12 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                             ),
                           ),
                         const SizedBox(height: 16),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             _StatBadge(label: 'Present', count: present, color: const Color(0xFF10B981)),
-                            const SizedBox(width: 8),
                             _StatBadge(label: 'Absent', count: absent, color: AppTheme.danger),
-                            const SizedBox(width: 8),
                             _StatBadge(label: 'Late', count: lateCount, color: AppTheme.accent),
                           ],
                         ),

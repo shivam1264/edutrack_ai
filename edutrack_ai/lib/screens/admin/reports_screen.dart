@@ -137,7 +137,12 @@ class _StatBox extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text('$count', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.w900)),
-              Text(label, style: const TextStyle(color: AppTheme.textHint, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+              Text(
+                label, 
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppTheme.textHint, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)
+              ),
             ],
           ),
         );

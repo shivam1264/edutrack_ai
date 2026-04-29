@@ -440,6 +440,8 @@ class _ParentHomeViewState extends State<ParentHomeView> {
                               const SizedBox(height: 2),
                               Text(
                                 s['label'] as String,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 10,
                                   color: AppTheme.textSecondary,
