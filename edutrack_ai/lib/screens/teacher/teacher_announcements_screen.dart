@@ -17,6 +17,21 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
   final _msgCtrl = TextEditingController();
   bool _isSending = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _markAsRead();
+  }
+
+  void _markAsRead() {
+    final user = context.read<AuthProvider>().user;
+    if (user != null) {
+      FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'last_seen_announcements': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
   Future<void> _sendAnnouncement() async {
     if (_msgCtrl.text.trim().isEmpty) return;
     

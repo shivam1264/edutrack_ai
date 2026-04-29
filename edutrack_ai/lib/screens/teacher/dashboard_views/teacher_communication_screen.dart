@@ -40,27 +40,45 @@ class TeacherCommunicationScreen extends StatelessWidget {
             () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherChatListScreen())),
           ),
           const SizedBox(height: 16),
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('announcements')
-                .where(Filter.or(
-                  Filter('class_id', isEqualTo: classId),
-                  Filter('target', isEqualTo: 'all'),
-                  Filter('target', isEqualTo: 'teachers'),
-                ))
-                .snapshots(),
-
-            builder: (context, snapshot) {
-              final count = snapshot.data?.docs.length ?? 0;
-              return _buildCommAction(
-                context,
-                'Announcements',
-                'Send updates to students',
-                Icons.campaign_rounded,
-                const Color(0xFF3B82F6),
-                count,
-                () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAnnouncementsScreen(classId: classId))),
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance.collection('users').doc(context.read<AuthProvider>().user?.uid).snapshots(),
+            builder: (context, userSnap) {
+              final lastSeen = (userSnap.data?.data() as Map<String, dynamic>?)?['last_seen_announcements'] as Timestamp?;
+              
+              return StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('announcements')
+                    .where(Filter.or(
+                      Filter('class_id', isEqualTo: classId),
+                      Filter('target', isEqualTo: 'all'),
+                      Filter('target', isEqualTo: 'teachers'),
+                    ))
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  int count = 0;
+                  if (snapshot.hasData) {
+                    final docs = snapshot.data!.docs;
+                    if (lastSeen == null) {
+                      count = docs.length;
+                    } else {
+                      count = docs.where((doc) {
+                        final createdAt = (doc.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                        return createdAt != null && createdAt.compareTo(lastSeen) > 0;
+                      }).length;
+                    }
+                  }
+                  
+                  return _buildCommAction(
+                    context,
+                    'Announcements',
+                    'Send updates to students',
+                    Icons.campaign_rounded,
+                    const Color(0xFF3B82F6),
+                    count,
+                    () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherAnnouncementsScreen(classId: classId))),
+                  );
+                }
               );
-            }
+            },
           ),
           const SizedBox(height: 16),
           StreamBuilder<QuerySnapshot>(

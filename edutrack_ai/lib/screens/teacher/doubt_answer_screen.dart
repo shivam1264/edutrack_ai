@@ -167,6 +167,25 @@ class _DoubtCardState extends State<_DoubtCard> {
     if (mounted) setState(() { _isSaving = false; _isExpanded = false; });
   }
 
+  void _viewImage(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              child: Image.network(url, fit: BoxFit.contain),
+            ),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = widget.doc.data() as Map<String, dynamic>;
@@ -189,6 +208,22 @@ class _DoubtCardState extends State<_DoubtCard> {
             ),
             const SizedBox(height: 10),
             Text(d['question'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary, fontSize: 15)),
+            if (d['imageUrl'] != null && d['imageUrl'].toString().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => _viewImage(context, d['imageUrl']),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    d['imageUrl'], 
+                    height: 150, 
+                    width: double.infinity, 
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) => progress == null ? child : Container(height: 150, color: Colors.grey.withOpacity(0.1), child: const Center(child: CircularProgressIndicator())),
+                  ),
+                ),
+              ),
+            ],
             if (d['isAI'] == true && widget.isPending == false)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

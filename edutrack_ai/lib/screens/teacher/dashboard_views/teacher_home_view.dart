@@ -473,6 +473,17 @@ class TeacherHomeView extends StatelessWidget {
   Widget _buildQuickActions(BuildContext ctx) {
     final actions = [
       {
+        'label': 'Messages',
+        'icon': Icons.chat_bubble_rounded,
+        'color': const Color(0xFFF97316),
+        'onTap': () => Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (_) => const TeacherChatListScreen(),
+          ),
+        ),
+      },
+      {
         'label': 'Attendance',
         'icon': Icons.how_to_reg_rounded,
         'color': const Color(0xFF059669),
@@ -531,17 +542,6 @@ class TeacherHomeView extends StatelessWidget {
             builder: (_) => ResourceManagementScreen(
               classId: selectedClassId ?? '',
             ),
-          ),
-        ),
-      },
-      {
-        'label': 'Messages',
-        'icon': Icons.chat_bubble_rounded,
-        'color': const Color(0xFFF97316),
-        'onTap': () => Navigator.push(
-          ctx,
-          MaterialPageRoute(
-            builder: (_) => const TeacherChatListScreen(),
           ),
         ),
       },

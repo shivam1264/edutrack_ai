@@ -41,6 +41,12 @@ class TeacherMoreView extends StatelessWidget {
             }),
           ]),
           const SizedBox(height: 24),
+          _buildSection('Communication', [
+            _buildMenuItem(Icons.chat_bubble_outline_rounded, 'Messages (Parent & Student)', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherChatListScreen()));
+            }),
+          ]),
+          const SizedBox(height: 24),
           _buildSection(AppLocalizations.of(context)!.support, [
             _buildMenuItem(Icons.help_outline_rounded, AppLocalizations.of(context)!.helpSupport, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));

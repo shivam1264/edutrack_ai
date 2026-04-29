@@ -5,6 +5,7 @@ import '../../utils/app_theme.dart';
 import '../../widgets/premium_card.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LeaveApprovalScreen extends StatefulWidget {
   final String classId;
@@ -169,18 +170,34 @@ class _LeaveRequestCard extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request $status!')));
   }
 
-  void _viewDoc(BuildContext context, String url) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.network(url, fit: BoxFit.contain),
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-          ],
+  void _viewDoc(BuildContext context, String url) async {
+    final isPdf = url.toLowerCase().contains('.pdf');
+    if (isPdf) {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open PDF viewer.')));
+        }
+      }
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Image.network(url, fit: BoxFit.contain),
+              ),
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen>
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
                           ),
-                          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 50),
+                          child: const Icon(Icons.school_rounded, color: Colors.white, size: 50),
                         ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack).rotate(begin: 0.5, end: 0, duration: 600.ms),
                         const SizedBox(height: 20),
                         const Text(
@@ -141,14 +141,6 @@ class _LoginScreenState extends State<LoginScreen>
                             letterSpacing: -1,
                           ),
                         ).animate().fadeIn(duration: 600.ms, delay: 200.ms).slideY(begin: 0.2, end: 0),
-                        Text(
-                          'Your AI-Powered Academic Companion',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 16,
-                            letterSpacing: 0.2,
-                          ),
-                        ).animate().fadeIn(duration: 600.ms, delay: 400.ms),
                       ],
                     ),
 
@@ -168,14 +160,6 @@ class _LoginScreenState extends State<LoginScreen>
                                 fontSize: 26,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Enter your credentials to access your class portal',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 32),
@@ -248,32 +232,6 @@ class _LoginScreenState extends State<LoginScreen>
                     ).animate().fadeIn(duration: 800.ms, delay: 600.ms).slideY(begin: 0.1, end: 0),
 
                     const SizedBox(height: 48),
-
-                    // Role indicator
-                    Column(
-                      children: [
-                        Text(
-                          'Select your access point',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 16),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _RoleChip(label: 'Admin', color: Colors.amber),
-                              const SizedBox(width: 8),
-                              _RoleChip(label: 'Teacher', color: Colors.cyan),
-                              const SizedBox(width: 8),
-                              _RoleChip(label: 'Student', color: Colors.lightGreenAccent),
-                              const SizedBox(width: 8),
-                              _RoleChip(label: 'Parent', color: Colors.orangeAccent),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ).animate().fadeIn(duration: 800.ms, delay: 1000.ms),
                   ],
                 ),
               ),

@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import '../../utils/config.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
 
 class RequestLeaveScreen extends StatefulWidget {
   final String? studentId;
@@ -38,17 +39,52 @@ class _RequestLeaveScreenState extends State<RequestLeaveScreen> {
   }
 
   Future<void> _pickDocument() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image == null) return;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(title: Text('Select Attachment', style: TextStyle(fontWeight: FontWeight.bold))),
+            ListTile(
+              leading: const Icon(Icons.image_rounded, color: Colors.blue),
+              title: const Text('Image (Gallery)'),
+              onTap: () async {
+                Navigator.pop(context);
+                final picker = ImagePicker();
+                final image = await picker.pickImage(source: ImageSource.gallery);
+                if (image != null) _processFile(File(image.path), isImage: true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_rounded, color: Colors.red),
+              title: const Text('PDF Document'),
+              onTap: () async {
+                Navigator.pop(context);
+                final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+                if (result != null && result.files.single.path != null) {
+                  _processFile(File(result.files.single.path!), isImage: false);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
 
+  Future<void> _processFile(File file, {required bool isImage}) async {
     setState(() {
-      _selectedFile = File(image.path);
-      _isProcessingAI = true;
+      _selectedFile = file;
+      _isProcessingAI = isImage; // Only try AI on images
     });
 
+    if (!isImage) return;
+
     try {
-      final bytes = await _selectedFile!.readAsBytes();
+      final bytes = await file.readAsBytes();
       final base64Image = base64.encode(bytes);
 
       final response = await http.post(
@@ -60,21 +96,16 @@ class _RequestLeaveScreenState extends State<RequestLeaveScreen> {
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
         setState(() {
-          _reasonCtrl.text = result['reason'] ?? '';
-          _leaveType = result['type'] ?? 'medical';
-          if (result['start_date'] != null) {
-            _startDate = DateTime.parse(result['start_date']);
-          }
-          if (result['end_date'] != null) {
-            _endDate = DateTime.parse(result['end_date']);
-          }
+          _reasonCtrl.text = result['reason'] ?? _reasonCtrl.text;
+          _leaveType = result['type'] ?? _leaveType;
+          if (result['start_date'] != null) _startDate = DateTime.parse(result['start_date']);
+          if (result['end_date'] != null) _endDate = DateTime.parse(result['end_date']);
         });
-        _showSnack('AI analyzed the document and pre-filled the form! ✨');
+        _showSnack('AI analyzed the document! ✨');
       }
     } catch (e) {
-      _showSnack('AI Analysis skipped. Manual entry enabled.', isError: true);
+      // Quietly skip AI if fails
     }
-
     setState(() => _isProcessingAI = false);
   }
 
@@ -218,42 +249,53 @@ class _RequestLeaveScreenState extends State<RequestLeaveScreen> {
   }
 
   Widget _buildAIScanButton() {
-    return GestureDetector(
-      onTap: _isProcessingAI ? null : _pickDocument,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.primary.withOpacity(0.2), width: 2),
-          boxShadow: [BoxShadow(color: AppTheme.primary.withOpacity(0.05), blurRadius: 15)],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-              child: _isProcessingAI 
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.document_scanner_rounded, color: AppTheme.primary),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: _isProcessingAI ? null : _pickDocument,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.primary.withOpacity(0.2), width: 2),
+              boxShadow: [BoxShadow(color: AppTheme.primary.withOpacity(0.05), blurRadius: 15)],
             ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_isProcessingAI ? 'AI Analyzing...' : 'One-Tap AI Scan', 
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.primary)),
-                  const SizedBox(height: 4),
-                  const Text('Upload Medical Slips or Notes to auto-fill this form', 
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                ],
-              ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                  child: _isProcessingAI 
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(_selectedFile == null ? Icons.document_scanner_rounded : Icons.file_present_rounded, color: AppTheme.primary),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_isProcessingAI ? 'AI Analyzing...' : (_selectedFile == null ? 'One-Tap AI Scan' : 'Document Selected'), 
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.primary)),
+                      const SizedBox(height: 4),
+                      Text(_selectedFile == null ? 'Upload Medical Slips or Notes to auto-fill this form' : _selectedFile!.path.split('/').last, 
+                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                if (_selectedFile != null)
+                  IconButton(
+                    icon: const Icon(Icons.cancel_rounded, color: Colors.red),
+                    onPressed: () => setState(() => _selectedFile = null),
+                  )
+                else
+                  const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
+              ],
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
