@@ -52,6 +52,7 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
                 'Teacher';
             final teacherId = classData?['class_teacher_id']?.toString() ??
                 classData?['teacher_id']?.toString() ??
+                classData?['teacherUid']?.toString() ??
                 '';
             final chatId = childId.isNotEmpty && teacherId.isNotEmpty
                 ? '${childId}_$teacherId'
@@ -245,12 +246,14 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || chatId.isEmpty) return;
 
+    final parent = context.read<AuthProvider>().user;
     await _chatService.sendMessage(
       chatId: chatId,
       senderId: senderId,
       text: text,
       studentId: studentId,
       teacherId: teacherId,
+      senderName: parent?.name,
     );
     _messageController.clear();
   }

@@ -121,15 +121,43 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
             bottom: 24,
             left: 16,
             right: 16,
-            child: ElevatedButton(
-              onPressed: () => _showAddTaskDialog(context, userId),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-              child: const Text('+ Add Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _showAddTaskDialog(context, userId),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 0,
+                      side: const BorderSide(color: AppTheme.primary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    child: const Text('+ Add Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _showTopicPlanningDialog(context, userId),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 18),
+                        SizedBox(width: 8),
+                        Text('AI Topic Plan', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -275,6 +303,102 @@ class _SmartPlannerScreenState extends State<SmartPlannerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'))
         );
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  void _showTopicPlanningDialog(BuildContext context, String userId) {
+    final topicCtrl = TextEditingController();
+    final subjectCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: AppTheme.primary),
+            SizedBox(width: 12),
+            Text('AI Topic Strategy'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter a topic, and AI will create a 4-step study strategy for you.', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: topicCtrl,
+              decoration: InputDecoration(
+                labelText: 'Topic Name',
+                hintText: 'e.g. Quantum Physics, Periodic Table',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: subjectCtrl,
+              decoration: InputDecoration(
+                labelText: 'Subject (Optional)',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (topicCtrl.text.isEmpty) return;
+              Navigator.pop(context);
+              _generateTopicPlan(topicCtrl.text, subjectCtrl.text.isEmpty ? 'General' : subjectCtrl.text);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+            child: const Text('Generate Strategy'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _generateTopicPlan(String topic, String subject) async {
+    final userId = context.read<AuthProvider>().user?.uid ?? '';
+    setState(() => _isGenerating = true);
+
+    try {
+      final tasks = await AIService().generateTopicTasks(topic: topic, subject: subject);
+
+      if (tasks.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not generate strategy. Please try again.')));
+        }
+        return;
+      }
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final task in tasks) {
+        final docRef = FirebaseFirestore.instance.collection('study_tasks').doc();
+        batch.set(docRef, {
+          'userId': userId,
+          'title': task['title'] ?? 'Study Session',
+          'subject': task['subject'] ?? subject,
+          'duration_minutes': task['duration_minutes'] ?? 30,
+          'is_completed': false,
+          'type': task['type'] ?? 'AI Strategy',
+          'created_at': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('AI Study Strategy for $topic added! 🚀')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);

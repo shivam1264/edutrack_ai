@@ -8,11 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
-// speech_to_text removed — uses jni/NDK incompatible with this build env
-
-// flutter_tts removed — uses jni/NDK incompatible with this build env
-import 'dart:io';
-import 'dart:convert';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class HomeworkChatScreen extends StatefulWidget {
   const HomeworkChatScreen({super.key});
@@ -34,7 +30,9 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
   // Vision & Voice state
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
-  // Voice input: gracefully disabled (jni build incompatibility)
+  
+  // Voice input
+  final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _isSpeechEnabled = true;
 
@@ -54,8 +52,13 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
     _initTts();
   }
 
-  void _initSpeech() {
-    // Voice input disabled in this build — jni/NDK incompatibility resolved by stub
+  void _initSpeech() async {
+    try {
+      await _speech.initialize();
+      setState(() {});
+    } catch (e) {
+      debugPrint('Speech init error: $e');
+    }
   }
 
   void _initTts() {
@@ -95,14 +98,21 @@ class _HomeworkChatScreenState extends State<HomeworkChatScreen> {
     setState(() => _selectedImage = image);
   }
 
-  void _listen() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Voice input not available in this version. Please type your question.'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Color(0xFF6366F1),
-      ),
-    );
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize();
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) => setState(() {
+            _questionCtrl.text = val.recognizedWords;
+          }),
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
   }
 
   void _speak(String text) {

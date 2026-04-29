@@ -243,12 +243,14 @@ class _TeacherChatRoomScreenState extends State<_TeacherChatRoomScreen> {
           GestureDetector(
             onTap: () {
               if (_messageController.text.trim().isNotEmpty) {
+                final teacher = context.read<AuthProvider>().user;
                 _chatService.sendMessage(
                   chatId: chatId,
                   senderId: senderId,
                   text: _messageController.text.trim(),
                   studentId: widget.studentId,
                   teacherId: senderId,
+                  senderName: teacher?.name,
                 );
                 _messageController.clear();
               }

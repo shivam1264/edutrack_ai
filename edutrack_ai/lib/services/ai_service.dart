@@ -48,6 +48,24 @@ class AIService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> generateTopicTasks({
+    required String topic,
+    required String subject,
+  }) async {
+    try {
+      final data = await _postBackendJson(
+        '/generate-topic-tasks',
+        body: {
+          'topic': topic,
+          'subject': subject,
+        },
+      );
+      return _readList(data, preferredKeys: const ['tasks']);
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<Map<String, dynamic>>> generateFlashcards(String content) async {
     try {
       final data = await _postBackendJson(

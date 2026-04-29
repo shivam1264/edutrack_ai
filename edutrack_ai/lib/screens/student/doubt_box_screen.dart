@@ -11,6 +11,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../services/cloudinary_service.dart';
 
 class DoubtBoxScreen extends StatefulWidget {
@@ -26,6 +27,10 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProvid
   String _selectedSubject = 'Mathematics';
   bool _isSubmitting = false;
   XFile? _selectedImage;
+
+  // Speech to Text variables
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
 
   final List<String> _subjects = [
     'Mathematics', 'Science', 'Physics', 'Chemistry',
@@ -43,6 +48,26 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProvid
     _tabCtrl.dispose();
     _questionCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) => print('onStatus: $val'),
+        onError: (val) => print('onError: $val'),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) => setState(() {
+            _questionCtrl.text = val.recognizedWords;
+          }),
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
   }
 
   Future<void> _pickImage() async {
@@ -67,6 +92,10 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProvid
         imageUrl = result?.secureUrl;
       }
 
+      final questionText = _questionCtrl.text.trim();
+      final subject = _selectedSubject;
+      final grade = user?.classId ?? 'Grade 10';
+
       final docRef = await FirebaseFirestore.instance.collection('doubts').add({
         'studentId': user?.uid,
         'studentName': user?.name ?? 'Student',
@@ -74,8 +103,8 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProvid
         'school_id': user?.schoolId ?? '',
         'classId': user?.classId ?? '',
         'class_id': user?.classId ?? '',
-        'subject': _selectedSubject,
-        'question': _questionCtrl.text.trim(),
+        'subject': subject,
+        'question': questionText,
         'imageUrl': imageUrl,
         'status': 'pending',
         'answer': '✨ Generating Best Answer for you...',
@@ -83,12 +112,12 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProvid
         'createdAt': FieldValue.serverTimestamp(),
       });
       
-      final questionText = _questionCtrl.text.trim();
       _questionCtrl.clear();
       setState(() {
         _selectedImage = null;
       });
-      _generateAIBestAnswer(docRef.id, questionText, _selectedSubject, user?.classId ?? 'Grade 10');
+      
+      _generateAIBestAnswer(docRef.id, questionText, subject, grade, imageUrl);
 
       if (mounted) {
         _tabCtrl.animateTo(1);
@@ -97,12 +126,17 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProvid
     if (mounted) setState(() => _isSubmitting = false);
   }
 
-  Future<void> _generateAIBestAnswer(String docId, String question, String subject, String grade) async {
+  Future<void> _generateAIBestAnswer(String docId, String question, String subject, String grade, String? imageUrl) async {
     try {
       final res = await http.post(
         Uri.parse(app_config.Config.endpoint('/generate-best-answer')),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'question': question, 'subject': subject, 'grade': grade}),
+        body: jsonEncode({
+          'question': question,
+          'subject': subject,
+          'grade': grade,
+          'imageUrl': imageUrl, // Now passing the image URL to AI
+        }),
       ).timeout(const Duration(seconds: 40));
 
       if (res.statusCode == 200) {
@@ -205,17 +239,28 @@ class _DoubtBoxScreenState extends State<DoubtBoxScreen> with SingleTickerProvid
               ),
             ),
             const SizedBox(height: 24),
-            Text('Your Question', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _questionCtrl,
-              maxLines: 6,
-              decoration: InputDecoration(
-                hintText: 'I need help with linear equations...',
-                filled: true,
-                fillColor: const Color(0xFFF1F5F9),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                TextField(
+                  controller: _questionCtrl,
+                  maxLines: 6,
+                  decoration: InputDecoration(
+                    hintText: 'I need help with linear equations...',
+                    filled: true,
+                    fillColor: const Color(0xFFF1F5F9),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: FloatingActionButton.small(
+                    onPressed: _listen,
+                    backgroundColor: _isListening ? Colors.red : const Color(0xFF6366F1),
+                    child: Icon(_isListening ? Icons.mic : Icons.mic_none, color: Colors.white),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             GestureDetector(

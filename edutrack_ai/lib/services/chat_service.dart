@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'notification_service.dart';
 
 class ChatMessage {
   final String id;
@@ -46,6 +47,7 @@ class ChatService {
     required String text,
     String? studentId,
     String? teacherId,
+    String? senderName, // Added to show in notification
   }) async {
     await _db.collection('chats').doc(chatId).collection('messages').add({
       'sender_id': senderId,
@@ -63,5 +65,19 @@ class ChatService {
     if (teacherId != null) chatUpdate['teacher_id'] = teacherId;
 
     await _db.collection('chats').doc(chatId).set(chatUpdate, SetOptions(merge: true));
+
+    // Send Push Notification
+    try {
+      final targetId = (senderId == teacherId) ? studentId : teacherId;
+      if (targetId != null) {
+        await NotificationService.sendNotificationToUser(
+          userId: targetId,
+          title: 'New Message from ${senderName ?? "Chat"}',
+          content: text,
+        );
+      }
+    } catch (e) {
+      print('Error sending chat notification: $e');
+    }
   }
 }

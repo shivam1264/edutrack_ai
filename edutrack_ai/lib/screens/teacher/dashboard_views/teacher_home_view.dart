@@ -17,6 +17,7 @@ import 'package:edutrack_ai/screens/teacher/teacher_calendar_screen.dart';
 import 'package:edutrack_ai/screens/teacher/dashboard_views/teacher_students_view.dart';
 import 'package:edutrack_ai/screens/teacher/resource_management_screen.dart';
 import 'package:edutrack_ai/screens/teacher/teacher_announcements_screen.dart';
+import 'package:edutrack_ai/screens/teacher/teacher_chat_list_screen.dart';
 import 'package:edutrack_ai/screens/teacher/upload_notes_screen.dart';
 import 'package:edutrack_ai/services/analytics_service.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
@@ -528,6 +529,17 @@ class TeacherHomeView extends StatelessWidget {
             builder: (_) => ResourceManagementScreen(
               classId: selectedClassId ?? '',
             ),
+          ),
+        ),
+      },
+      {
+        'label': 'Messages',
+        'icon': Icons.chat_bubble_rounded,
+        'color': const Color(0xFFF97316),
+        'onTap': () => Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (_) => const TeacherChatListScreen(),
           ),
         ),
       },

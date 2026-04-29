@@ -615,6 +615,45 @@ def generate_study_plan():
     except Exception as e:
         return jsonify({'plan': f"Error: {str(e)}"})
 
+# ─── AI Topic Task Generator (Smart Planner) ─────────────────────────────
+@app.route('/generate-topic-tasks', methods=['POST'])
+def generate_topic_tasks():
+    data = request.get_json(silent=True) or {}
+    topic = data.get('topic', '').strip()
+    subject = data.get('subject', 'General')
+    
+    if not topic:
+        return jsonify({'error': 'Topic is required'}), 400
+
+    print(f"    [TOPIC-PLAN] Generating strategy for: {topic}")
+
+    system_instruction = (
+        "You are an AI Academic Strategist. Create a detailed 4-step study plan for a specific topic. "
+        "Return ONLY a JSON list of 4 tasks. Each task MUST have: "
+        "'title' (specific action like 'Read Chapter 1' or 'Solve 10 problems'), "
+        "'subject' (the subject name), "
+        "'duration_minutes' (30, 45, or 60), "
+        "'type' ('Theory', 'Practice', or 'Revision').\n"
+        "Example: [{\"title\": \"Read basic definitions\", \"subject\": \"Math\", \"duration_minutes\": 30, \"type\": \"Theory\"}]"
+    )
+    
+    prompt = f"Create a 4-step study strategy for the topic: {topic} in {subject}."
+    
+    try:
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
+        tasks = parse_ai_json(response_text)
+        return jsonify({'tasks': tasks})
+    except Exception as e:
+        print(f"    [TOPIC-PLAN ERROR] {str(e)}")
+        # Fallback tasks if AI fails
+        fallback_tasks = [
+            {'title': f'Read {topic} introduction', 'subject': subject, 'duration_minutes': 30, 'type': 'Theory'},
+            {'title': f'Note down key formulas/dates in {topic}', 'subject': subject, 'duration_minutes': 45, 'type': 'Revision'},
+            {'title': f'Solve practice questions on {topic}', 'subject': subject, 'duration_minutes': 60, 'type': 'Practice'},
+            {'title': f'Summary review of {topic}', 'subject': subject, 'duration_minutes': 15, 'type': 'Revision'},
+        ]
+        return jsonify({'tasks': fallback_tasks})
+
 # ─── AI Question Paper Generator ───────────────────────────────────────────
 @app.route('/generate-quiz', methods=['POST'])
 def generate_quiz():
@@ -1241,15 +1280,27 @@ def generate_best_answer():
     question = data.get('question', '').strip()
     subject = data.get('subject', 'General')
     grade = data.get('grade', 'Grade 10')
+    image_url = data.get('imageUrl') # Added image support
     
-    print(f"    [BEST-ANSWER] Generating for {grade} | Subject: {subject}")
+    print(f"    [BEST-ANSWER] Generating for {grade} | Subject: {subject} | Has Image: {image_url is not None}")
     
-    if not question:
-        return jsonify({'error': 'Question is required'}), 400
+    if not question and not image_url:
+        return jsonify({'error': 'Question or image is required'}), 400
+
+    image_base64 = None
+    if image_url:
+        try:
+            # Download image and convert to base64
+            resp = requests.get(image_url, timeout=20)
+            resp.raise_for_status()
+            image_base64 = base64.b64encode(resp.content).decode('utf-8')
+        except Exception as e:
+            print(f"    [IMAGE DOWNLOAD ERROR] {str(e)}")
 
     system_instruction = (
         f"You are an Elite Academic Specialist and Expert Teacher for {grade} level. "
         f"Your task is to provide the 'BEST ANSWER' for the following {subject} question. "
+        "If an image is provided, analyze it thoroughly to understand the question context.\n\n"
         "A 'Best Answer' must be:\n"
         "1. **Highly Structured**: Use sections like 'Core Concept', 'Explanation', 'Real-world Example'.\n"
         "2. **Premium Tone**: Encouraging, professional, and very clear.\n"
@@ -1257,11 +1308,17 @@ def generate_best_answer():
         "4. **Concise but Deep**: Don't just give a 1-liner. Give a thorough explanation in 200-300 words."
     )
     
+    prompt = f"Subject: {subject}\nGrade: {grade}\nQuestion: {question or 'Please analyze the attached image and solve the problem shown.'}"
+
     try:
-        response_text = generate_with_groq(f"Question: {question}", system_instruction=system_instruction)
+        response_text = generate_with_groq(
+            prompt, 
+            system_instruction=system_instruction,
+            image_data=image_base64
+        )
         return jsonify({
             'answer': response_text.strip(),
-            'model': 'groq-llama3-high-intent'
+            'model': 'groq-llama3-vision' if image_base64 else 'groq-llama3-high-intent'
         })
     except Exception as e:
         print(f"    [BEST-ANSWER ERROR] {str(e)}")

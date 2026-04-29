@@ -10,6 +10,7 @@ import 'package:edutrack_ai/screens/parent/parent_academics_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_assignments_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_attendance_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_wellness_screen.dart';
+import 'package:edutrack_ai/screens/parent/parent_chat_screen.dart';
 import 'package:edutrack_ai/screens/parent/views/parent_profile_view.dart';
 import 'package:edutrack_ai/services/analytics_service.dart';
 import 'package:edutrack_ai/services/attendance_service.dart';
@@ -496,6 +497,12 @@ class _ParentHomeViewState extends State<ParentHomeView> {
         'icon': Icons.auto_awesome_rounded,
         'color': AppTheme.accent,
         'screen': ParentWellnessScreen(studentId: childId),
+      },
+      {
+        'label': 'Teacher Chat',
+        'icon': Icons.chat_bubble_rounded,
+        'color': const Color(0xFFF97316),
+        'screen': ParentChatScreen(studentId: childId),
       },
     ];
 
