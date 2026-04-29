@@ -3,9 +3,6 @@ import sys
 import ast
 import re
 
-# Force pure-Python implementation for Protobuf
-os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
-
 import json
 import flask
 from flask import Flask, request, jsonify
@@ -13,7 +10,6 @@ from flask_cors import CORS
 from collections import defaultdict
 from datetime import datetime, timedelta
 import time
-import google.generativeai as genai
 from dotenv import load_dotenv
 import base64
 import io
@@ -64,7 +60,6 @@ def log_request_info():
         print(f"    Payload: {request.get_json()}")
 
 # ─── AI Providers Setup ───────────────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 GROQ_KEYS = [
     os.getenv('GROQ_API_KEY_1', ''),
     os.getenv('GROQ_API_KEY_2', ''),
@@ -73,52 +68,18 @@ GROQ_KEYS = [
 ]
 GROQ_KEYS = [k for k in GROQ_KEYS if k] # Filter out empty keys
 
-# Configure Gemini
-if GEMINI_API_KEY:
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        print("✅ Gemini AI configured.")
-    except Exception as e:
-        print(f"❌ Gemini Configuration Error: {e}")
-
 GROQ_TEXT_MODEL = "llama-3.3-70b-versatile"
 GROQ_VISION_MODEL = "llama-3.2-11b-vision-preview"
 
 # Current key tracker for rotation
 _current_groq_key_index = 0
 
-def generate_with_gemini(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None):
-    """Fallback generation using Google Gemini 1.5 Flash"""
-    if not GEMINI_API_KEY:
-        return None
-    try:
-        print("🔄 Falling back to Gemini 1.5 Flash...")
-        model_name = 'gemini-1.5-flash'
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=system_instruction
-        )
-        
-        if image_data:
-            # Convert base64 to image bytes
-            img_bytes = base64.b64decode(image_data)
-            img = Image.open(io.BytesIO(img_bytes))
-            response = model.generate_content([prompt, img])
-        else:
-            response = model.generate_content(prompt)
-            
-        return response.text
-    except Exception as e:
-        print(f"❌ Gemini Error: {e}")
-        return f"AI Error (Gemini): {str(e)}"
-
 def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None, max_retries=None):
-    """Unified AI Generation with Groq Key Rotation and Gemini Fallback"""
+    """AI Generation with Groq Key Rotation"""
     global _current_groq_key_index
-    
+
     if not GROQ_KEYS:
-        # If no Groq keys, try Gemini immediately
-        return generate_with_gemini(prompt, system_instruction, image_data)
+        return "AI Error: No Groq API keys configured."
 
     # Try each Groq key in the list
     for _ in range(len(GROQ_KEYS)):
@@ -129,7 +90,7 @@ def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistan
             "Authorization": f"Bearer {current_key}",
             "Content-Type": "application/json"
         }
-        
+
         content_parts = [{"type": "text", "text": prompt}]
         if image_data:
             content_parts.append({
@@ -146,29 +107,28 @@ def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistan
             "temperature": 0.5,
             "max_tokens": 2048
         }
-        
+
         throttle_groq_request()
-        
+
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=25)
-            
+
             # If rate limited, rotate to next key and try again
             if response.status_code == 429:
                 print(f"⚠️ Groq Key {_current_groq_key_index + 1} rate limited (429). Rotating...")
                 _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
                 continue
-            
+
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
-            
+
         except Exception as e:
             print(f"❌ Groq Error with Key {_current_groq_key_index + 1}: {e}")
             # For other errors, also try rotating
             _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
             continue
-            
-    # If all Groq keys fail, fallback to Gemini
-    return generate_with_gemini(prompt, system_instruction, image_data) or "AI Error: All providers exhausted."
+
+    return "AI Error: All Groq API keys exhausted."
 
 
 def clean_ai_text(text):
@@ -233,7 +193,7 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health():
-    ai_status = 'ok' if (GROQ_KEYS or GEMINI_API_KEY) else 'missing_key'
+    ai_status = 'ok' if GROQ_KEYS else 'missing_key'
     return jsonify({
         'status': 'ok',
         'ai_status': ai_status,
@@ -247,9 +207,7 @@ def debug_config():
     return jsonify({
         'groq_keys_count': len(GROQ_KEYS),
         'groq_keys_configured': len(GROQ_KEYS) > 0,
-        'gemini_configured': bool(GEMINI_API_KEY),
-        'gemini_key_present': bool(GEMINI_API_KEY),
-        'primary_ai': 'groq' if GROQ_KEYS else 'gemini' if GEMINI_API_KEY else 'none',
+        'primary_ai': 'groq' if GROQ_KEYS else 'none',
         'groq_text_model': GROQ_TEXT_MODEL,
         'groq_vision_model': GROQ_VISION_MODEL
     })
@@ -521,7 +479,7 @@ def homework_help():
     if not check_rate_limit(student_id):
         return jsonify({'error': 'Rate limit reached'}), 429
 
-    if not GROQ_KEYS and not GEMINI_API_KEY:
+    if not GROQ_KEYS:
         return jsonify({'answer': _fallback_answer(question, subject), 'generated_by': 'fallback'})
 
     try:
@@ -573,7 +531,7 @@ def generate_study_plan():
     
     print(f"    [PLAN] Generating rescue plan for {student_name}")
 
-    if not GROQ_KEYS and not GEMINI_API_KEY:
+    if not GROQ_KEYS:
         return jsonify({'plan': 'AI Configuration missing on server.'})
 
     try:
