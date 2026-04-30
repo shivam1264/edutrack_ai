@@ -121,51 +121,52 @@ class _ProgressViewState extends State<ProgressView> {
   Widget _buildTabs(Map<String, dynamic>? data, AppLocalizations l10n) {
     final subjectAvg = data?['subject_avg'] as Map<String, dynamic>? ?? {};
     final dynamicTabs = [l10n.all, ...subjectAvg.keys];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final List<Color> tabColors = [
+      AppTheme.primary,
+      ...List.generate(subjectAvg.keys.length, (index) => AppTheme.subjectColors[index % AppTheme.subjectColors.length])
+    ];
 
     return Container(
-      height: 48,
+      height: 45,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       margin: const EdgeInsets.symmetric(vertical: 20),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: dynamicTabs.length,
         itemBuilder: (context, index) {
           final isSelected = _selectedTabIndex == index;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: InkWell(
-              onTap: () => setState(() => _selectedTabIndex = index),
-              borderRadius: BorderRadius.circular(24),
-              child: AnimatedContainer(
-                duration: 300.ms,
-                curve: Curves.easeInOut,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                decoration: BoxDecoration(
-                  color: isSelected 
-                    ? AppTheme.primary 
-                    : (Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.05) : Colors.white),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: isSelected ? AppTheme.primary : AppTheme.borderLight.withOpacity(0.5),
-                  ),
-                  boxShadow: isSelected ? [
-                    BoxShadow(
-                      color: AppTheme.primary.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    )
-                  ] : [],
+          final color = tabColors[index];
+          
+          return GestureDetector(
+            onTap: () => setState(() => _selectedTabIndex = index),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(
+                color: isSelected ? color.withOpacity(0.15) : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isSelected ? color : (isDark ? Colors.white10 : AppTheme.borderLight.withOpacity(0.5)),
+                  width: 1.5,
                 ),
-                child: Center(
-                  child: Text(
-                    dynamicTabs[index],
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : AppTheme.textSecondary,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
+                boxShadow: isSelected ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ] : [],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                dynamicTabs[index],
+                style: TextStyle(
+                  color: isSelected ? color : (isDark ? Colors.white70 : AppTheme.textSecondary),
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
             ),
