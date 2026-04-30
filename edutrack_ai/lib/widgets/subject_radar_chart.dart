@@ -47,17 +47,16 @@ class SubjectRadarChart extends StatelessWidget {
         radarBorderData: BorderSide(color: isDark ? Colors.white10 : AppTheme.borderLight, width: 1),
         radarShape: RadarShape.circle,
         getTitle: (index, angle) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
           return RadarChartTitle(
             text: subjects[index],
             angle: angle,
-            style: TextStyle(
-              color: isDark ? Colors.white70 : AppTheme.textSecondary,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
           );
         },
+        titleTextStyle: TextStyle(
+          color: isDark ? Colors.white70 : AppTheme.textSecondary,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
         tickCount: 4,
         ticksTextStyle: const TextStyle(color: Colors.transparent, fontSize: 10),
         tickBorderData: BorderSide(color: isDark ? Colors.white10 : AppTheme.borderLight, width: 1),

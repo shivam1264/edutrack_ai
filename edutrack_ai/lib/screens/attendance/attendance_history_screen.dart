@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../../services/attendance_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/attendance_model.dart';
@@ -26,26 +27,34 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   String? _selectedClassId;
   List<DateTime> _markedDates = [];
   bool _isLoading = false;
+  bool _showCalendar = true; // Default to calendar view
+  AttendanceStats? _classStats;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
   final Map<DateTime, List<AttendanceModel>> _detailsCache = {};
 
   @override
   void initState() {
     super.initState();
     _selectedClassId = widget.initialClassId;
-    if (_selectedClassId != null) {
+    _selectedDay = DateTime.now();
+    if (_selectedClassId != null && _selectedClassId!.isNotEmpty) {
       _loadDates();
     }
   }
 
   Future<void> _loadDates() async {
-    if (_selectedClassId == null) return;
+    if (_selectedClassId == null || _selectedClassId!.isEmpty) return;
     setState(() => _isLoading = true);
     try {
       final dates = await AttendanceService().getMarkedDates(_selectedClassId!);
+      final stats = await AttendanceService().getClassAttendanceStats(_selectedClassId!);
       setState(() {
-        _markedDates = dates;
+        _markedDates = dates.map((d) => DateTime(d.year, d.month, d.day)).toList();
+        _classStats = stats;
         _detailsCache.clear();
       });
+      if (_selectedDay != null) _loadDetails(_selectedDay!);
     } catch (e) {
       _showSnack('Failed to load archive: $e', isError: true);
     }
@@ -53,15 +62,16 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   }
 
   Future<void> _loadDetails(DateTime date) async {
-    if (_detailsCache.containsKey(date)) return;
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    if (_detailsCache.containsKey(normalizedDate)) return;
     try {
       final details = await AttendanceService().getAttendanceByDate(
         classId: _selectedClassId!,
-        date: date,
+        date: normalizedDate,
         filterBySubject: false,
       );
       setState(() {
-        _detailsCache[date] = details;
+        _detailsCache[normalizedDate] = details;
       });
     } catch (e) {
       _showSnack('Failed to sync details: $e', isError: true);
@@ -69,6 +79,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   }
 
   void _showSnack(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message),
       backgroundColor: isError ? AppTheme.danger : AppTheme.secondary,
@@ -78,8 +89,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: AppTheme.bgLight,
+      backgroundColor: isDark ? AppTheme.bgDark : AppTheme.bgLight,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -89,7 +102,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               title: StreamBuilder<DocumentSnapshot>(
-                stream: _selectedClassId != null 
+                stream: _selectedClassId != null && _selectedClassId!.isNotEmpty
                   ? FirebaseFirestore.instance.collection('classes').doc(_selectedClassId).snapshots()
                   : null,
                 builder: (context, snap) {
@@ -100,53 +113,23 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               ),
               centerTitle: true,
             ),
+            actions: [
+              IconButton(
+                icon: Icon(_showCalendar ? Icons.list_rounded : Icons.calendar_month_rounded),
+                onPressed: () => setState(() => _showCalendar = !_showCalendar),
+              ),
+            ],
           ),
           SliverToBoxAdapter(child: _buildHeader()),
           SliverPadding(
             padding: const EdgeInsets.all(16),
-            sliver: _selectedClassId == null
+            sliver: (_selectedClassId == null || _selectedClassId!.isEmpty)
                 ? SliverFillRemaining(hasScrollBody: false, child: _buildNoClassSelected())
                 : _isLoading
                     ? const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
-                    : _markedDates.isEmpty
-                        ? SliverFillRemaining(hasScrollBody: false, child: _buildEmptyState())
-                        : SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final date = _markedDates[index];
-                                final isExpanded = _detailsCache.containsKey(date);
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: PremiumCard(
-                                    opacity: 1,
-                                    padding: EdgeInsets.zero,
-                                    child: Theme(
-                                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                                      child: ExpansionTile(
-                                        onExpansionChanged: (expanding) {
-                                          if (expanding) _loadDetails(date);
-                                        },
-                                        leading: Container(
-                                          width: 44, height: 44,
-                                          decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                                          child: const Icon(Icons.event_available_rounded, color: AppTheme.secondary, size: 22),
-                                        ),
-                                        title: Text(DateFormat('EEEE, dd MMM yyyy').format(date), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                                        subtitle: Text('Click to view roll-call details', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                                        children: [
-                                          if (!isExpanded)
-                                            const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2))
-                                          else
-                                            _buildDetailsList(_detailsCache[date]!),
-                                        ],
-                                      ),
-                                    ),
-                                  ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1),
-                                );
-                              },
-                              childCount: _markedDates.length,
-                            ),
-                          ),
+                    : _showCalendar 
+                        ? SliverToBoxAdapter(child: _buildCalendarView())
+                        : _buildListView(),
           ),
         ],
       ),
@@ -166,13 +149,126 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         children: [
           const Text('HISTORICAL LOGS', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
           const SizedBox(height: 8),
-          if (widget.isAdmin)
-            _buildClassPicker()
-          else
-            const SizedBox(height: 10),
+          _buildClassPicker(),
+          if (_classStats != null && _selectedClassId != null && _selectedClassId!.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _SummaryItem(label: 'Avg. Attendance', value: '${_classStats!.percentage.toStringAsFixed(1)}%', icon: Icons.analytics_rounded),
+                  _SummaryItem(label: 'Total Sessions', value: '${_markedDates.length}', icon: Icons.history_rounded),
+                  _SummaryItem(label: 'Total Present', value: '${_classStats!.totalPresent}', icon: Icons.people_rounded),
+                ],
+              ),
+            ).animate().fadeIn().slideY(begin: 0.2),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildCalendarView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      children: [
+        PremiumCard(
+          padding: const EdgeInsets.all(8),
+          child: TableCalendar(
+            firstDay: DateTime(2023),
+            lastDay: DateTime.now(),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            calendarFormat: CalendarFormat.month,
+            headerStyle: HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+              titleTextStyle: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textPrimary),
+            ),
+            calendarStyle: CalendarStyle(
+              todayDecoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.3), shape: BoxShape.circle),
+              selectedDecoration: const BoxDecoration(color: AppTheme.secondary, shape: BoxShape.circle),
+              markerDecoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+              markersMaxCount: 1,
+            ),
+            eventLoader: (day) {
+              final normalized = DateTime(day.year, day.month, day.day);
+              return _markedDates.contains(normalized) ? [true] : [];
+            },
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+              _loadDetails(selectedDay);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        if (_selectedDay != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, size: 16, color: AppTheme.textSecondary),
+                const SizedBox(width: 8),
+                Text(
+                  'Details for ${DateFormat('dd MMM yyyy').format(_selectedDay!)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildDetailsList(_detailsCache[DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)] ?? []),
+        ],
+      ],
+    ).animate().fadeIn();
+  }
+
+  Widget _buildListView() {
+    return _markedDates.isEmpty
+        ? SliverFillRemaining(hasScrollBody: false, child: _buildEmptyState())
+        : SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final date = _markedDates[index];
+                final isExpanded = _detailsCache.containsKey(date);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: PremiumCard(
+                    opacity: 1,
+                    padding: EdgeInsets.zero,
+                    child: ExpansionTile(
+                      onExpansionChanged: (expanding) {
+                        if (expanding) _loadDetails(date);
+                      },
+                      leading: Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.event_available_rounded, color: AppTheme.secondary, size: 22),
+                      ),
+                      title: Text(DateFormat('EEEE, dd MMM yyyy').format(date), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      subtitle: const Text('Click to view roll-call details', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      children: [
+                        if (!isExpanded)
+                          const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2))
+                        else
+                          _buildDetailsList(_detailsCache[date]!),
+                      ],
+                    ),
+                  ),
+                ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1);
+              },
+              childCount: _markedDates.length,
+            ),
+          );
   }
 
   Widget _buildClassPicker() {
@@ -207,7 +303,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 );
               }).toList(),
               onChanged: (val) {
-                setState(() => _selectedClassId = val);
+                setState(() {
+                  _selectedClassId = val;
+                  _detailsCache.clear();
+                });
                 _loadDates();
               },
             ),
@@ -243,48 +342,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     );
   }
 
-  Widget _buildDateList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: _markedDates.length,
-      itemBuilder: (context, index) {
-        final date = _markedDates[index];
-        final isExpanded = _detailsCache.containsKey(date);
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: PremiumCard(
-            opacity: 1,
-            padding: EdgeInsets.zero,
-            child: Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                onExpansionChanged: (expanding) {
-                  if (expanding) _loadDetails(date);
-                },
-                leading: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(color: AppTheme.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.event_available_rounded, color: AppTheme.secondary, size: 22),
-                ),
-                title: Text(DateFormat('EEEE, dd MMM yyyy').format(date), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                subtitle: Text('Click to view roll-call details', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                children: [
-                  if (!isExpanded)
-                    const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2))
-                  else
-                    _buildDetailsList(_detailsCache[date]!),
-                ],
-              ),
-            ),
-          ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1),
-        );
-      },
-    );
-  }
-
   Widget _buildDetailsList(List<AttendanceModel> details) {
-    if (details.isEmpty) return const Padding(padding: EdgeInsets.all(20), child: Text('No data captured.'));
+    if (details.isEmpty) return const Padding(padding: EdgeInsets.all(20), child: Text('No logs found for this date.'));
 
     final presentCount = details.where((d) => d.isPresent).length;
     final absentCount = details.where((d) => d.isAbsent).length;
@@ -326,16 +385,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                   color: _getStatusColor(a.status).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      a.status.name.toUpperCase(),
-                      style: TextStyle(color: _getStatusColor(a.status), fontWeight: FontWeight.w900, fontSize: 10),
-                    ),
-                    if (a.subject != null)
-                      Text(a.subject!, style: const TextStyle(color: AppTheme.textHint, fontSize: 8, fontWeight: FontWeight.bold)),
-                  ],
+                child: Text(
+                  a.status.name.toUpperCase(),
+                  style: TextStyle(color: _getStatusColor(a.status), fontWeight: FontWeight.w900, fontSize: 10),
                 ),
               ),
             );
@@ -351,6 +403,25 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       case AttendanceStatus.absent: return Colors.red;
       case AttendanceStatus.late: return Colors.orange;
     }
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  const _SummaryItem({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 20),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.bold)),
+      ],
+    );
   }
 }
 

@@ -200,6 +200,31 @@ class AttendanceService {
     );
   }
 
+  // ─── Get Aggregate Stats for a Class ─────────────────────────────────────────
+  Future<AttendanceStats> getClassAttendanceStats(String classId) async {
+    final snap = await _firestore
+        .collection(_col)
+        .where('class_id', isEqualTo: classId)
+        .get();
+
+    final records = snap.docs
+        .map((d) => AttendanceModel.fromMap(d.id, d.data()))
+        .toList();
+    
+    final present = records.where((r) => r.isPresent).length;
+    final absent = records.where((r) => r.isAbsent).length;
+    final late = records.where((r) => r.isLate).length;
+    final total = records.length;
+    final percentage = total > 0 ? ((present + (late * 0.5)) / total) * 100 : 0.0;
+
+    return AttendanceStats(
+      totalPresent: present,
+      totalAbsent: absent,
+      totalLate: late,
+      percentage: percentage,
+    );
+  }
+
   // ─── Get unique dates with marked attendance ──────────────────────────────
   Future<List<DateTime>> getMarkedDates(String classId) async {
     // Removed orderBy to avoid mandatory composite index requirement
