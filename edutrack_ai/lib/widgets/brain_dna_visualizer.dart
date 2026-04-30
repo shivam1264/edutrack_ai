@@ -524,10 +524,7 @@ class _TooltipPainter extends CustomPainter {
   });
 
   Color _getStatusColor() {
-    if (node.retentionFactor < 0.5) return Colors.grey;
-    if (node.masteryScore >= 0.8) return const Color(0xFF10B981);
-    if (node.masteryScore >= 0.5) return const Color(0xFFF59E0B);
-    return const Color(0xFFEF4444);
+    return AppTheme.primary;
   }
 
   String _getStatusText() {

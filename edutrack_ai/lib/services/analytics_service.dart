@@ -30,7 +30,7 @@ class AnalyticsService {
     });
 
     final scores = docs.take(20).map((d) {
-      final data = d.data();
+      final data = d.data() as Map<String, dynamic>;
       final score = (data['score'] as num?)?.toDouble() ?? 0;
       final total = (data['total'] as num?)?.toDouble() ?? 1;
       return total > 0 ? (score / total) * 100 : 0.0;
@@ -49,25 +49,31 @@ class AnalyticsService {
     final graded =
         subSnap.docs.where((d) => d.data()['status'] == 'graded').length;
 
-    // Combined breakdown from submissions AND quizzes
+    // Create a unified timeline of all performance points
     final Map<String, List<double>> subjectScores = {};
     final Map<String, Map<String, dynamic>> assignmentCache = {};
+    final List<Map<String, dynamic>> timeline = [];
 
-    // 1. Quizzes
+    // 1. Quizzes to timeline
     for (final doc in quizSnap.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final subject = data['subject'] as String? ?? 'General';
       final score = (data['score'] as num?)?.toDouble() ?? 0;
       final total = (data['total'] as num?)?.toDouble() ?? 1;
+      final date = data['submitted_at'] as Timestamp? ?? Timestamp.now();
+      final subject = data['subject'] as String? ?? 'General';
+      
       if (total > 0) {
+        final percentage = (score / total) * 100;
+        timeline.add({'date': date, 'score': percentage, 'subject': subject});
+        
         subjectScores.putIfAbsent(subject, () => []);
-        subjectScores[subject]!.add((score / total) * 100);
+        subjectScores[subject]!.add(percentage);
       }
     }
 
-    // 2. Graded Submissions
+    // 2. Graded Submissions to timeline
     for (final doc in subSnap.docs) {
-      final data = doc.data();
+      final data = doc.data() as Map<String, dynamic>;
       if (data['status'] == 'graded' && data['marks'] != null) {
         final assignId = data['assignment_id'] as String?;
         if (assignId != null) {
@@ -75,8 +81,8 @@ class AnalyticsService {
           if (aData == null) {
             final aDoc = await _db.collection('assignments').doc(assignId).get();
             if (aDoc.exists) {
-              aData = aDoc.data();
-              assignmentCache[assignId] = aData!;
+              aData = aDoc.data() as Map<String, dynamic>?;
+              if (aData != null) assignmentCache[assignId] = aData;
             }
           }
 
@@ -84,11 +90,29 @@ class AnalyticsService {
             final subject = aData['subject'] as String? ?? 'Other';
             final marks = (data['marks'] as num).toDouble();
             final maxMarks = (aData['max_marks'] as num?)?.toDouble() ?? 100;
+            final date = data['submitted_at'] as Timestamp? ?? Timestamp.now();
+            
+            final percentage = (marks / maxMarks) * 100;
+            timeline.add({'date': date, 'score': percentage, 'subject': subject});
+            
             subjectScores.putIfAbsent(subject, () => []);
-            subjectScores[subject]!.add((marks / maxMarks) * 100);
+            subjectScores[subject]!.add(percentage);
           }
         }
       }
+    }
+
+    // Sort timeline chronologically
+    timeline.sort((a, b) => (a['date'] as Timestamp).compareTo(b['date'] as Timestamp));
+    
+    final scoresTrend = timeline.map((e) => e['score'] as double).toList();
+    
+    // Create subject-specific trends from the sorted timeline
+    final Map<String, List<double>> subjectScoresTrend = {};
+    for (final point in timeline) {
+      final sub = point['subject'] as String;
+      subjectScoresTrend.putIfAbsent(sub, () => []);
+      subjectScoresTrend[sub]!.add(point['score'] as double);
     }
 
     final subjectAvg = subjectScores.map((k, v) =>
@@ -103,7 +127,8 @@ class AnalyticsService {
     int presentCount = 0;
     int totalAttendDays = attendSnap.docs.length;
     for (var doc in attendSnap.docs) {
-      final status = doc.data()['status']?.toString().toLowerCase();
+      final data = doc.data() as Map<String, dynamic>;
+      final status = data['status']?.toString().toLowerCase();
       if (status == 'present' || status == 'late') presentCount++;
     }
     final attendanceRate = totalAttendDays > 0 ? (presentCount / totalAttendDays) * 100 : 0.0;
@@ -123,13 +148,14 @@ class AnalyticsService {
     return {
       'class_id': classId,
       'avg_score': avgScore,
-      'last_5_scores': scores.take(5).toList(),
+      'scores_trend': scoresTrend,
       'subject_avg': subjectAvg,
       'submitted_count': submitted,
       'graded_count': graded,
       'attendance': attendanceRate,
       'course_completion': courseCompletion,
       'total_assignments': totalAssignments,
+      'subject_scores': subjectScoresTrend,
     };
   }
 
