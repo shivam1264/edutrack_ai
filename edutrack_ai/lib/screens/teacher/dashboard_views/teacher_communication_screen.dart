@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../utils/app_theme.dart';
 import '../doubt_answer_screen.dart';
 import '../leave_approval_screen.dart';
@@ -37,7 +39,7 @@ class TeacherCommunicationScreen extends StatelessWidget {
             Icons.chat_bubble_rounded,
             const Color(0xFFF97316),
             0,
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherChatListScreen())),
+            () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherChatListScreen())),
           ),
           const SizedBox(height: 16),
           StreamBuilder<DocumentSnapshot>(
@@ -92,7 +94,7 @@ class TeacherCommunicationScreen extends StatelessWidget {
                 Icons.help_center_rounded,
                 const Color(0xFF8B5CF6),
                 count,
-                () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DoubtAnswerScreen())),
+                () => Navigator.push(context, MaterialPageRoute(builder: (_) => DoubtAnswerScreen())),
               );
             }
           ),

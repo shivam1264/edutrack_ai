@@ -152,15 +152,7 @@ class _DNAPainter extends CustomPainter {
   };
 
   Color _getMasteryColor(KnowledgeNode node) {
-    if (node.retentionFactor < 0.5) {
-      return Colors.grey.shade400;
-    } else if (node.masteryScore >= 0.8) {
-      return const Color(0xFF10B981); // Mastered - Emerald
-    } else if (node.masteryScore >= 0.5) {
-      return const Color(0xFFF59E0B); // Learning - Amber
-    } else {
-      return const Color(0xFFEF4444); // Struggling - Red
-    }
+    return AppTheme.primary; // Use a single consistent color as requested
   }
 
   @override

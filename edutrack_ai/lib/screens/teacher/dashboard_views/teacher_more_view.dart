@@ -10,6 +10,7 @@ import '../../../services/class_service.dart';
 import '../../settings/app_settings_screen.dart';
 import '../../settings/help_support_screen.dart';
 import '../../settings/profile_screen.dart';
+import '../teacher_chat_list_screen.dart';
 
 class TeacherMoreView extends StatelessWidget {
   const TeacherMoreView({super.key});
@@ -43,7 +44,7 @@ class TeacherMoreView extends StatelessWidget {
           const SizedBox(height: 24),
           _buildSection('Communication', [
             _buildMenuItem(Icons.chat_bubble_outline_rounded, 'Messages (Parent & Student)', () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherChatListScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherChatListScreen()));
             }),
           ]),
           const SizedBox(height: 24),

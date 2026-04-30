@@ -159,7 +159,6 @@ class _HomeViewState extends State<HomeView> {
                                     ),
                             ),
                             const SizedBox(height: 12),
-                            _buildDNALegend(context),
                           ],
                         ),
                       );
@@ -752,80 +751,6 @@ class _HomeViewState extends State<HomeView> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildDNALegend(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceSubtle,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 8,
-        alignment: WrapAlignment.center,
-        children: [
-          _buildLegendItem(const Color(0xFF10B981), l10n.mastered, '≥80%'),
-          _buildLegendItem(const Color(0xFFF59E0B), l10n.learning, '50-80%'),
-          _buildLegendItem(const Color(0xFFEF4444), l10n.focus, '<50%'),
-          _buildLegendItem(Colors.grey, l10n.review, 'Low'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label, String range) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.4),
-                blurRadius: 4,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              Text(
-                range,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 8,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
