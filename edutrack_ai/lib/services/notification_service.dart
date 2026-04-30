@@ -21,14 +21,34 @@ class NotificationService {
     // 1. OneSignal Initialization
     OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
     OneSignal.initialize(oneSignalAppId);
-    OneSignal.Notifications.requestPermission(true);
 
-    // 2. Firebase Cloud Messaging (Legacy/Internal)
+    // 2. Request notification permission and wait for subscription
+    final permissionGranted = await OneSignal.Notifications.requestPermission(true);
+    print("📱 Notification permission: $permissionGranted");
+
+    // Listen for subscription changes
+    OneSignal.User.pushSubscription.addObserver((state) {
+      print("🔔 OneSignal subscription changed: ${state.current.jsonRepresentation()}");
+    });
+
+    // 3. Firebase Cloud Messaging (for data messages)
     await _fcm.requestPermission(alert: true, badge: true, sound: true);
+
+    // Handle foreground FCM messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("📨 FCM Foreground message: ${message.notification?.title}");
+    });
 
     // Handle messages when app is opened via OneSignal/FCM
     OneSignal.Notifications.addClickListener((event) {
-      print("Notification Clicked: ${event.notification.body}");
+      print("👆 Notification Clicked: ${event.notification.body}");
+    });
+
+    // Background/Terminated state notification opened handler
+    OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+      print("🔔 Notification will display in foreground: ${event.notification.body}");
+      event.preventDefault();
+      event.notification.display();
     });
   }
 
@@ -114,15 +134,30 @@ class NotificationService {
   // ─── Save FCM token (Keeping for compatibility) ──────────────────────────
   Future<void> saveFcmToken(String userId) async {
     try {
-      final token = await _fcm.getToken();
-      if (token != null) {
-        await _db.collection('users').doc(userId).update({
-          'fcm_token': token,
-          'fcm_updated': DateTime.now().toIso8601String(),
-          'onesignal_id': OneSignal.User.pushSubscription.id,
-        });
+      // Wait for OneSignal subscription to be ready
+      String? oneSignalId;
+      int attempts = 0;
+      while (oneSignalId == null && attempts < 10) {
+        oneSignalId = OneSignal.User.pushSubscription.id;
+        if (oneSignalId == null) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          attempts++;
+        }
       }
-    } catch (_) {}
+
+      final token = await _fcm.getToken();
+      final data = <String, dynamic>{
+        'fcm_token': token,
+        'fcm_updated': DateTime.now().toIso8601String(),
+        'onesignal_id': oneSignalId,
+        'notifications_enabled': OneSignal.User.pushSubscription.optedIn,
+      };
+
+      await _db.collection('users').doc(userId).update(data);
+      print("✅ FCM/OneSignal token saved: $oneSignalId");
+    } catch (e) {
+      print("❌ Error saving FCM token: $e");
+    }
   }
 
   // ─── Notifications stream ─────────────────────────────────────────────────

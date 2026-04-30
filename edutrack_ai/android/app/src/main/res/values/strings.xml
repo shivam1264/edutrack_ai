@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EduTrack AI</string>
+    <string name="default_notification_channel_id">edutrack_channel</string>
+    <string name="default_notification_channel_name">EduTrack Notifications</string>
+    <string name="default_notification_channel_description">Important updates from EduTrack AI</string>
+</resources>
