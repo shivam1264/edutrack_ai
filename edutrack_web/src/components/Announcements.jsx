@@ -92,7 +92,7 @@ export default function Announcements({ role, user, classes, fullUserData }) {
     if (t === 'all') return 'Global';
     if (t === 'teachers') return 'Faculty';
     if (t === 'class') {
-      const cls = classes.find(c => c.id === classId);
+      const cls = (classes || []).find(c => c.id === classId);
       return cls ? cls.displayName || cls.name || classId : classId;
     }
     return t;
@@ -154,7 +154,7 @@ export default function Announcements({ role, user, classes, fullUserData }) {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Annual Sports Meet 2024"
                   required
-                  style={{ padding: '14px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)' }}
+                  style={{ padding: '14px', background: 'var(--input-bg)', color: 'var(--text-main)' }}
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -163,12 +163,12 @@ export default function Announcements({ role, user, classes, fullUserData }) {
                   className="glass-input"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  style={{ padding: '14px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', cursor: 'pointer' }}
+                  style={{ padding: '14px', background: 'var(--input-bg)', color: 'var(--text-main)', cursor: 'pointer' }}
                 >
-                  <option value="General" style={{ background: '#0f172a', color: 'white' }}>General</option>
-                  <option value="Academic" style={{ background: '#0f172a', color: 'white' }}>Academic</option>
-                  <option value="Event" style={{ background: '#0f172a', color: 'white' }}>Event</option>
-                  <option value="Holiday" style={{ background: '#0f172a', color: 'white' }}>Holiday</option>
+                  <option value="General" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>General</option>
+                  <option value="Academic" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>Academic</option>
+                  <option value="Event" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>Event</option>
+                  <option value="Holiday" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>Holiday</option>
                 </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -177,11 +177,11 @@ export default function Announcements({ role, user, classes, fullUserData }) {
                   className="glass-input"
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
-                  style={{ padding: '14px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', cursor: 'pointer' }}
+                  style={{ padding: '14px', background: 'var(--input-bg)', color: 'var(--text-main)', cursor: 'pointer' }}
                 >
-                  <option value="all" style={{ background: '#0f172a', color: 'white' }}>Entire School</option>
-                  <option value="teachers" style={{ background: '#0f172a', color: 'white' }}>Faculty Only</option>
-                  <option value="class" style={{ background: '#0f172a', color: 'white' }}>Specific Hub</option>
+                  <option value="all" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>Entire School</option>
+                  <option value="teachers" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>Faculty Only</option>
+                  <option value="class" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>Specific Hub</option>
                 </select>
               </div>
             </div>
@@ -194,11 +194,11 @@ export default function Announcements({ role, user, classes, fullUserData }) {
                   value={selectedClassId}
                   onChange={(e) => setSelectedClassId(e.target.value)}
                   required
-                  style={{ padding: '14px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)' }}
+                  style={{ padding: '14px', background: 'var(--input-bg)', color: 'var(--text-main)' }}
                 >
-                  <option value="" style={{ background: '#0f172a', color: 'white' }}>Choose a Hub...</option>
-                  {classes.map(c => (
-                    <option key={c.id} value={c.id} style={{ background: '#0f172a', color: 'white' }}>{c.displayName || c.name || c.id}</option>
+                  <option value="" style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>Choose a Hub...</option>
+                  {(classes || []).map(c => (
+                    <option key={c.id} value={c.id} style={{ background: 'var(--card-bg)', color: 'var(--text-main)' }}>{c.displayName || c.name || c.id}</option>
                   ))}
                 </select>
               </motion.div>
@@ -212,7 +212,7 @@ export default function Announcements({ role, user, classes, fullUserData }) {
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Provide comprehensive details about this update..."
                 rows={5}
-                style={{ resize: 'none', padding: '16px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)' }}
+                style={{ resize: 'none', padding: '16px', background: 'var(--input-bg)', color: 'var(--text-main)' }}
                 required
               />
             </div>
@@ -256,7 +256,7 @@ export default function Announcements({ role, user, classes, fullUserData }) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search bulletins by title, content or category..."
-            style={{ width: '100%', padding: '14px 14px 14px 48px', fontSize: '14px', background: 'rgba(255,255,255,0.03)' }}
+            style={{ width: '100%', padding: '14px 14px 14px 48px', fontSize: '14px', background: 'var(--input-bg)' }}
           />
         </div>
       </div>

@@ -10,20 +10,28 @@ export default function Messages({ role, user, classes, allUsers, fullUserData }
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [contactType, setContactType] = useState('parent'); // 'parent' or 'teacher'
   const messagesEndRef = useRef(null);
 
   // Get all parents for teacher to chat with
-  const parents = allUsers.filter(u => u.role === 'parent');
-  const teachers = allUsers.filter(u => u.role === 'teacher');
+  const parents = (allUsers || []).filter(u => u.role === 'parent');
+  const teachers = (allUsers || []).filter(u => u.role === 'teacher');
 
   useEffect(() => {
     const unsub = onSnapshot(
-      query(collection(db, 'messages'), where('participants', 'array-contains', user.uid), orderBy('lastMessageAt', 'desc')),
+      query(collection(db, 'messages'), where('participants', 'array-contains', user.uid)),
       (snap) => {
-        setConversations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const convos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Client-side sort to avoid composite index requirement
+        convos.sort((a, b) => {
+          const tA = a.lastMessageAt?.toMillis ? a.lastMessageAt.toMillis() : 0;
+          const tB = b.lastMessageAt?.toMillis ? b.lastMessageAt.toMillis() : 0;
+          return tB - tA;
+        });
+        setConversations(convos);
       },
-      () => {
-        // Fallback if no index: load all messages involving user
+      (error) => {
+        console.error("Messages query error:", error);
         setConversations([]);
       }
     );
@@ -86,10 +94,11 @@ export default function Messages({ role, user, classes, allUsers, fullUserData }
     return convo.participantNames?.[otherId] || 'User';
   };
 
-  const contactList = role === 'teacher' ? parents : [...teachers, ...parents];
+  const contactList = contactType === 'teacher' ? teachers : parents;
   const filteredContacts = contactList.filter(u =>
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    u.id !== user.uid
   );
 
   return (
@@ -104,55 +113,51 @@ export default function Messages({ role, user, classes, allUsers, fullUserData }
         overflow: 'hidden',
         transition: 'width 0.3s ease'
       }}>
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '20px' }}>
-            <span className="gradient-text">Messages</span>
-          </h3>
+        <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '900', letterSpacing: '-0.5px' }}>
+              <span className="gradient-text">Messages</span>
+            </h3>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--glass-surface)', padding: '4px', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
+              <button 
+                onClick={() => setContactType('teacher')}
+                style={{ 
+                  padding: '6px 12px', borderRadius: '7px', fontSize: '11px', fontWeight: '800', border: 'none', cursor: 'pointer',
+                  background: contactType === 'teacher' ? 'var(--primary)' : 'transparent',
+                  color: contactType === 'teacher' ? 'white' : 'var(--text-dim)',
+                  transition: 'all 0.2s ease'
+                }}
+              >TEACHERS</button>
+              <button 
+                onClick={() => setContactType('parent')}
+                style={{ 
+                  padding: '6px 12px', borderRadius: '7px', fontSize: '11px', fontWeight: '800', border: 'none', cursor: 'pointer',
+                  background: contactType === 'parent' ? 'var(--primary)' : 'transparent',
+                  color: contactType === 'parent' ? 'white' : 'var(--text-dim)',
+                  transition: 'all 0.2s ease'
+                }}
+              >PARENTS</button>
+            </div>
+          </div>
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', opacity: 0.5 }} />
             <input
               className="glass-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search contacts..."
-              style={{ width: '100%', paddingLeft: '34px', fontSize: '13px', padding: '10px 12px 10px 34px' }}
+              placeholder={`Search ${contactType}s...`}
+              style={{ width: '100%', paddingLeft: '40px', fontSize: '14px', height: '44px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)' }}
             />
           </div>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-          {/* Active Conversations */}
-          {conversations.length > 0 && (
-            <>
-              <p style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 12px' }}>Recent Chats</p>
-              {conversations.map(convo => (
-                <motion.div
-                  key={convo.id}
-                  whileHover={{ background: 'var(--glass-surface-hover)' }}
-                  onClick={() => setSelectedConvo(convo)}
-                  style={{
-                    padding: '12px', borderRadius: '12px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    background: selectedConvo?.id === convo.id ? 'var(--glass-surface-hover)' : 'transparent'
-                  }}
-                >
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '14px', flexShrink: 0 }}>
-                    {getOtherName(convo).charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getOtherName(convo)}</p>
-                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{convo.lastMessage || 'No messages yet'}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </>
-          )}
-
           {/* New Contact List */}
-          <p style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', padding: '12px 12px 6px' }}>
-            {role === 'teacher' ? 'Parents' : 'All Contacts'}
+          <p style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1.5px', padding: '20px 12px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={12} />
+            Available {contactType}s
           </p>
-          {filteredContacts.map(u => (
+          {(filteredContacts || []).map(u => (
             <motion.div
               key={u.id}
               whileHover={{ background: 'var(--glass-surface-hover)' }}
@@ -201,14 +206,16 @@ export default function Messages({ role, user, classes, allUsers, fullUserData }
               return (
                 <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                   <div style={{
-                    maxWidth: '70%', padding: '12px 16px',
-                    borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    background: isMe ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'var(--glass-surface)',
+                    maxWidth: '75%', padding: '12px 18px',
+                    borderRadius: isMe ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                    background: isMe ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'var(--glass-surface)',
                     color: isMe ? 'white' : 'var(--text-main)',
-                    border: isMe ? 'none' : '1px solid var(--glass-border)'
+                    border: isMe ? 'none' : '1px solid var(--glass-border)',
+                    boxShadow: isMe ? '0 4px 15px rgba(59, 130, 246, 0.2)' : '0 2px 10px rgba(0,0,0,0.05)',
+                    position: 'relative'
                   }}>
-                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5' }}>{msg.text}</p>
-                    <p style={{ margin: '6px 0 0 0', fontSize: '10px', opacity: 0.7, textAlign: 'right' }}>
+                    <p style={{ margin: 0, fontSize: '14.5px', lineHeight: '1.6', fontWeight: '500' }}>{msg.text}</p>
+                    <p style={{ margin: '6px 0 0 0', fontSize: '10px', opacity: 0.6, textAlign: 'right', fontWeight: '700' }}>
                       {msg.timestamp?.toDate?.()?.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) || 'Now'}
                     </p>
                   </div>

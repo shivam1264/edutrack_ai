@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   checkHealth,
   analyzePerformance,
@@ -14,7 +14,7 @@ import {
   markAttendance,
   checkSystemStatus
 } from './services/api';
-import { auth, db, storage } from './firebase';
+import { auth, db, storage, secondaryAuth } from './firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   collection,
@@ -28,9 +28,11 @@ import {
   getDoc,
   getDocs,
   limit,
+  orderBy,
   deleteDoc,
   updateDoc,
-  Timestamp
+  Timestamp,
+  collectionGroup
 } from "firebase/firestore";
 import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import {
@@ -60,6 +62,7 @@ import {
   Edit2,
   AlertTriangle,
   Database,
+  ChevronLeft,
   ChevronRight,
   ChevronUp,
   ToggleRight,
@@ -76,14 +79,15 @@ import {
   Phone,
   XCircle,
   Layers,
-  PlusCircle
+  PlusCircle,
+  ClipboardList
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell,
   BarChart, Bar,
   AreaChart, Area,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  XAxis, YAxis, Tooltip, ResponsiveContainer
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 import { motion } from 'framer-motion';
 import Login from './Login';
@@ -92,10 +96,43 @@ import Messages from './components/Messages';
 import QuizResults from './components/QuizResults';
 import StudentAnalytics from './components/StudentAnalytics';
 import SchoolAnalytics from './components/SchoolAnalytics';
+import AssignmentsHub from './components/AssignmentsHub';
+import AttendanceHub from './components/AttendanceHub';
+import IntelligenceHub from './components/IntelligenceHub';
+import RiskMonitorHub from './components/RiskMonitorHub';
+import DoubtHub from './components/DoubtHub';
+import QuizHub from './components/QuizHub';
+import BulkGradingHub from './components/BulkGradingHub';
 import logo from './assets/Edu_track-logo.png';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px', background: '#1e293b', color: 'white', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <h1 style={{ color: '#f43f5e', fontSize: '48px', marginBottom: '20px' }}>System Crash Detected</h1>
+          <p style={{ fontSize: '18px', opacity: 0.8, marginBottom: '32px' }}>{this.state.error?.toString()}</p>
+          <button onClick={() => window.location.reload()} style={{ padding: '16px 32px', background: '#3b82f6', border: 'none', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Reboot System</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // App.jsx continued...
 function App() {
+  console.log("App Rendering...");
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -111,7 +148,10 @@ function App() {
   const [allUsers, setAllUsers] = useState([]);
   const [newMemberRole, setNewMemberRole] = useState('student');
   const [predictions, setPredictions] = useState([]);
+
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const [showIntelligenceResults, setShowIntelligenceResults] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -139,6 +179,7 @@ function App() {
   const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
   const [dashboardAiAnalysis, setDashboardAiAnalysis] = useState(null);
   const [dashboardAiLoading, setDashboardAiLoading] = useState(false);
+  const [quizResults, setQuizResults] = useState([]);
   const [aiQuizLoading, setAiQuizLoading] = useState(false);
   const [aiPlanLoading, setAiPlanLoading] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState('');
@@ -148,6 +189,21 @@ function App() {
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [profileTab, setProfileTab] = useState('identity');
   const [syncingImage, setSyncingImage] = useState(false);
+<<<<<<< HEAD
+=======
+  const [quizDraftQuestions, setQuizDraftQuestions] = useState([]);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [brainDnaData, setBrainDnaData] = useState([]);
+  const [healthStatus, setHealthStatus] = useState(null);
+
+  // Assignment States
+  const [assignmentFile, setAssignmentFile] = useState(null);
+  const [isUploadingAssignment, setIsUploadingAssignment] = useState(false);
+  const [assignmentFileUrl, setAssignmentFileUrl] = useState('');
+  const [submissions, setSubmissions] = useState([]);
+  const [assignmentTab, setAssignmentTab] = useState('all');
+
+>>>>>>> 82a22ca (Professionalize Bulk Grading Hub with Auto-Sync and fix System Crash hook violation)
 
   // Computed Chart Data
   const [attendanceChartData, setAttendanceChartData] = useState([]);
@@ -187,6 +243,75 @@ function App() {
   const [tempParentChildRoll, setTempParentChildRoll] = useState('');
   const [newParentChildRoll, setNewParentChildRoll] = useState('');
 
+  // Determine which classes this user can see/access
+  const visibleClasses = useMemo(() => {
+    if (role === 'admin') return classes;
+    if (role === 'teacher') {
+      const allowedUnits = fullUserData?.academicUnits || [];
+      const allowedClassId = fullUserData?.classId || '';
+      const allowedIdsFromStr = allowedClassId.split(',').map(s => s.trim()).filter(Boolean);
+      const combined = Array.from(new Set([...allowedUnits, ...allowedIdsFromStr]));
+
+      if (combined.length === 0) return []; // No classes allotted
+
+      return classes.filter(c =>
+        combined.includes(c.id) ||
+        combined.includes(c.displayName)
+      );
+    }
+    return classes; // Fallback
+  }, [classes, role, fullUserData]);
+
+  // Ensure selectedClass is valid for teachers
+  useEffect(() => {
+    if (role === 'teacher' && visibleClasses.length > 0 && !selectedClass) {
+      setSelectedClass(visibleClasses[0].id);
+    }
+  }, [visibleClasses, role, selectedClass]);
+
+
+  const handleAssignmentFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAssignmentFile(file);
+    setIsUploadingAssignment(true);
+    try {
+      const storageRef = ref(storage, `assignments/${user.uid}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setAssignmentFileUrl(url);
+    } catch (err) {
+      alert('File Upload Failed: ' + err.message);
+    } finally {
+      setIsUploadingAssignment(false);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+
+    try {
+      await setDoc(doc(db, 'system_config', 'global'), {
+        aiModel,
+        attendanceThreshold,
+        autoNotifyParents,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Log the activity
+      await addDoc(collection(db, 'activity_logs'), {
+        action: 'System Configuration Updated',
+        type: 'system',
+        user: fullUserData?.name || user?.email || 'Admin',
+        timestamp: serverTimestamp()
+      });
+
+      alert('System configuration synced successfully!');
+    } catch (err) {
+      console.error('Error saving config:', err);
+      alert('Failed to sync configuration.');
+    }
+  };
+
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -195,8 +320,13 @@ function App() {
   // --- Backend Health Check on Mount ---
   useEffect(() => {
     checkHealth()
-      .then(() => setBackendOnline(true))
-      .catch(() => setBackendOnline(false));
+      .then((res) => {
+        setBackendOnline(res.status === 'ok' || res.status === 'offline');
+        if (res.status === 'offline') console.log("EduTrack: Running in Standalone AI Mode");
+      })
+      .catch(() => {
+        setBackendOnline(true); // Always online in standalone mode
+      });
   }, []);
 
   useEffect(() => {
@@ -265,15 +395,15 @@ function App() {
   useEffect(() => {
     // Compute Teacher Stats reactively from synced arrays
     const newStats = {};
-    const teachers = allUsers.filter(u => u.role === 'teacher');
+    const teachers = (allUsers || []).filter(u => u.role === 'teacher');
 
-    teachers.forEach(t => {
+    (teachers || []).forEach(t => {
       newStats[t.id] = {
-        doubts: doubts.filter(d => d.answeredBy === (t.name || '')).length,
-        notes: notes.filter(n => n.teacherId === t.id).length,
-        assigns: assignments.filter(a => a.teacher_id === t.id).length,
-        quizzes: quizzes.filter(q => q.teacher_id === t.id).length,
-        plans: lessonPlans.filter(p => p.teacherId === t.id).length
+        doubts: (doubts || []).filter(d => d.answeredBy === (t.name || '')).length,
+        notes: (notes || []).filter(n => n.teacherId === t.id).length,
+        assigns: (assignments || []).filter(a => a.teacher_id === t.id).length,
+        quizzes: (quizzes || []).filter(q => q.teacher_id === t.id).length,
+        plans: (lessonPlans || []).filter(p => p.teacherId === t.id).length
       };
     });
 
@@ -295,21 +425,15 @@ function App() {
     const fetchData = async () => {
       setBackendError(null);
       try {
-        // Still check system status via API for health monitoring
         const status = await checkSystemStatus();
-        if (status) {
-          setBackendOnline(true);
-          if (status.database && typeof status.database === 'string' && status.database.includes('Disconnected')) {
-            setBackendError("Backend is Online but Database is Disconnected (Missing service_account.json)");
-          }
-        } else {
-          setBackendOnline(false);
-          setBackendError("Backend API is Offline. Please run 'python predict_api.py'");
+        setBackendOnline(true);
+        if (status.backend && status.backend.includes('Standalone')) {
+          // Silently running in standalone mode
+        } else if (status.database && typeof status.database === 'string' && status.database.includes('Disconnected')) {
+          setBackendError("Database Node Disconnected in Backend.");
         }
       } catch (err) {
-        console.error("Health check failed:", err);
-        setBackendOnline(false);
-        setBackendError("Backend API Connectivity Issue.");
+        setBackendOnline(true); // Default to true for client-side AI
       }
     };
 
@@ -324,7 +448,15 @@ function App() {
     });
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map(d => {
+        const userData = d.data();
+        return {
+          id: d.id,
+          ...userData,
+          // Mobile uses mastery_score (0-1), Web uses mastery (0-100)
+          mastery: userData.mastery ?? (userData.mastery_score ? userData.mastery_score * 100 : 0)
+        };
+      });
       setAllUsers(data);
       const studentList = data.filter(u => u.role === 'student');
       setStudents(studentList);
@@ -338,10 +470,10 @@ function App() {
     });
 
     const unsubDoubts = onSnapshot(collection(db, 'doubts'), (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const data = (snap.docs || []).map(d => ({ id: d.id, ...d.data() }));
       setDoubts(data);
-      const answered = data.filter(d => d.status === 'answered' || d.status === 'ai_answered').length;
-      const pending = data.filter(d => d.status === 'pending').length;
+      const answered = (data || []).filter(d => d.status === 'answered' || d.status === 'ai_answered').length;
+      const pending = (data || []).filter(d => d.status === 'pending').length;
       setDoubtStats({ total: data.length, answered, pending });
     });
 
@@ -365,10 +497,53 @@ function App() {
       setTimetables(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // Predictions (Keep API-driven for AI results)
-    fetchPredictions().then(data => {
-      if (Array.isArray(data)) setPredictions(data);
+    const unsubQuizResults = onSnapshot(collectionGroup(db, 'quiz_results'), (snap) => {
+      setQuizResults((snap.docs || []).map(d => ({ id: d.id, ...d.data() })));
     });
+
+    const unsubSubmissions = onSnapshot(collection(db, 'submissions'), (snap) => {
+      setSubmissions((snap.docs || []).map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    const unsubLogs = onSnapshot(query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(10)), (snap) => {
+      setRecentAlerts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.error("Activity logs sync error:", error);
+    });
+
+    const unsubConfig = onSnapshot(doc(db, 'system_config', 'global'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.aiModel) setAiModel(data.aiModel);
+        if (data.attendanceThreshold !== undefined) setAttendanceThreshold(data.attendanceThreshold);
+        if (data.autoNotifyParents !== undefined) setAutoNotifyParents(data.autoNotifyParents);
+      }
+    });
+
+    // Predictions (Real-time Sync)
+    const unsubPredictions = onSnapshot(collection(db, 'predictions'), (snap) => {
+      setPredictions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+
+    const unsubBrainDna = onSnapshot(collectionGroup(db, 'brain_dna'), (snap) => {
+      setBrainDnaData(snap.docs.map(d => {
+        const data = d.data();
+        const rawMastery = data.mastery ?? data.mastery_score ?? 0;
+        return {
+          id: d.id,
+          ...data,
+          mastery: rawMastery <= 1 ? rawMastery * 100 : rawMastery,
+          subject: data.subject || 'General'
+        };
+      }));
+    });
+
+    const unsubSystemHealth = onSnapshot(doc(db, 'system_health', 'realtime'), (snap) => {
+      if (snap.exists()) setHealthStatus(snap.data());
+    });
+
+
 
     return () => {
       unsubClasses();
@@ -380,27 +555,34 @@ function App() {
       unsubNotes();
       unsubLessonPlans();
       unsubTimetable();
+      unsubQuizResults();
+      unsubSubmissions();
+      unsubBrainDna();
+      unsubPredictions();
+      unsubSystemHealth();
+      if (typeof unsubLogs === 'function') unsubLogs();
+      if (typeof unsubConfig === 'function') unsubConfig();
     };
   }, [user, role, fullUserData]);
 
   // Trigger AI analysis for the dashboard automatically
   useEffect(() => {
-    if (user && (role === 'admin' || role === 'teacher') && !dashboardAiAnalysis && backendOnline && stats.students > 0) {
+    if (user && (role === 'admin' || role === 'teacher') && !dashboardAiAnalysis && (stats?.students || 0) > 0) {
       const runDashboardAnalysis = async () => {
         setDashboardAiLoading(true);
         try {
-          const avgAttendance = attendanceArchive.length > 0
-            ? Math.round(attendanceArchive.filter(r => r.status === 'present').length / attendanceArchive.length * 100)
+          const avgAttendance = (attendanceArchive || []).length > 0
+            ? Math.round((attendanceArchive || []).filter(r => r.status === 'present').length / (attendanceArchive || []).length * 100)
             : 85;
-          
+
           const result = await analyzePerformance({
             task: 'analysis',
-            total_students: stats.students,
-            total_teachers: allUsers.filter(u => u.role === 'teacher').length,
-            total_assignments: stats.assignments,
+            total_students: stats?.students || 0,
+            total_teachers: (allUsers || []).filter(u => u.role === 'teacher').length,
+            total_assignments: stats?.assignments || 0,
             attendance_pct: avgAttendance,
-            high_risk_count: predictions.filter(p => p.risk_level === 'high').length,
-            medium_risk_count: predictions.filter(p => p.risk_level === 'medium').length,
+            high_risk_count: (predictions || []).filter(p => p?.risk_level === 'high').length,
+            medium_risk_count: (predictions || []).filter(p => p?.risk_level === 'medium').length,
           });
           setDashboardAiAnalysis(result);
         } catch (e) {
@@ -441,7 +623,20 @@ function App() {
     if (students.length > 0) {
       const perf = { 'A+': 0, 'A': 0, 'B': 0, 'C': 0 };
       students.forEach(s => {
-        const score = s.mastery || 75;
+        // Find student's average quiz performance
+        const studentResults = quizResults.filter(r => r.student_id === s.id || r.studentId === s.id);
+        let score = 75; // Default
+
+        if (studentResults.length > 0) {
+          const totalPct = studentResults.reduce((acc, r) => {
+            const pct = r.total > 0 ? (r.score / r.total) * 100 : 0;
+            return acc + pct;
+          }, 0);
+          score = totalPct / studentResults.length;
+        } else if (s.mastery) {
+          score = s.mastery;
+        }
+
         if (score >= 90) perf['A+']++;
         else if (score >= 75) perf['A']++;
         else if (score >= 60) perf['B']++;
@@ -453,7 +648,7 @@ function App() {
         { name: 'A+', count: 12 }, { name: 'A', count: 25 }, { name: 'B', count: 18 }, { name: 'C', count: 8 }
       ]);
     }
-  }, [students]);
+  }, [students, quizResults]);
 
   useEffect(() => {
     if (predictions.length > 0) {
@@ -510,9 +705,18 @@ function App() {
   };
 
   const handleAttDateChange = async (dateStr) => {
+    if (!dateStr) return;
     setAttDate(dateStr);
     setAttStatusMap({});
     if (selectedClass) await loadExistingAttendance(selectedClass, dateStr);
+  };
+
+  const shiftAttDate = (days) => {
+    const d = new Date(attDate);
+    d.setDate(d.getDate() + days);
+    const newDateStr = d.toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    handleAttDateChange(newDateStr);
   };
 
   const setStudentStatus = (studentId, status) => {
@@ -551,6 +755,17 @@ function App() {
   };
 
   const renderContent = () => {
+<<<<<<< HEAD
+=======
+
+    if (!role) return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px' }}>
+        <div className="spinning-loader" style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.05)', borderTopColor: 'var(--primary)', borderRadius: '50%' }}></div>
+        <p style={{ color: 'var(--text-dim)', fontWeight: '700' }}>Synchronizing Security Context...</p>
+      </div>
+    );
+
+>>>>>>> 82a22ca (Professionalize Bulk Grading Hub with Auto-Sync and fix System Crash hook violation)
     // STUDENT VIEW
     if (role === 'student') {
       return (
@@ -576,11 +791,13 @@ function App() {
           <div className="glass-card" style={{ marginTop: '24px', padding: '24px' }}>
             <h3>Your Recent Assignments</h3>
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {assignments.map(a => (
+              {(assignments || []).map(a => (
                 <div key={a.id} style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <p style={{ fontWeight: '600' }}>{a.title}</p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{a.subject} | Due: {a.due_date}</p>
+                    <div style={{ fontWeight: '600' }}>{String(a.title || 'Untitled')}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+                      {String(a.subject || 'General')} | Due: {a.due_date && typeof a.due_date.toDate === 'function' ? a.due_date.toDate().toLocaleDateString() : String(a.due_date || 'TBD')}
+                    </div>
                   </div>
                   <button style={{ padding: '8px 16px', fontSize: '12px' }}>View Details</button>
                 </div>
@@ -691,39 +908,72 @@ function App() {
                     </div>
                     <h3 style={{ margin: 0 }}>Class Knowledge DNA</h3>
                   </div>
-                  <div style={{ height: '300px' }}>
+                  <div style={{ height: '260px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
-                        { subject: 'Math', A: 120, fullMark: 150 },
-                        { subject: 'Science', A: 98, fullMark: 150 },
-                        { subject: 'English', A: 86, fullMark: 150 },
-                        { subject: 'History', A: 99, fullMark: 150 },
-                        { subject: 'Physics', A: 85, fullMark: 150 },
-                        { subject: 'Arts', A: 65, fullMark: 150 },
-                      ]}>
+                      <RadarChart cx="50%" cy="50%" outerRadius="60%" data={(() => {
+                        const subjectMap = {};
+                        const defaultSubjects = ['Math', 'Science', 'English', 'History', 'Physics', 'Arts'];
+                        defaultSubjects.forEach(s => {
+                          subjectMap[s] = { subject: s, mastery: 0, count: 0 };
+                        });
+
+                        brainDnaData.forEach(d => {
+                          const sub = d.subject || 'General';
+                          if (!subjectMap[sub]) subjectMap[sub] = { subject: sub, mastery: 0, count: 0 };
+                          subjectMap[sub].mastery += (d.mastery || 0);
+                          subjectMap[sub].count++;
+                        });
+
+                        return Object.values(subjectMap).map(s => ({
+                          subject: s.subject,
+                          A: s.count > 0 ? Math.round(s.mastery / s.count) : 0,
+                          fullMark: 100
+                        }));
+                      })()}>
                         <PolarGrid stroke="var(--glass-border)" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-dim)', fontSize: 12 }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
-                        <Radar name="Class Mastery" dataKey="A" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.5} />
-                        <Tooltip contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px' }} />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-dim)', fontSize: 14, fontWeight: '800' }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <Radar
+                          name="Class Mastery"
+                          dataKey="A"
+                          stroke="#8b5cf6"
+                          strokeWidth={3}
+                          fill="url(#radarGrad)"
+                          fillOpacity={0.6}
+                          animationDuration={1500}
+                        />
+                        <Tooltip
+                          contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', backdropFilter: 'blur(10px)', color: '#fff' }}
+                          itemStyle={{ color: '#8b5cf6', fontWeight: '900' }}
+                        />
+                        <defs>
+                          <linearGradient id="radarGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0.2} />
+                          </linearGradient>
+                        </defs>
                       </RadarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* Academic Stars */}
-                <div className="glass-card" style={{ padding: '24px' }}>
-                  <h3 style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px' }}>
-                    Academic Stars ðŸ†
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+                {/* Academic Stars - Compact & Professional */}
+                <div className="glass-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Academic Stars</h3>
+                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontSize: '10px', fontWeight: '900' }}>TOP 1%</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {students.slice(0, 4).map((s, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '900' }}>{i + 1}</div>
-                          <span style={{ fontWeight: '600', fontSize: '14px' }}>{s.name}</span>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '900', color: '#10b981', opacity: 0.6 }}>0{i + 1}</span>
+                          <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>{s.name}</span>
                         </div>
-                        <span style={{ color: '#10b981', fontWeight: '900' }}>98%</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '900', color: '#10b981' }}>98%</div>
+                          <div style={{ fontSize: '9px', color: 'var(--text-dim)', fontWeight: '600' }}>Mastery</div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -731,16 +981,20 @@ function App() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', marginTop: '24px' }}>
-                {/* Attention Needed */}
-                <div className="glass-card" style={{ padding: '24px' }}>
-                  <h3 style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px' }}>
-                    Attention Needed âš ï¸
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+                {/* Attention Needed - Compact & Professional */}
+                <div className="glass-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Critical Nodes</h3>
+                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', fontSize: '10px', fontWeight: '900' }}>RISK LIST</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {students.slice(-4).map((s, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)' }}>
-                        <span style={{ fontWeight: '600', fontSize: '14px' }}>{s.name}</span>
-                        <span style={{ color: '#ef4444', fontWeight: '900' }}>42%</span>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)' }}>
+                        <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>{s.name}</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '900', color: '#f43f5e' }}>42%</div>
+                          <div style={{ fontSize: '9px', color: 'var(--text-dim)', fontWeight: '600' }}>Under-perf</div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -768,17 +1022,27 @@ function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {students.map(s => (
-                          <tr key={s.id} style={{ borderTop: '1px solid var(--glass-border)', fontSize: '14px' }}>
-                            <td style={{ padding: '12px', fontWeight: '600' }}>{s.name}</td>
-                            <td style={{ padding: '12px' }}>{s.classId}</td>
-                            <td style={{ padding: '12px' }}>
-                              <div style={{ width: '60px', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
-                                <div style={{ width: '75%', height: '100%', background: '#3b82f6', borderRadius: '3px' }} />
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                        {(students || []).map(s => {
+                          const studentClass = (classes || []).find(c =>
+                            c.id === (s.classId || s.class_id) ||
+                            c.displayName === (s.classId || s.class_id || s.className)
+                          );
+                          const className = studentClass
+                            ? (studentClass.standard ? (studentClass.section ? `${studentClass.standard} - ${studentClass.section}` : studentClass.standard) : (studentClass.name || studentClass.className || 'Class'))
+                            : (s.classId || s.class_id || '-');
+
+                          return (
+                            <tr key={s.id} style={{ borderTop: '1px solid var(--glass-border)', fontSize: '14px' }}>
+                              <td style={{ padding: '12px', fontWeight: '600' }}>{s.name}</td>
+                              <td style={{ padding: '12px' }}>{className}</td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ width: '60px', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
+                                  <div style={{ width: `${s.mastery || 75}%`, height: '100%', background: '#3b82f6', borderRadius: '3px' }} />
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -796,15 +1060,15 @@ function App() {
               <p style={{ color: 'var(--text-dim)' }}>Interconnected with your Mobile App</p>
             </header>
 
-            {/* AI PERFORMANCE OVERVIEW */}
+            {/* AI PERFORMANCE OVERVIEW - Compact */}
             {(dashboardAiLoading || dashboardAiAnalysis) && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card"
                 style={{
-                  padding: '24px',
-                  marginBottom: '24px',
+                  padding: '16px 20px',
+                  marginBottom: '20px',
                   background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05))',
                   border: '1px solid rgba(59, 130, 246, 0.2)',
                   position: 'relative',
@@ -812,49 +1076,49 @@ function App() {
                 }}
               >
                 {dashboardAiLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--text-dim)' }}>
-                    <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    <span style={{ fontSize: '14px', fontWeight: '600' }}>AI is aggregating institutional data...</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-dim)' }}>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                    <span style={{ fontSize: '13px', fontWeight: '700' }}>Aggregating Matrix Data...</span>
                   </div>
                 ) : (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ padding: '8px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '10px', color: '#3b82f6' }}>
-                          <Zap size={20} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ padding: '6px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', color: '#3b82f6' }}>
+                          <Zap size={16} />
                         </div>
                         <div>
-                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800' }}>Institutional AI Matrix</h3>
-                          <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Global analysis of all academic nodes</p>
+                          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800' }}>Institutional AI Matrix</h3>
+                          <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-dim)' }}>Node Analysis Active</p>
                         </div>
                       </div>
                       <div style={{
-                        padding: '6px 12px',
+                        padding: '4px 10px',
                         borderRadius: '20px',
-                        fontSize: '11px',
+                        fontSize: '10px',
                         fontWeight: '900',
                         background: (dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
                         color: (dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? '#ef4444' : '#10b981',
                         border: `1px solid ${(dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}`
                       }}>
-                        STATUS: {(dashboardAiAnalysis.risk_level || 'HEALTHY').toUpperCase()}
+                        {(dashboardAiAnalysis.risk_level || 'HEALTHY').toUpperCase()}
                       </div>
                     </div>
-                    <p style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-main)', marginBottom: '16px', opacity: 0.9 }}>
+                    <p style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--text-main)', marginBottom: '12px', opacity: 0.85 }}>
                       {dashboardAiAnalysis.summary}
                     </p>
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
                       <button
                         onClick={() => handleTabChange('intelligence')}
-                        style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                        style={{ padding: '6px 14px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
                       >
-                        Launch Intel Node
+                        Intel Node
                       </button>
                       <button
                         onClick={() => { setDashboardAiAnalysis(null); }}
-                        style={{ padding: '8px 16px', borderRadius: '8px', background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--glass-border)', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                        style={{ padding: '6px 14px', borderRadius: '6px', background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--glass-border)', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
                       >
-                        Recalibrate AI
+                        Recalibrate
                       </button>
                     </div>
                   </>
@@ -868,10 +1132,14 @@ function App() {
                 { label: 'Active Hubs', value: classes.length, icon: <Cpu size={20} />, color: '#06b6d4' },
                 { label: 'AI Predictions', value: '98%', icon: <Brain size={20} />, color: '#10b981' }
               ].map((item, i) => (
-                <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card stat-item">
-                  <div style={{ color: item.color }}>{item.icon}</div>
-                  <div className="stat-value">{item.value}</div>
-                  <div className="stat-label">{item.label}</div>
+                <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card stat-item-compact" style={{ background: 'var(--glass-surface)', border: '1px solid var(--glass-border)' }}>
+                  <div style={{ color: item.color, width: '32px', height: '32px', borderRadius: '8px', background: `${item.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {React.cloneElement(item.icon, { size: 16 })}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-main)', marginTop: '2px' }}>{item.value}</div>
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -890,14 +1158,19 @@ function App() {
                     <AreaChart data={attendanceChartData}>
                       <defs>
                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6} />
                           <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 11 }} />
-                      <YAxis hide domain={[0, 100]} />
-                      <Tooltip contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '12px' }} />
-                      <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#colorValue)" strokeWidth={2} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 11, fontWeight: '700' }} />
+                      <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 11, fontWeight: '700' }} width={30} />
+                      <Tooltip
+                        contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '12px', color: 'var(--text-main)', backdropFilter: 'blur(10px)' }}
+                        itemStyle={{ color: '#3b82f6', fontWeight: '900' }}
+                        labelStyle={{ color: 'var(--text-main)', fontWeight: '800' }}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#colorValue)" strokeWidth={3} animationDuration={1500} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -913,10 +1186,21 @@ function App() {
                 </div>
                 <div style={{ height: '200px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={performanceChartData}>
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 11 }} />
-                      <Tooltip contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '12px' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                      <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <BarChart data={performanceChartData} barSize={30}>
+                      <defs>
+                        <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#059669" stopOpacity={0.4} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 11, fontWeight: '800' }} />
+                      <YAxis hide />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', backdropFilter: 'blur(8px)' }}
+                      />
+                      <Bar dataKey="count" fill="url(#perfGrad)" radius={[6, 6, 0, 0]} animationDuration={2000} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -924,46 +1208,107 @@ function App() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '16px', marginTop: '16px' }}>
-              {/* System Alerts */}
+              {/* Class Knowledge DNA Radar Chart */}
               <div className="glass-card" style={{ padding: '16px 18px' }}>
-                <h3 style={{ fontSize: '14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-dim)' }}>
-                  <Globe size={14} color="#f43f5e" /> System Alerts
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {recentAlerts.map((alert, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--glass-surface)', borderRadius: '10px', borderLeft: `3px solid ${alert.color}` }}>
-                      <span style={{ fontSize: '13px', fontWeight: '500' }}>{alert.msg}</span>
-                      <span style={{ fontSize: '10px', color: alert.color, fontWeight: '800', whiteSpace: 'nowrap', marginLeft: '12px' }}>{alert.time}</span>
-                    </div>
-                  ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                  <div style={{ padding: '6px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '10px', color: '#8b5cf6' }}>
+                    <Brain size={16} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Class Knowledge DNA</h3>
+                </div>
+                <div style={{ height: '260px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="60%" data={(() => {
+                      const subjectMap = {};
+                      const defaultSubjects = ['Math', 'Science', 'English', 'History', 'Physics', 'Arts'];
+                      defaultSubjects.forEach(s => {
+                        subjectMap[s] = { subject: s, mastery: 0, count: 0 };
+                      });
+
+                      brainDnaData.forEach(d => {
+                        const sub = d.subject || 'General';
+                        if (!subjectMap[sub]) subjectMap[sub] = { subject: sub, mastery: 0, count: 0 };
+                        subjectMap[sub].mastery += (d.mastery || 0);
+                        subjectMap[sub].count++;
+                      });
+
+                      return Object.values(subjectMap).map(s => ({
+                        subject: s.subject,
+                        A: s.count > 0 ? Math.round(s.mastery / s.count) : 0,
+                        fullMark: 100
+                      }));
+                    })()}>
+                      <PolarGrid stroke="var(--glass-border)" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-dim)', fontSize: 13, fontWeight: '800' }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                      <Radar
+                        name="Institutional Mastery"
+                        dataKey="A"
+                        stroke="#8b5cf6"
+                        strokeWidth={3}
+                        fill="url(#adminRadarGrad)"
+                        fillOpacity={0.6}
+                        animationDuration={2000}
+                      />
+                      <defs>
+                        <linearGradient id="adminRadarGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.2} />
+                        </linearGradient>
+                      </defs>
+                      <Tooltip contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '12px', color: 'var(--text-main)', backdropFilter: 'blur(10px)' }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Quick Navigation Card */}
-              <div className="glass-card" style={{
-                padding: '18px 20px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: '14px',
-                border: '1px solid rgba(99, 102, 241, 0.15)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Cpu size={20} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* System Telemetry - Compact & Professional */}
+                <div className="glass-card" style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '11px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-dim)' }}>
+                      <Globe size={12} color="#f43f5e" /> System Telemetry
+                    </h3>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
                   </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800 }}>Control Center</h3>
-                    <p style={{ margin: 0, color: 'var(--text-dim)', fontSize: '11px', fontWeight: 500, marginTop: '2px' }}>System configurations & admin nodes</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {recentAlerts.length > 0 ? recentAlerts.map((alert, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', borderLeft: `2px solid ${alert.color || '#3b82f6'}`, fontSize: '12px' }}>
+                        <span style={{ fontWeight: '600', opacity: 0.9 }}>{alert.msg || alert.message || alert.action || 'Log Entry'}</span>
+                        <span style={{ fontSize: '9px', color: 'var(--text-dim)', fontWeight: '700', whiteSpace: 'nowrap', marginLeft: '10px' }}>{alert.time || 'NOW'}</span>
+                      </div>
+                    )) : (
+                      <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-dim)', fontSize: '11px' }}>Clear of anomalies</div>
+                    )}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleTabChange('management')}
-                  style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--primary)', color: 'white', fontWeight: '700', border: 'none', cursor: 'pointer', fontSize: '13px', width: '100%' }}
-                >
-                  Enter Management Matrix
-                </button>
+
+                {/* Quick Navigation Card */}
+                <div className="glass-card" style={{
+                  padding: '14px 16px',
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(168, 85, 247, 0.05))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  border: '1px solid rgba(99, 102, 241, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Cpu size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800' }}>Control Center</h4>
+                      <p style={{ margin: 0, color: 'var(--text-dim)', fontSize: '10px', fontWeight: '500' }}>Admin Matrix</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleTabChange('management')}
+                    style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--primary)', color: 'white', fontWeight: '800', border: 'none', cursor: 'pointer', fontSize: '11px' }}
+                  >
+                    Enter
+                  </button>
+                </div>
               </div>
             </div>
           </>
@@ -986,9 +1331,9 @@ function App() {
                   { id: 'attendance_archive', label: 'Attendance Archive', icon: <Clock size={32} />, color: '#f59e0b', desc: 'Historical logs' },
                   { id: 'intelligence', label: 'Intelligence', icon: <Brain size={32} />, color: '#10b981', desc: 'AI node monitoring' },
                   { id: 'teacher_tracking', label: 'Teacher Tracking', icon: <MapPin size={32} />, color: '#3b82f6', desc: 'Real-time telemetry' },
-                  { id: 'global_alerts', label: 'Emergency Hub', icon: <Zap size={32} />, color: '#ef4444', desc: 'Critical broadcast' },
                   { id: 'institution_stats', label: 'Institution Stats', icon: <BarChart3 size={32} />, color: '#d946ef', desc: 'Big data analytics' },
                   { id: 'master_timetable', label: 'Master Timetable', icon: <Grid size={32} />, color: '#eab308', desc: 'Schedule matrix' },
+                  { id: 'manage_assignments', label: 'Assignments', icon: <BookOpen size={32} />, color: '#6366f1', desc: 'Academic missions' },
                   { id: 'risk_monitor', label: 'Risk Monitor', icon: <HeartPulse size={32} />, color: '#f43f5e', desc: 'Student safety' },
                 ].map(mod => (
                   <motion.div
@@ -1028,261 +1373,25 @@ function App() {
           </>
         );
 
-      case 'attendance': {
-        // Filter students: support both 'class_id' (mobile app) and 'classId' (web legacy)
-        const classStudents = selectedClass
-          ? students.filter(s => (s.class_id === selectedClass) || (s.classId === selectedClass))
-          : [];
-
-        const markedCount = Object.keys(attStatusMap).length;
-        const presentCount = Object.values(attStatusMap).filter(v => v === 'present').length;
-        const absentCount = Object.values(attStatusMap).filter(v => v === 'absent').length;
-        const lateCount = Object.values(attStatusMap).filter(v => v === 'late').length;
-
+      case 'attendance':
         return (
-          <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #0F172A, #1E293B)', padding: '28px 32px', borderBottom: '1px solid var(--glass-border)' }}>
-              <h2 style={{ margin: '0 0 4px 0', fontSize: '22px', fontWeight: '900', color: 'white' }}>Mark Attendance</h2>
-              <p style={{ margin: 0, color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
-                {selectedClass && classStudents.length > 0
-                  ? `${classStudents.length} students | ${markedCount} marked`
-                  : 'Select a class to begin'}
-              </p>
-            </div>
-
-            <div style={{ padding: '24px' }}>
-              {/* Controls Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-                    Select Class
-                  </label>
-                  <select
-                    value={selectedClass || ''}
-                    onChange={(e) => handleAttClassChange(e.target.value)}
-                    style={{ width: '100%', padding: '12px 16px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '14px', outline: 'none' }}
-                  >
-                    <option value="">-- Choose Class --</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.standard} - {c.section}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={attDate}
-                    max={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => handleAttDateChange(e.target.value)}
-                    style={{ width: '100%', padding: '12px 16px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontSize: '14px', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              {/* Loading */}
-              {attLoading && (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)' }}>
-                  <div style={{ width: '32px', height: '32px', border: '3px solid var(--glass-border)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }}></div>
-                  <p>Loading attendance data...</p>
-                </div>
-              )}
-
-              {/* No Class Selected */}
-              {!attLoading && !selectedClass && (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-dim)' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                  <p style={{ fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>No Class Selected</p>
-                  <p style={{ fontSize: '13px' }}>Choose a class from the dropdown above to load students.</p>
-                </div>
-              )}
-
-              {/* Class Selected but No Students */}
-              {!attLoading && selectedClass && classStudents.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-dim)' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
-                  <p style={{ fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>No Students Found</p>
-                  <p style={{ fontSize: '13px', marginBottom: '8px' }}>No students with <code>class_id = {selectedClass}</code> found in Firestore.</p>
-                  <p style={{ fontSize: '12px', color: 'rgba(239,68,68,0.7)' }}>
-                    Total students loaded: {students.length}. All students: {students.map(s => s.class_id || s.classId || '(no class)').join(', ')}
-                  </p>
-                </div>
-              )}
-
-              {/* Students Loaded */}
-              {!attLoading && selectedClass && classStudents.length > 0 && (
-                <>
-                  {/* Stats Row */}
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                    {[
-                      { label: 'Present', count: presentCount, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-                      { label: 'Absent', count: absentCount, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-                      { label: 'Late', count: lateCount, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                      { label: 'Unmarked', count: classStudents.length - markedCount, color: 'var(--text-dim)', bg: 'var(--glass-surface)' },
-                    ].map(s => (
-                      <div key={s.label} style={{ padding: '10px 18px', borderRadius: '10px', background: s.bg, border: `1px solid ${s.color}30` }}>
-                        <div style={{ fontSize: '18px', fontWeight: '900', color: s.color }}>{s.count}</div>
-                        <div style={{ fontSize: '10px', fontWeight: '700', color: s.color, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{s.label}</div>
-                      </div>
-                    ))}
-                    <div style={{ flex: 1 }} />
-                    {/* Bulk Actions */}
-                    <button
-                      onClick={() => {
-                        const map = {};
-                        classStudents.forEach(s => { map[s.id] = 'present'; });
-                        setAttStatusMap(map);
-                      }}
-                      style={{ padding: '8px 16px', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      All Present
-                    </button>
-                    <button
-                      onClick={() => {
-                        const map = {};
-                        classStudents.forEach(s => { map[s.id] = 'absent'; });
-                        setAttStatusMap(map);
-                      }}
-                      style={{ padding: '8px 16px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      All Absent
-                    </button>
-                  </div>
-
-                  {/* Student Table */}
-                  <div style={{ border: '1px solid var(--glass-border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ background: 'var(--glass-surface)' }}>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>#</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>Student</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>Roll No</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>Mark Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {classStudents.map((s, idx) => {
-                          const status = attStatusMap[s.id] || null;
-                          return (
-                            <tr key={s.id} style={{ borderTop: '1px solid var(--glass-border)', background: status === 'present' ? 'rgba(16,185,129,0.03)' : status === 'absent' ? 'rgba(239,68,68,0.03)' : status === 'late' ? 'rgba(245,158,11,0.03)' : 'transparent', transition: 'background 0.2s' }}>
-                              <td style={{ padding: '14px 16px', color: 'var(--text-dim)', fontSize: '13px', fontWeight: '600' }}>{idx + 1}</td>
-                              <td style={{ padding: '14px 16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(99,102,241,0.15)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', flexShrink: 0 }}>
-                                    {(s.name || 'S').charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight: '700', fontSize: '14px' }}>{s.name || 'Unknown Student'}</div>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{s.email || ''}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--text-dim)', fontWeight: '600' }}>
-                                {s.roll_no || s.rollNo || s.rollNumber || '-'}
-                              </td>
-                              <td style={{ padding: '14px 16px' }}>
-                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                  {[
-                                    { key: 'present', label: 'P', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
-                                    { key: 'absent', label: 'A', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
-                                    { key: 'late', label: 'L', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-                                  ].map(btn => (
-                                    <button
-                                      key={btn.key}
-                                      onClick={() => setStudentStatus(s.id, btn.key)}
-                                      title={btn.key.charAt(0).toUpperCase() + btn.key.slice(1)}
-                                      style={{
-                                        width: '36px', height: '36px',
-                                        borderRadius: '8px',
-                                        border: `2px solid ${status === btn.key ? btn.color : 'var(--glass-border)'}`,
-                                        background: status === btn.key ? btn.bg : 'transparent',
-                                        color: status === btn.key ? btn.color : 'var(--text-dim)',
-                                        fontWeight: '900',
-                                        fontSize: '13px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s ease',
-                                        transform: status === btn.key ? 'scale(1.1)' : 'scale(1)',
-                                      }}
-                                    >
-                                      {btn.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Save Button */}
-                  <button
-                    disabled={attSaving}
-                    onClick={() => saveAllAttendance(classStudents)}
-                    style={{
-                      width: '100%', padding: '16px',
-                      background: attSaving ? 'rgba(16,185,129,0.4)' : 'linear-gradient(135deg, #10b981, #059669)',
-                      color: 'white', border: 'none', borderRadius: '12px',
-                      fontSize: '15px', fontWeight: '900', cursor: attSaving ? 'wait' : 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                      transition: 'opacity 0.2s'
-                    }}
-                  >
-                    {attSaving
-                      ? <><div style={{ width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div> Saving...</>
-                      : `Save Attendance for ${markedCount || 0} Student${markedCount !== 1 ? 's' : ''} -> Sync to Mobile`
-                    }
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+          <AttendanceHub
+            classes={visibleClasses}
+            students={students}
+            selectedClass={selectedClass}
+            attDate={attDate}
+            attStatusMap={attStatusMap}
+            attLoading={attLoading}
+            attSaving={attSaving}
+            handleAttClassChange={handleAttClassChange}
+            handleAttDateChange={handleAttDateChange}
+            shiftAttDate={shiftAttDate}
+            setStudentStatus={setStudentStatus}
+            saveAllAttendance={saveAllAttendance}
+            setAttStatusMap={setAttStatusMap}
+          />
         );
-      }
 
-
-      case 'assignments':
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3>Create Assignment</h3>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                await addDoc(collection(db, 'assignments'), {
-                  title: formData.get('title'),
-                  subject: formData.get('subject'),
-                  due_date: formData.get('due'),
-                  class_id: formData.get('class'),
-                  created_at: serverTimestamp()
-                });
-                alert('Assignment Posted!');
-                e.target.reset();
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-                <input name="title" placeholder="Title" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <input name="subject" placeholder="Subject" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <input name="due" type="date" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <select name="class" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }}>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.standard} - {c.section}</option>)}
-                </select>
-                <button type="submit">Post to Mobile App</button>
-              </form>
-            </div>
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3>Live Assignments</h3>
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {assignments.map(a => (
-                  <div key={a.id} style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)' }}>
-                    <p style={{ fontWeight: '600' }}>{a.title}</p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{a.subject} • Due: {a.due_date}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
 
       case 'students':
         return (
@@ -1334,13 +1443,13 @@ function App() {
                 background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
                 padding: '40px 30px',
                 position: 'relative',
-                color: '#ffffff',
+                color: 'white',
                 borderBottom: '1px solid var(--glass-border)'
               }}>
                 <div style={{ position: 'absolute', right: '-20px', top: '-20px', opacity: 0.15 }}>
-                  <Users size={150} color="#ffffff" />
+                  <Users size={150} color="white" />
                 </div>
-                <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '8px', position: 'relative', zIndex: 1, textShadow: '0 4px 15px rgba(0,0,0,0.3)', color: '#ffffff' }}>Register Class Member</h2>
+                <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '8px', position: 'relative', zIndex: 1, textShadow: '0 4px 15px rgba(0,0,0,0.3)', color: 'white' }}>Register Class Member</h2>
                 <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', position: 'relative', zIndex: 1 }}>Onboard new students, teachers, or parents</p>
               </div>
 
@@ -1366,7 +1475,7 @@ function App() {
                   const academicUnits = formData.get('academicUnits');
 
                   try {
-                    const userCred = await createUserWithEmailAndPassword(auth, email, password);
+                    const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
                     await setDoc(doc(db, 'users', userCred.user.uid), {
                       name,
                       email,
@@ -1387,6 +1496,10 @@ function App() {
                       schoolId: 'SCH001',
                       createdAt: serverTimestamp()
                     });
+
+                    // CRITICAL: Sign out from secondary instance so it doesn't interfere
+                    await signOut(secondaryAuth);
+
                     alert('Hub Member Registered Successfully!');
                     setTeacherSpecs([]);
                     setTeacherClasses([]);
@@ -1418,7 +1531,7 @@ function App() {
                             fontWeight: '600',
                             fontSize: '14px',
                             transition: 'all 0.2s',
-                            background: newMemberRole === role.id ? '#6366f1' : 'rgba(255,255,255,0.05)',
+                            background: newMemberRole === role.id ? '#6366f1' : 'var(--input-bg)',
                             color: newMemberRole === role.id ? 'white' : 'var(--text-dim)',
                             border: newMemberRole === role.id ? '1px solid #6366f1' : '1px solid var(--glass-border)',
                             boxShadow: newMemberRole === role.id ? '0 4px 15px rgba(99, 102, 241, 0.4)' : 'none'
@@ -1520,7 +1633,7 @@ function App() {
                                 <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#6366f1' }}><Cpu size={20} /></span>
                                 <select name="classId" required={newMemberRole === 'student'} style={{ width: '100%', padding: '16px 16px 16px 48px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', fontSize: '15px', outline: 'none' }}>
                                   <option value="" style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>Select a standardized hub</option>
-                                  {classes.map(c => <option key={c.id} value={c.displayName || c.id} style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>{c.displayName || `${c.standard} - ${c.section}`}</option>)}
+                                  {classes.map(c => <option key={c.id} value={c.id} style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>{c.displayName || `${c.standard} - ${c.section}`}</option>)}
                                 </select>
                               </div>
                             </div>
@@ -1688,7 +1801,7 @@ function App() {
                   <select
                     value={attendanceClassFilter}
                     onChange={(e) => setAttendanceClassFilter(e.target.value)}
-                    style={{ width: '100%', padding: '16px', borderRadius: '16px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)', color: 'var(--text-main)', outline: 'none', fontSize: '15px' }}
+                    style={{ width: '100%', padding: '16px', borderRadius: '16px', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-main)', outline: 'none', fontSize: '15px' }}
                   >
                     <option value="" style={{ background: 'var(--bg-gradient-start)' }}>Select an Academic Hub</option>
                     {classes.map(c => (
@@ -1812,12 +1925,12 @@ function App() {
         );
 
       case 'manage_users': {
-        const stats = {
-          all: allUsers.length,
-          student: allUsers.filter(u => u.role === 'student').length,
-          teacher: allUsers.filter(u => u.role === 'teacher').length,
-          parent: allUsers.filter(u => u.role === 'parent').length,
-          admin: allUsers.filter(u => u.role === 'admin').length
+        const userStats = {
+          all: (allUsers || []).length,
+          student: (allUsers || []).filter(u => u.role === 'student').length,
+          teacher: (allUsers || []).filter(u => u.role === 'teacher').length,
+          parent: (allUsers || []).filter(u => u.role === 'parent').length,
+          admin: (allUsers || []).filter(u => u.role === 'admin').length
         };
 
         return (
@@ -1832,7 +1945,7 @@ function App() {
                 <div style={{ display: 'flex', gap: '12px' }}>
                   {['student', 'teacher', 'parent', 'admin'].map(r => (
                     <div key={r} style={{ padding: '10px 16px', borderRadius: '14px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary)' }}>{stats[r]}</div>
+                      <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary)' }}>{userStats[r]}</div>
                       <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase' }}>{r}s</div>
                     </div>
                   ))}
@@ -1891,11 +2004,11 @@ function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ background: 'var(--glass-surface)', borderBottom: '1px solid var(--glass-border)' }}>
-                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>Member</th>
-                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>Role</th>
-                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>ID / Contact</th>
-                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>Academic Info</th>
-                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'right' }}>Actions</th>
+                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '1px' }}>Member</th>
+                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '1px' }}>Role</th>
+                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '1px' }}>ID / Contact</th>
+                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '1px' }}>Academic Info</th>
+                      <th style={{ padding: '16px 24px', fontSize: '11px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1931,11 +2044,15 @@ function App() {
                         const theme = roleColors[u.role] || roleColors.student;
 
                         return (
-                          <tr key={u.id} style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.2s', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                            <td style={{ padding: '16px 24px' }}>
+                          <tr key={u.id} style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.2s', cursor: 'default' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--glass-surface)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                            <td style={{ padding: '12px 24px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: theme.bg, color: theme.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '900', border: `1px solid ${theme.color}20` }}>
-                                  {(u.name || u.email || 'U')[0].toUpperCase()}
+                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: theme.bg, color: theme.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '900', border: `1px solid ${theme.color}20`, overflow: 'hidden' }}>
+                                  {(u.avatar_url || u.photoURL || u.profileImage || u.avatar || u.imageUrl || u.image || u.profile_image || u.avatarUrl || u.profilePic || u.profile_pic) ? (
+                                    <img src={u.avatar_url || u.photoURL || u.profileImage || u.avatar || u.imageUrl || u.image || u.profile_image || u.avatarUrl || u.profilePic || u.profile_pic} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                                  ) : (
+                                    (u.name || u.email || 'U')[0].toUpperCase()
+                                  )}
                                 </div>
                                 <div>
                                   <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>{u.name || 'Unknown'}</div>
@@ -1943,28 +2060,35 @@ function App() {
                                 </div>
                               </div>
                             </td>
-                            <td style={{ padding: '16px 24px' }}>
+                            <td style={{ padding: '12px 24px' }}>
                               <span style={{ padding: '4px 10px', borderRadius: '6px', background: theme.bg, color: theme.color, fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 {u.role}
                               </span>
                             </td>
-                            <td style={{ padding: '16px 24px' }}>
-                              <div style={{ fontSize: '13px', fontWeight: '600' }}>{u.studentId || u.rollNo || u.roll_no || u.facultyId || u.phone || '--'}</div>
+                            <td style={{ padding: '12px 24px' }}>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{u.studentId || u.rollNo || u.roll_no || u.facultyId || u.phone || '--'}</div>
                               <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>{u.role === 'student' ? 'Roll Number' : (u.role === 'teacher' ? 'Faculty Code' : 'Contact')}</div>
                             </td>
-                            <td style={{ padding: '16px 24px' }}>
-                              <div style={{ fontSize: '13px', fontWeight: '600' }}>
+                            <td style={{ padding: '12px 24px' }}>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
                                 {u.role === 'teacher' ? (
                                   Array.isArray(u.specialization) ? u.specialization.join(', ') : (u.specialization || '--')
                                 ) : (
-                                  u.role === 'parent' ? (u.linkedStudentRollNo ? `Child: ${u.linkedStudentRollNo}` : '--') : (u.classId || u.class_id || u.className || '--')
+                                  u.role === 'parent' ? (u.linkedStudentRollNo ? `Child: ${u.linkedStudentRollNo}` : '--') : (() => {
+                                    const targetId = u.classId || u.class_id || u.className;
+                                    const matchedClass = (classes || []).find(c => c.id === targetId || c.name === targetId || c.className === targetId);
+                                    if (matchedClass) {
+                                      return matchedClass.displayName || (matchedClass.standard ? (matchedClass.section ? `${matchedClass.standard} - ${matchedClass.section}` : matchedClass.standard) : (matchedClass.name || targetId));
+                                    }
+                                    return targetId || '--';
+                                  })()
                                 )}
                               </div>
                               <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
                                 {u.role === 'teacher' ? 'Specialization' : (u.role === 'student' ? 'Assigned Hub' : 'Linkage')}
                               </div>
                             </td>
-                            <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                            <td style={{ padding: '12px 24px', textAlign: 'right' }}>
                               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                 <button
                                   onClick={() => {
@@ -1978,9 +2102,10 @@ function App() {
                                     }
                                     setShowEditUserModal(true);
                                   }}
-                                  style={{ padding: '8px 12px', borderRadius: '8px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                  className="action-btn-mini btn-blue"
+                                  style={{ padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', gap: '6px' }}
                                 >
-                                  <Edit2 size={12} /> Edit
+                                  <Edit2 size={14} strokeWidth={2.5} /> Edit
                                 </button>
                                 <button
                                   onClick={async () => {
@@ -1988,9 +2113,10 @@ function App() {
                                       await deleteDoc(doc(db, 'users', u.id));
                                     }
                                   }}
-                                  style={{ padding: '8px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.15)', cursor: 'pointer' }}
+                                  className="action-btn-mini btn-red"
+                                  style={{ padding: '8px', borderRadius: '8px' }}
                                 >
-                                  <Trash size={12} />
+                                  <Trash size={14} strokeWidth={2.5} />
                                 </button>
                               </div>
                             </td>
@@ -2015,23 +2141,23 @@ function App() {
                 <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '900', letterSpacing: '-1px' }}>Hub Management</h1>
                 <p style={{ margin: '4px 0 0 0', color: 'var(--text-dim)', fontSize: '15px', fontWeight: '500' }}>Establish and monitor academic neural nodes.</p>
               </div>
-              <div style={{ display: 'flex', gap: '20px' }}>
-                <div className="glass-card" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', color: '#3b82f6' }}>
-                    <Layers size={24} />
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="glass-card stat-item-compact" style={{ border: '1px solid var(--glass-border)', background: 'var(--glass-surface)' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Layers size={16} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '20px', fontWeight: '900' }}>{classes.length}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Total Hubs</div>
+                    <div style={{ fontSize: '16px', fontWeight: '900', color: 'var(--text-main)' }}>{classes.length}</div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Total Hubs</div>
                   </div>
                 </div>
-                <div className="glass-card" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', color: '#10b981' }}>
-                    <Users size={24} />
+                <div className="glass-card stat-item-compact" style={{ border: '1px solid var(--glass-border)', background: 'var(--glass-surface)' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={16} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '20px', fontWeight: '900' }}>{allUsers.filter(u => u.role === 'student').length}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Enrolled Nodes</div>
+                    <div style={{ fontSize: '16px', fontWeight: '900', color: 'var(--text-main)' }}>{allUsers.filter(u => u.role === 'student').length}</div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Nodes</div>
                   </div>
                 </div>
               </div>
@@ -2105,15 +2231,23 @@ function App() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--glass-border)' }}>
-                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '1px' }}>Hub Identifier</th>
-                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '1px' }}>Enrolled Nodes</th>
-                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '1px' }}>Status</th>
-                        <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '1px' }}>Actions</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Hub Identifier</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Enrolled Nodes</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Status</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {classes.map(cls => {
-                        const studentCount = allUsers.filter(u => u.role === 'student' && (u.classId === cls.id || u.class_id === cls.id || u.className === cls.displayName)).length;
+                        const studentCount = allUsers.filter(u =>
+                          u.role === 'student' && (
+                            u.classId === cls.id ||
+                            u.class_id === cls.id ||
+                            u.classId === cls.displayName ||
+                            u.class_id === cls.displayName ||
+                            u.className === cls.displayName
+                          )
+                        ).length;
                         return (
                           <tr key={cls.id} style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                             <td style={{ padding: '16px 24px' }}>
@@ -2146,11 +2280,10 @@ function App() {
                                     setEditingHub(cls);
                                     setShowEditHubModal(true);
                                   }}
-                                  style={{ padding: '8px 12px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.05)', color: '#3b82f6', border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800' }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)'}
+                                  className="action-btn-mini btn-blue"
+                                  style={{ padding: '8px 12px', borderRadius: '10px', gap: '6px', fontSize: '11px', fontWeight: '800' }}
                                 >
-                                  <Edit2 size={14} /> Edit
+                                  <Edit2 size={16} strokeWidth={2.5} /> Edit
                                 </button>
                                 <button
                                   onClick={async () => {
@@ -2158,11 +2291,10 @@ function App() {
                                       await deleteDoc(doc(db, 'classes', cls.id));
                                     }
                                   }}
-                                  style={{ padding: '8px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.05)', color: '#ef4444', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)'}
+                                  className="action-btn-mini btn-red"
+                                  style={{ padding: '8px', borderRadius: '10px' }}
                                 >
-                                  <Trash size={14} />
+                                  <Trash size={16} strokeWidth={2.5} />
                                 </button>
                               </div>
                             </td>
@@ -2291,7 +2423,7 @@ function App() {
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 12px', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ color: 'var(--text-dim)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      <tr style={{ color: 'var(--text-main)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                         <th style={{ padding: '0 16px 12px 16px', fontWeight: 'bold' }}>Faculty Member</th>
                         <th style={{ padding: '0 16px 12px 16px', fontWeight: 'bold', textAlign: 'center' }}>Assigns</th>
                         <th style={{ padding: '0 16px 12px 16px', fontWeight: 'bold', textAlign: 'center' }}>Quizzes</th>
@@ -2303,14 +2435,18 @@ function App() {
                     </thead>
                     <tbody>
                       {teachers.map(t => {
-                        const stats = teacherStats[t.id] || { assigns: 0, quizzes: 0, doubts: 0, notes: 0, plans: 0 };
+                        const teacherLocalStats = (teacherStats || {})[t.id] || { assigns: 0, quizzes: 0, doubts: 0, notes: 0, plans: 0 };
 
                         return (
                           <tr key={t.id} style={{ background: 'var(--glass-surface)', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                             <td style={{ padding: '16px', borderRadius: '16px 0 0 16px', border: '1px solid var(--glass-border)', borderRight: 'none' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(192, 38, 211, 0.1)', color: '#C026D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '900' }}>
-                                  {(t.name || 'T').charAt(0).toUpperCase()}
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(192, 38, 211, 0.1)', color: '#C026D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '900', overflow: 'hidden' }}>
+                                  {(t.avatar_url || t.photoURL || t.profileImage || t.avatar || t.imageUrl || t.image || t.profile_image || t.avatarUrl || t.profilePic || t.profile_pic) ? (
+                                    <img src={t.avatar_url || t.photoURL || t.profileImage || t.avatar || t.imageUrl || t.image || t.profile_image || t.avatarUrl || t.profilePic || t.profile_pic} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                                  ) : (
+                                    (t.name || 'T').charAt(0).toUpperCase()
+                                  )}
                                 </div>
                                 <div>
                                   <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>{t.name}</h4>
@@ -2322,21 +2458,21 @@ function App() {
                             <td style={{ padding: '16px', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', textAlign: 'center' }}>
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', color: '#3b82f6' }}>
                                 <BookOpen size={14} />
-                                <span style={{ fontWeight: '800', fontSize: '14px' }}>{stats.assigns}</span>
+                                <span style={{ fontWeight: '800', fontSize: '14px' }}>{teacherLocalStats.assigns}</span>
                               </div>
                             </td>
 
                             <td style={{ padding: '16px', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', textAlign: 'center' }}>
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', color: '#f59e0b' }}>
                                 <TrendingUp size={14} />
-                                <span style={{ fontWeight: '800', fontSize: '14px' }}>{stats.quizzes}</span>
+                                <span style={{ fontWeight: '800', fontSize: '14px' }}>{teacherLocalStats.quizzes}</span>
                               </div>
                             </td>
 
                             <td style={{ padding: '16px', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', textAlign: 'center' }}>
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'rgba(124, 58, 237, 0.1)', borderRadius: '8px', color: '#7c3aed' }}>
                                 <UserCircle size={14} />
-                                <span style={{ fontWeight: '800', fontSize: '14px' }}>{stats.doubts}</span>
+                                <span style={{ fontWeight: '800', fontSize: '14px' }}>{teacherLocalStats.doubts}</span>
                               </div>
                             </td>
 
@@ -2371,30 +2507,30 @@ function App() {
         );
       }
 
-       case 'global_alerts':
-         return (
-           <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-             <div style={{
-               background: 'linear-gradient(135deg, #b91c1c, #ef4444)',
-               padding: '32px',
-               borderBottom: '1px solid var(--glass-border)',
-               display: 'flex',
-               alignItems: 'center',
-               gap: '16px',
-               position: 'relative',
-               overflow: 'hidden'
-             }}>
-               <div style={{ position: 'absolute', right: '-20px', top: '-20px', opacity: 0.2, color: 'white' }}>
-                 <Zap size={120} />
-               </div>
-               <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '16px', color: 'white', position: 'relative', zIndex: 1 }}>
-                 <Zap size={32} />
-               </div>
-               <div style={{ position: 'relative', zIndex: 1 }}>
-                 <h2 style={{ margin: '0 0 8px 0', color: 'white', fontSize: '24px', fontWeight: '900', letterSpacing: '0.5px' }}>Emergency Command Center</h2>
-                 <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: '14px', fontWeight: '600' }}>Direct priority broadcast to all active mobile nodes.</p>
-               </div>
-             </div>
+      case 'global_alerts':
+        return (
+          <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #b91c1c, #ef4444)',
+              padding: '32px',
+              borderBottom: '1px solid var(--glass-border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{ position: 'absolute', right: '-20px', top: '-20px', opacity: 0.2, color: 'white' }}>
+                <Zap size={120} />
+              </div>
+              <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '16px', color: 'white', position: 'relative', zIndex: 1 }}>
+                <Zap size={32} />
+              </div>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <h2 style={{ margin: '0 0 8px 0', color: 'white', fontSize: '24px', fontWeight: '900', letterSpacing: '0.5px' }}>Emergency Command Center</h2>
+                <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: '14px', fontWeight: '600' }}>Direct priority broadcast to all active mobile nodes.</p>
+              </div>
+            </div>
 
             <div style={{ padding: '32px', background: 'var(--card-bg)' }}>
               <form onSubmit={async (e) => {
@@ -2435,11 +2571,11 @@ function App() {
                     <select
                       value={alertTarget}
                       onChange={(e) => setAlertTarget(e.target.value)}
-                      style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none' }}
+                      style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none' }}
                     >
-                      <option value="all" style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>All School Members</option>
-                      <option value="teachers" style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>Teachers Only</option>
-                      <option value="class" style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>Specific Class</option>
+                      <option value="all" style={{ color: 'var(--text-main)', background: 'var(--card-bg)' }}>All School Members</option>
+                      <option value="teachers" style={{ color: 'var(--text-main)', background: 'var(--card-bg)' }}>Teachers Only</option>
+                      <option value="class" style={{ color: 'var(--text-main)', background: 'var(--card-bg)' }}>Specific Class</option>
                     </select>
                   </div>
 
@@ -2450,11 +2586,11 @@ function App() {
                         value={alertClassId}
                         onChange={(e) => setAlertClassId(e.target.value)}
                         required
-                        style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid #3b82f6', outline: 'none' }}
+                        style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid #3b82f6', outline: 'none' }}
                       >
-                        <option value="" style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>-- Choose Target Class --</option>
+                        <option value="" style={{ color: 'var(--text-main)', background: 'var(--card-bg)' }}>-- Choose Target Class --</option>
                         {classes.map(cls => (
-                          <option key={cls.id} value={cls.id} style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>
+                          <option key={cls.id} value={cls.id} style={{ color: 'var(--text-main)', background: 'var(--card-bg)' }}>
                             {cls.displayName}
                           </option>
                         ))}
@@ -2465,12 +2601,12 @@ function App() {
 
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-dim)', fontWeight: 'bold', fontSize: '13px', textTransform: 'uppercase' }}>Alert Title</label>
-                  <input name="title" required placeholder="e.g., Tomorrow is a Holiday" style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none', fontSize: '16px', boxSizing: 'border-box' }} />
+                  <input name="title" required placeholder="e.g., Tomorrow is a Holiday" style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none', fontSize: '16px', boxSizing: 'border-box' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-dim)', fontWeight: 'bold', fontSize: '13px', textTransform: 'uppercase' }}>Message Body</label>
-                  <textarea name="message" required placeholder="Type your detailed announcement here..." style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none', minHeight: '150px', fontSize: '15px', resize: 'vertical', boxSizing: 'border-box' }}></textarea>
+                  <textarea name="message" required placeholder="Type your detailed announcement here..." style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none', minHeight: '150px', fontSize: '15px', resize: 'vertical', boxSizing: 'border-box' }}></textarea>
                 </div>
 
                 <button type="submit" style={{ padding: '18px', background: 'linear-gradient(135deg, #ef4444, #b91c1c)', color: 'white', borderRadius: '12px', border: 'none', fontWeight: '900', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', textTransform: 'uppercase', letterSpacing: '1px', boxShadow: '0 8px 20px rgba(239, 68, 68, 0.3)' }}>
@@ -2544,10 +2680,10 @@ function App() {
                   <select
                     value={activeClassId}
                     onChange={(e) => setTimetableClassFilter(e.target.value)}
-                    style={{ width: '100%', maxWidth: '400px', padding: '16px', borderRadius: '12px', background: 'var(--glass-surface)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none' }}
+                    style={{ width: '100%', maxWidth: '400px', padding: '16px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none' }}
                   >
                     {classes.map(cls => (
-                      <option key={cls.id} value={cls.id} style={{ color: 'var(--text-main)', background: 'var(--bg-gradient-start)' }}>
+                      <option key={cls.id} value={cls.id} style={{ color: 'var(--text-main)', background: 'var(--card-bg)' }}>
                         {cls.displayName}
                       </option>
                     ))}
@@ -2633,10 +2769,11 @@ function App() {
                                 setEditPeriodIndex(i);
                                 setShowAddPeriodModal(true);
                               }}
-                              style={{ background: 'rgba(15, 118, 110, 0.1)', color: '#0f766e', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                              className="action-btn-mini btn-blue"
+                              style={{ padding: '8px', borderRadius: '8px' }}
                               title="Edit Period"
                             >
-                              <Edit2 size={16} />
+                              <Edit2 size={16} strokeWidth={2.5} />
                             </button>
                             <button
                               onClick={async () => {
@@ -2654,10 +2791,11 @@ function App() {
                                   alert('Error deleting period: ' + err.message);
                                 }
                               }}
-                              style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                              className="action-btn-mini btn-red"
+                              style={{ padding: '8px', borderRadius: '8px' }}
                               title="Delete Period"
                             >
-                              <Trash size={16} />
+                              <Trash size={16} strokeWidth={2.5} />
                             </button>
                           </div>
                         </div>
@@ -2784,364 +2922,31 @@ function App() {
         );
       }
 
-      case 'risk_monitor': {
-        const riskStudents = predictions
-          .filter(p => p.risk_level === 'high' || p.risk_level === 'medium')
-          .sort((a, b) => {
-            if (a.risk_level === 'high' && b.risk_level !== 'high') return -1;
-            if (a.risk_level !== 'high' && b.risk_level === 'high') return 1;
-            return (a.performance_score || 0) - (b.performance_score || 0); // lower score first means higher risk
-          })
-          .slice(0, 10);
-
+      case 'risk_monitor':
         return (
-          <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #0F172A, #334155)',
-              padding: '40px 32px',
-              borderBottom: '1px solid var(--glass-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px'
-            }}>
-              <div>
-                <h2 style={{ margin: '0 0 8px 0', color: 'white', fontSize: '26px', fontWeight: '900' }}>AI Risk Monitor</h2>
-                <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Identifying the Top 10 students requiring academic intervention.</p>
-              </div>
-              <div style={{ padding: '6px 14px', background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', borderRadius: '20px', border: '1px solid rgba(244, 63, 94, 0.3)', fontSize: '11px', fontWeight: '900', letterSpacing: '1.2px' }}>
-                PROACTIVE
-              </div>
-            </div>
-
-            <div style={{ padding: '32px', background: 'var(--card-bg)' }}>
-              {riskStudents.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-dim)' }}>
-                  <ShieldCheck size={64} color="#10b981" style={{ opacity: 0.2, marginBottom: '16px' }} />
-                  <p style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '15px' }}>All students are currently within safe academic thresholds.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {riskStudents.map((pred, i) => {
-                    const isHigh = pred.risk_level === 'high';
-                    const score = (pred.performance_score || 0) * 100;
-                    const student = allUsers.find(u => u.id === pred.student_id);
-                    const name = student?.name || 'Loading Student...';
-                    const classId = student?.class_id || 'Unknown Class';
-                    const iconColor = isHigh ? '#ef4444' : '#f59e0b';
-                    const iconBg = isHigh ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
-
-                    return (
-                      <div key={pred.student_id || i} style={{ display: 'flex', alignItems: 'center', background: 'var(--glass-surface)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)', boxShadow: '0 4px 10px rgba(0,0,0,0.02)', transition: 'transform 0.2s' }}>
-                        <div style={{ padding: '12px', background: iconBg, color: iconColor, borderRadius: '50%', marginRight: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {isHigh ? <ShieldAlert size={24} /> : <AlertTriangle size={24} />}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: 'var(--text-main)' }}>{name}</h4>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-dim)' }}>Class: {classId}</p>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '20px', fontWeight: '900', color: iconColor }}>
-                            {score.toFixed(0)}%
-                          </div>
-                          <div style={{ fontSize: '11px', fontWeight: '900', color: iconColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            {pred.risk_level} RISK
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          <RiskMonitorHub
+            predictions={predictions}
+            allUsers={allUsers}
+          />
         );
-      }
 
-      case 'intelligence': {
-        const teachers = allUsers.filter(u => u.role === 'teacher').length;
-
-        let low = 0, med = 0, high = 0;
-        predictions.forEach(p => {
-          if (p.risk_level === 'low') low++;
-          else if (p.risk_level === 'medium') med++;
-          else if (p.risk_level === 'high') high++;
-        });
-
-        const totalPredictions = low + med + high;
-        const riskData = totalPredictions > 0 ? [
-          { name: 'Safe', value: low, color: '#10b981' },
-          { name: 'Watch', value: med, color: '#f59e0b' },
-          { name: 'Alert', value: high, color: '#ef4444' }
-        ] : [];
-
-        const attendanceStats = {
-          'Mon': { present: 0, total: 0, color: '#10b981' },
-          'Tue': { present: 0, total: 0, color: '#f59e0b' },
-          'Wed': { present: 0, total: 0, color: '#3b82f6' },
-          'Thu': { present: 0, total: 0, color: '#6366f1' },
-          'Fri': { present: 0, total: 0, color: '#ec4899' }
-        };
-
-        attendanceArchive.forEach(record => {
-          if (record.date && typeof record.date.toDate === 'function') {
-            const dateObj = record.date.toDate();
-            const dayMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const day = dayMap[dateObj.getDay()];
-
-            if (attendanceStats[day]) {
-              attendanceStats[day].total++;
-              if (record.status === 'present') {
-                attendanceStats[day].present++;
-              }
-            }
-          }
-        });
-
-        const attendanceData = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => {
-          const stats = attendanceStats[day];
-          const percentage = stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
-          return { day, attendance: percentage, color: stats.color };
-        });
-
-        if (!showIntelligenceResults) {
-          return (
-            <div className="glass-card" style={{ padding: '0', overflow: 'hidden', border: 'none' }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #4f46e5, #ec4899)',
-                padding: '80px 40px',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '60vh',
-                color: 'white'
-              }}>
-                <motion.div
-                  animate={{
-                    scale: isAnalyzing ? [1, 1.1, 1] : 1,
-                    opacity: isAnalyzing ? [0.7, 1, 0.7] : 1
-                  }}
-                  transition={{ duration: 1.5, repeat: isAnalyzing ? Infinity : 0 }}
-                >
-                  <Brain size={80} style={{ marginBottom: '24px', color: 'white', filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.4))' }} />
-                </motion.div>
-                <h2 style={{ textTransform: 'uppercase', marginBottom: '16px', fontSize: '32px', fontWeight: '900', letterSpacing: '1px' }}>Global Intelligence Protocol</h2>
-                <p style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '40px', maxWidth: '500px', lineHeight: '1.6', fontSize: '16px' }}>
-                  Initialize enterprise-grade AI analytics to aggregate student performance risk and map institutional attendance protocols.
-                </p>
-                <button
-                  onClick={async () => {
-                    setIsAnalyzing(true);
-                    setAiInsights(null);
-                    try {
-                      // Build student performance summary from Firestore data
-                      const avgAttendance = attendanceArchive.length > 0
-                        ? Math.round(attendanceArchive.filter(r => r.status === 'present').length / attendanceArchive.length * 100)
-                        : 75;
-                      const result = await analyzePerformance({
-                        task: 'analysis',
-                        total_students: stats.students,
-                        total_teachers: allUsers.filter(u => u.role === 'teacher').length,
-                        total_assignments: stats.assignments,
-                        attendance_pct: avgAttendance,
-                        high_risk_count: predictions.filter(p => p.risk_level === 'high').length,
-                        medium_risk_count: predictions.filter(p => p.risk_level === 'medium').length,
-                      });
-                      setAiInsights(result);
-                    } catch (e) {
-                      console.warn('Backend offline, showing chart data only.');
-                    } finally {
-                      setIsAnalyzing(false);
-                      setShowIntelligenceResults(true);
-                    }
-                  }}
-                  disabled={isAnalyzing}
-                  style={{
-                    padding: '18px 36px',
-                    fontSize: '16px',
-                    fontWeight: '900',
-                    background: isAnalyzing ? 'rgba(0,0,0,0.3)' : 'white',
-                    color: isAnalyzing ? 'rgba(255,255,255,0.5)' : '#4f46e5',
-                    boxShadow: isAnalyzing ? 'none' : '0 10px 30px rgba(0,0,0,0.2)',
-                    border: 'none',
-                    cursor: isAnalyzing ? 'wait' : 'pointer',
-                    borderRadius: '50px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    transition: 'all 0.3s',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px'
-                  }}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.5)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                      {backendOnline ? 'Running AI Analysis...' : 'Analyzing Data...'}
-                    </>
-                  ) : (
-                    <>
-                      <LucidePieChart size={20} />
-                      {backendOnline ? 'Run AI Analytics' : 'Run Global Analytics'}
-                    </>
-                  )}
-                </button>
-                {!backendOnline && (
-                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginTop: '12px' }}>
-                    AI Backend offline. Start python predict_api.py for real AI insights.
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        }
-
+      case 'intelligence':
         return (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card" style={{ padding: '24px' }}>
-            {/* Header */}
-            <div style={{ marginBottom: '32px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', padding: '32px', borderRadius: '24px', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 30px rgba(59, 130, 246, 0.2)' }}>
-              <div style={{ position: 'absolute', right: '-20px', top: '-20px', opacity: 0.15, color: 'white' }}>
-                <Brain size={180} />
-              </div>
-              <h2 style={{ fontSize: '28px', fontWeight: '900', color: 'white', marginBottom: '8px', position: 'relative', zIndex: 1, letterSpacing: '0.5px' }}>Global Intelligence Protocol</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 1 }}>
-                <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', fontWeight: 'bold' }}>Enterprise Analytics</span>
-                <span style={{ width: '6px', height: '6px', background: '#4ade80', borderRadius: '50%', boxShadow: '0 0 10px #4ade80' }}></span>
-                <span style={{ fontSize: '13px', color: '#4ade80', fontWeight: 'bold' }}>Live Sync</span>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
-              <div style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'inline-flex', padding: '8px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '10px', color: '#3b82f6', marginBottom: '16px' }}>
-                  <Users size={20} />
-                </div>
-                <h3 style={{ fontSize: '32px', fontWeight: '900', color: 'var(--text-main)', margin: '0 0 4px 0' }}>{stats.students}</h3>
-                <p style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, letterSpacing: '0.5px' }}>Active Students</p>
-              </div>
-              <div style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'inline-flex', padding: '8px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '10px', color: '#6366f1', marginBottom: '16px' }}>
-                  <Brain size={20} />
-                </div>
-                <h3 style={{ fontSize: '32px', fontWeight: '900', color: 'var(--text-main)', margin: '0 0 4px 0' }}>{teachers}</h3>
-                <p style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, letterSpacing: '0.5px' }}>Verified Faculty</p>
-              </div>
-            </div>
-
-            {/* Charts */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-              <div style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                  <div style={{ padding: '8px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '10px', color: '#3b82f6' }}>
-                    <LucidePieChart size={18} />
-                  </div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Student Success Risk Distribution</h3>
-                </div>
-                <div style={{ height: '240px', width: '100%' }}>
-                  {totalPredictions === 0 ? (
-                    <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
-                      No intelligence data gathered.
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={riskData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} paddingAngle={2}>
-                          {riskData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-main)' }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                  <div style={{ padding: '8px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '10px', color: '#a855f7' }}>
-                    <BarChart3 size={18} />
-                  </div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Monthly Attendance Protocols</h3>
-                </div>
-                <div style={{ height: '240px', width: '100%' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={attendanceData}>
-                      <XAxis dataKey="day" stroke="var(--text-dim)" axisLine={false} tickLine={false} />
-                      <Tooltip cursor={{ fill: 'var(--glass-surface-hover)' }} contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-main)' }} />
-                      <Bar dataKey="attendance" radius={[4, 4, 0, 0]}>
-                        {attendanceData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* AI Insights Panel - shown when backend returns real data */}
-            {aiInsights && (
-              <div style={{ marginTop: '24px', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '20px', padding: '28px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                  <div style={{ padding: '8px', background: 'rgba(99,102,241,0.1)', borderRadius: '10px', color: '#6366f1' }}>
-                    <Zap size={20} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>
-                    Groq AI Analysis <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', marginLeft: '8px' }}>â— Live</span>
-                  </h3>
-                </div>
-
-                {aiInsights.summary && (
-                  <p style={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.7', marginBottom: '20px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', borderLeft: '3px solid #6366f1' }}>
-                    {aiInsights.summary}
-                  </p>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  {aiInsights.insights && aiInsights.insights.length > 0 && (
-                    <div>
-                      <h4 style={{ fontSize: '12px', fontWeight: '900', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Key Insights</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {(Array.isArray(aiInsights.insights) ? aiInsights.insights : []).slice(0, 4).map((insight, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-main)' }}>
-                            <span style={{ color: '#3b82f6', flexShrink: 0, marginTop: '2px' }}>*</span>
-                            <span>{typeof insight === 'object' ? insight.title || JSON.stringify(insight) : insight}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {aiInsights.recommendations && aiInsights.recommendations.length > 0 && (
-                    <div>
-                      <h4 style={{ fontSize: '12px', fontWeight: '900', color: '#10b981', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Recommendations</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {(Array.isArray(aiInsights.recommendations) ? aiInsights.recommendations : []).slice(0, 4).map((rec, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-main)' }}>
-                            <span style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }}>OK</span>
-                            <span>{typeof rec === 'object' ? rec.title || JSON.stringify(rec) : rec}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {aiInsights.risk_level && (
-                  <div style={{ marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '20px', background: aiInsights.risk_level?.toLowerCase() === 'high' ? 'rgba(239,68,68,0.1)' : aiInsights.risk_level?.toLowerCase() === 'medium' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', border: `1px solid ${aiInsights.risk_level?.toLowerCase() === 'high' ? 'rgba(239,68,68,0.3)' : aiInsights.risk_level?.toLowerCase() === 'medium' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}` }}>
-                    <span style={{ fontSize: '12px', fontWeight: '900', color: aiInsights.risk_level?.toLowerCase() === 'high' ? '#ef4444' : aiInsights.risk_level?.toLowerCase() === 'medium' ? '#f59e0b' : '#10b981' }}>
-                      Overall Risk: {aiInsights.risk_level}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </motion.div>
+          <IntelligenceHub
+            predictions={predictions}
+            allUsers={allUsers}
+            stats={stats}
+            attendanceArchive={attendanceArchive}
+            brainDnaData={brainDnaData}
+            isAnalyzing={isAnalyzing}
+            setIsAnalyzing={setIsAnalyzing}
+            aiInsights={aiInsights}
+            setAiInsights={setAiInsights}
+            showIntelligenceResults={showIntelligenceResults}
+            setShowIntelligenceResults={setShowIntelligenceResults}
+            analyzePerformance={analyzePerformance}
+          />
         );
-      }
 
       case 'health': {
         const usersCount = allUsers.length;
@@ -3187,7 +2992,7 @@ function App() {
               </h4>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '40px' }}>
-                <div style={{ background: 'var(--glass-surface)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                <div style={{ background: 'var(--input-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                     <Users color="#3b82f6" size={20} />
                     <span style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-main)', flex: 1 }}>Firestore Pulse</span>
@@ -3199,7 +3004,7 @@ function App() {
                   <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: 'var(--text-dim)' }}>Real-time database synchronization status</p>
                 </div>
 
-                <div style={{ background: 'var(--glass-surface)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                <div style={{ background: 'var(--input-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                     <Brain color="#c084fc" size={20} />
                     <span style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-main)', flex: 1 }}>AI Inference Load</span>
@@ -3211,7 +3016,7 @@ function App() {
                   <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: 'var(--text-dim)' }}>Volume of predictive analysis threads</p>
                 </div>
 
-                <div style={{ background: 'var(--glass-surface)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                <div style={{ background: 'var(--input-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                     <Cpu color="#2dd4bf" size={20} />
                     <span style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-main)', flex: 1 }}>Network Latency</span>
@@ -3225,21 +3030,27 @@ function App() {
               </div>
 
               <h4 style={{ margin: '0 0 16px 0', fontSize: '12px', fontWeight: '900', letterSpacing: '1.5px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
-                Recent Security Logs
+                Live System Activity (Synced)
               </h4>
 
               <div style={{ background: 'var(--glass-surface)', borderRadius: '16px', border: '1px solid var(--glass-border)', overflow: 'hidden' }}>
-                {[0, 1, 2, 3].map(index => (
-                  <div key={index} style={{ padding: '16px 20px', borderBottom: index < 3 ? '1px solid var(--glass-border)' : 'none', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    {index === 0 ? <ShieldCheck size={20} color="#34d399" /> : <Settings size={20} color="var(--text-dim)" />}
+                {recentAlerts.length > 0 ? recentAlerts.map((log, index) => (
+                  <div key={log.id || index} style={{ padding: '16px 20px', borderBottom: index < recentAlerts.length - 1 ? '1px solid var(--glass-border)' : 'none', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {log.type === 'security' || log.level === 'critical' ? <ShieldCheck size={20} color="#34d399" /> : <Settings size={20} color="var(--text-dim)" />}
                     <div style={{ flex: 1 }}>
                       <h5 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>
-                        {index === 0 ? 'Admin Session Validated' : `Access Log: Fetch users/${index}`}
+                        {log.action || log.message || 'System Event Recorded'}
                       </h5>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-dim)' }}>{index * 2} minutes ago</p>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-dim)' }}>
+                        {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : 'Just now'} • {log.user || 'System'}
+                      </p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>
+                    No recent activity logs found in database.
+                  </div>
+                )}
               </div>
 
             </div>
@@ -3396,98 +3207,32 @@ function App() {
               </div>
 
               <button
-                onClick={() => alert('System configuration updated successfully.')}
-                style={{ width: '100%', background: '#0F172A', color: 'white', padding: '16px', borderRadius: '16px', fontSize: '16px', fontWeight: '900', letterSpacing: '0.5px' }}
+                onClick={handleSaveConfig}
+                style={{ width: '100%', background: '#0F172A', color: 'white', padding: '16px', borderRadius: '16px', fontSize: '16px', fontWeight: '900', letterSpacing: '0.5px', cursor: 'pointer' }}
               >
-                Save System Configuration
+                Save & Sync Configuration
               </button>
-
             </div>
           </div>
         );
+
       case 'doubts':
         return (
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: '800' }}>Student Doubt Queue</h2>
-              <div style={{ padding: '8px 16px', background: 'rgba(124, 58, 237, 0.1)', borderRadius: '12px', color: '#7c3aed', fontSize: '14px', fontWeight: 'bold' }}>
-                {doubts.filter(d => d.status === 'pending').length} Pending
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {doubts.map(d => (
-                <div key={d.id} className="glass-card" style={{ padding: '20px', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '900', color: d.status === 'pending' ? '#f59e0b' : '#10b981', textTransform: 'uppercase' }}>
-                      {d.status === 'pending' ? 'Pending' : 'Answered'}
-                    </span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
-                      Class {d.classId} | {d.subject}
-                    </span>
-                  </div>
-                  <p style={{ fontWeight: '600', fontSize: '15px', marginBottom: '16px' }}>{d.question}</p>
-
-                  {d.status === 'pending' ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        <input
-                          id={`ans-${d.id}`}
-                          placeholder="Type your answer here..."
-                          style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {backendOnline && (
-                          <button
-                            disabled={aiDoubtLoading[d.id]}
-                            onClick={async () => {
-                              setAiDoubtLoading(prev => ({ ...prev, [d.id]: true }));
-                              try {
-                                const result = await generalChat(d.question, 'teacher');
-                                const inputEl = document.getElementById(`ans-${d.id}`);
-                                if (inputEl) inputEl.value = result.answer || '';
-                              } catch (e) { alert('AI error: ' + e.message); }
-                              finally { setAiDoubtLoading(prev => ({ ...prev, [d.id]: false })); }
-                            }}
-                            style={{ flex: 1, padding: '10px', background: 'linear-gradient(135deg, #7c3aed, #6366f1)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: aiDoubtLoading[d.id] ? 'wait' : 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                          >
-                            {aiDoubtLoading[d.id] ? <><div style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div> AI Thinking...</> : <><Zap size={12} /> AI Answer</>}
-                          </button>
-                        )}
-                        <button
-                          onClick={async () => {
-                            const ans = document.getElementById(`ans-${d.id}`).value;
-                            if (!ans) return;
-                            await updateDoc(doc(db, 'doubts', d.id), {
-                              answer: ans,
-                              status: 'answered',
-                              answeredBy: fullUserData?.name || 'Teacher',
-                              answeredAt: serverTimestamp()
-                            });
-                            alert('Answer submitted!');
-                          }}
-                          style={{ flex: 1, padding: '10px', background: '#7c3aed', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}
-                        >
-                          Submit
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                      <p style={{ fontSize: '13px', color: '#10b981', fontWeight: 'bold', marginBottom: '4px' }}>Teacher Answer:</p>
-                      <p style={{ fontSize: '14px', color: 'var(--text-main)' }}>{d.answer}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {doubts.length === 0 && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)' }}>No doubts found in your assigned classes.</div>}
-            </div>
-          </div>
+          <DoubtHub
+            doubts={doubts}
+            backendOnline={backendOnline}
+            aiDoubtLoading={aiDoubtLoading}
+            setAiDoubtLoading={setAiDoubtLoading}
+            generalChat={generalChat}
+            db={db}
+            fullUserData={fullUserData}
+          />
         );
 
+      case 'new_quiz':
       case 'quizzes':
         return (
+<<<<<<< HEAD
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             <div className="glass-card" style={{ padding: '24px' }}>
               <h3>Create New Quiz</h3>
@@ -3564,6 +3309,21 @@ function App() {
               ))}
             </div>
           </div>
+=======
+          <QuizHub
+            classes={visibleClasses}
+            quizzes={quizzes}
+            user={user}
+            db={db}
+            quizDraftQuestions={quizDraftQuestions}
+            setQuizDraftQuestions={setQuizDraftQuestions}
+            isGeneratingQuiz={isGeneratingQuiz}
+            setIsGeneratingQuiz={setIsGeneratingQuiz}
+            backendOnline={backendOnline}
+            generateQuiz={generateQuiz}
+            setActiveTab={setActiveTab}
+          />
+>>>>>>> 82a22ca (Professionalize Bulk Grading Hub with Auto-Sync and fix System Crash hook violation)
         );
 
       case 'leave_requests':
@@ -3614,10 +3374,8 @@ function App() {
               {[
                 { id: 'attendance', label: 'Mark Attendance', icon: <CheckCircle size={32} />, color: '#10b981' },
                 { id: 'attendance_archive', label: 'Attendance Archive', icon: <Clock size={32} />, color: '#0F172A' },
-                { id: 'assignments', label: 'New Assignment', icon: <Zap size={32} />, color: '#8b5cf6' },
-                { id: 'manage_assignments', label: 'Manage Assignments', icon: <BookOpen size={32} />, color: '#6366f1' },
-                { id: 'new_quiz', label: 'New Quiz', icon: <Cpu size={32} />, color: '#8b5cf6' },
-                { id: 'quizzes', label: 'Manage Quizzes', icon: <TrendingUp size={32} />, color: '#f59e0b' },
+                { id: 'manage_assignments', label: 'Assignments Hub', icon: <BookOpen size={32} />, color: '#6366f1' },
+                { id: 'quizzes', label: 'Quiz Hub', icon: <TrendingUp size={32} />, color: '#f59e0b' },
                 { id: 'bulk_grading', label: 'Bulk Grading', icon: <TrendingUp size={32} />, color: '#ec4899' },
               ].map(mod => (
                 <div key={mod.id} className="nav-item" onClick={() => handleTabChange(mod.id)} style={{ flexDirection: 'column', gap: '16px', padding: '32px 20px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)', height: 'auto', alignItems: 'center', textAlign: 'center' }}>
@@ -3667,127 +3425,19 @@ function App() {
           </div>
         );
 
-      case 'new_quiz':
-        return (
-          <div className="glass-card" style={{ padding: '24px', maxWidth: '600px', margin: '0 auto' }}>
-            <h3>Create New Quiz</h3>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.target);
-              await addDoc(collection(db, 'quizzes'), {
-                title: formData.get('title'),
-                subject: formData.get('subject'),
-                questions_count: parseInt(formData.get('count')),
-                duration: parseInt(formData.get('duration')),
-                class_id: formData.get('class'),
-                teacher_id: user.uid,
-                created_at: serverTimestamp()
-              });
-              alert('Quiz Published Successfully!');
-              setActiveTab('quizzes');
-            }} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-              <input name="title" placeholder="Quiz Title" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-              <input name="subject" placeholder="Subject" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <input name="count" type="number" placeholder="Questions" required style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <input name="duration" type="number" placeholder="Mins" required style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-              </div>
-              <select name="class" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }}>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.standard} - {c.section}</option>)}
-              </select>
-              <button type="submit" style={{ background: '#8b5cf6' }}>Publish Quiz</button>
-            </form>
-          </div>
-        );
-
       case 'bulk_grading':
         return (
-          <div className="glass-card" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-              <div>
-                <h2 style={{ fontSize: '28px', fontWeight: '900' }}>Bulk Grading Protocol</h2>
-                <p style={{ color: 'var(--text-dim)' }}>Simultaneous class assessment protocol</p>
-              </div>
-              <button
-                onClick={async () => {
-                  if (!selectedClass || !document.getElementById('assign-select').value) {
-                    alert('Please select an assignment first.');
-                    return;
-                  }
-                  const assignmentId = document.getElementById('assign-select').value;
-                  const inputs = document.querySelectorAll('.grade-input');
-                  for (let input of inputs) {
-                    const studentId = input.dataset.studentId;
-                    const marks = input.value;
-                    if (marks) {
-                      // Logic matches mobile app: update or create submission
-                      const q = query(collection(db, 'submissions'), where('assignment_id', '==', assignmentId), where('student_id', '==', studentId));
-                      const snap = await getDocs(q);
-                      if (!snap.empty) {
-                        await updateDoc(doc(db, 'submissions', snap.docs[0].id), {
-                          marks: parseFloat(marks),
-                          status: 'graded',
-                          graded_at: serverTimestamp()
-                        });
-                      } else {
-                        await addDoc(collection(db, 'submissions'), {
-                          assignment_id: assignmentId,
-                          student_id: studentId,
-                          marks: parseFloat(marks),
-                          status: 'graded',
-                          submitted_at: serverTimestamp(),
-                          graded_at: serverTimestamp(),
-                          content: '[Manual Entry]'
-                        });
-                      }
-                    }
-                  }
-                  alert('Sync Complete: All grades deployed!');
-                }}
-                style={{ background: '#ec4899', padding: '12px 24px', borderRadius: '12px', fontWeight: '900' }}
-              >
-                Deploy All Grades
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '32px' }}>
-              <div style={{ borderRight: '1px solid var(--glass-border)', paddingRight: '24px' }}>
-                <h4 style={{ fontSize: '11px', fontWeight: '900', letterSpacing: '1.2px', color: 'var(--text-dim)', marginBottom: '16px' }}>ACTIVE ASSIGNMENT</h4>
-                <select
-                  id="assign-select"
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--glass-surface)', color: 'white', border: '1px solid var(--glass-border)' }}
-                >
-                  <option value="">Select Assignment</option>
-                  {assignments.map(a => <option key={a.id} value={a.id}>{a.title} ({a.class_id})</option>)}
-                </select>
-              </div>
-
-              <div>
-                <h4 style={{ fontSize: '11px', fontWeight: '900', letterSpacing: '1.2px', color: 'var(--text-dim)', marginBottom: '16px' }}>STUDENT ROSTER</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {students.map(s => (
-                    <div key={s.id} className="glass-card" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>
-                          {(s.name || 'S')[0]}
-                        </div>
-                        <span style={{ fontWeight: '600' }}>{s.name || 'Unknown Student'}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="number"
-                          className="grade-input"
-                          data-student-id={s.id}
-                          placeholder="/100"
-                          style={{ width: '80px', padding: '10px', borderRadius: '8px', textAlign: 'center', fontWeight: '900', background: 'rgba(255,255,255,0.05)' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <BulkGradingHub
+            classes={visibleClasses}
+            students={students}
+            assignments={assignments}
+            submissions={submissions}
+            selectedClass={selectedClass}
+            setSelectedClass={setSelectedClass}
+            db={db}
+            user={user}
+            fullUserData={fullUserData}
+          />
         );
 
       case 'lesson_plans':
@@ -3871,12 +3521,12 @@ function App() {
                 {lessonPlans.map(lp => (
                   <div key={lp.id} style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <p style={{ fontWeight: '700' }}>{lp.title}</p>
+                      <div style={{ fontWeight: '700' }}>{String(lp.title || 'Untitled Plan')}</div>
                       {lp.aiGenerated && <span style={{ fontSize: '10px', color: '#6366f1', background: 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: '10px', fontWeight: '700', flexShrink: 0 }}>AI</span>}
                     </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{lp.subject} | Class {lp.classId}</p>
+                    <div style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{String(lp.subject || 'General')} | Hub {String(lp.classId || 'Global')}</div>
                     <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-main)' }}>
-                      {lp.objectives?.split('\n').map((o, i) => <div key={i}>- {o}</div>)}
+                      {(lp.objectives || '').split('\n').map((o, i) => <div key={i}>- {String(o)}</div>)}
                     </div>
                     {lp.aiPlan && (
                       <details style={{ marginTop: '12px' }}>
@@ -3890,6 +3540,30 @@ function App() {
             </div>
           </div>
         );
+
+      case 'assignments':
+      case 'create_assignment':
+      case 'manage_assignments':
+        return (
+          <AssignmentsHub
+            user={user}
+            assignments={assignments}
+            submissions={submissions}
+            students={students}
+            classes={visibleClasses}
+            db={db}
+            fullUserData={fullUserData}
+            assignmentFile={assignmentFile}
+            isUploadingAssignment={isUploadingAssignment}
+            handleAssignmentFileChange={handleAssignmentFileChange}
+            assignmentFileUrl={assignmentFileUrl}
+            setAssignmentFileUrl={setAssignmentFileUrl}
+            setAssignmentFile={setAssignmentFile}
+            mode={activeTab === 'create_assignment' ? 'create' : (activeTab === 'manage_assignments' ? 'manage' : null)}
+            setActiveTab={setActiveTab}
+          />
+        );
+
 
       case 'upload_notes':
         return (
@@ -3907,12 +3581,12 @@ function App() {
             <div style={{ marginTop: '32px' }}>
               <h3>Previously Uploaded</h3>
               <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
-                {teacherNotes.map((file, i) => (
-                  <div key={i} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {(notes || []).filter(n => n.teacherId === user.uid).map((file, i) => (
+                  <div key={file.id || i} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <FileText size={24} color="#059669" />
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>{file.title || 'Note'}</p>
-                      <p style={{ fontSize: '11px', color: 'var(--text-dim)', margin: '4px 0 0 0' }}>{file.createdAt?.toDate().toLocaleDateString()}</p>
+                      <div style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>{String(file.title || 'Note')}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-dim)', margin: '4px 0 0 0' }}>{file.createdAt && typeof file.createdAt.toDate === 'function' ? file.createdAt.toDate().toLocaleDateString() : 'Just now'}</div>
                     </div>
                     <Trash size={16} color="#ef4444" style={{ cursor: 'pointer' }} onClick={() => deleteDoc(doc(db, 'notes', file.id))} />
                   </div>
@@ -3923,19 +3597,19 @@ function App() {
         );
 
       case 'announcements':
-        return <Announcements role={role} user={user} classes={classes} fullUserData={fullUserData} />;
+        return <Announcements role={role} user={user} classes={visibleClasses} fullUserData={fullUserData} />;
 
       case 'messages':
-        return <Messages role={role} user={user} classes={classes} allUsers={allUsers} fullUserData={fullUserData} />;
+        return <Messages role={role} user={user} classes={visibleClasses} allUsers={allUsers} fullUserData={fullUserData} />;
 
       case 'quiz_results':
         return <QuizResults role={role} user={user} quizzes={quizzes} allUsers={allUsers} />;
 
       case 'student_analytics':
-        return <StudentAnalytics role={role} allUsers={allUsers} classes={classes} />;
+        return <StudentAnalytics role={role} allUsers={allUsers} classes={visibleClasses} quizResults={quizResults} quizzes={quizzes} />;
 
       case 'school_analytics':
-        return <SchoolAnalytics students={students} allUsers={allUsers} classes={classes} attendanceArchive={attendanceArchive} assignments={assignments} quizzes={quizzes} />;
+        return <SchoolAnalytics students={students} allUsers={allUsers} classes={visibleClasses} attendanceArchive={attendanceArchive} assignments={assignments} quizzes={quizzes} />;
 
       case 'profile': {
         const isAdmin = role === 'admin';
@@ -4177,9 +3851,20 @@ function App() {
   };
 
   const isTabActive = (tabId) => {
+    // 1. Direct Match (Highest Priority)
     if (activeTab === tabId) return true;
-    const managementSubTabs = ['history', 'manage_users', 'manage_classes', 'attendance_archive', 'intelligence', 'teacher_tracking', 'global_alerts', 'institution_stats', 'master_timetable', 'risk_monitor'];
-    if (tabId === 'management') return managementSubTabs.includes(activeTab);
+
+    // 2. Sub-modules categorization
+    const classroomFeatures = ['attendance', 'attendance_archive', 'manage_assignments', 'quizzes', 'bulk_grading', 'new_quiz', 'create_assignment', 'classroom'];
+    const managementFeatures = ['history', 'manage_users', 'manage_classes', 'attendance_archive', 'intelligence', 'teacher_tracking', 'global_alerts', 'institution_stats', 'master_timetable', 'risk_monitor', 'manage_assignments'];
+
+    // 3. Parental & Mapping logic
+    if (tabId === 'classroom' && classroomFeatures.includes(activeTab)) return true;
+    if (tabId === 'management' && managementFeatures.includes(activeTab)) return true;
+
+    // AI Labs Mapping
+    if (tabId === 'ailabs' && activeTab === 'intelligence') return true;
+
     return false;
   };
 
@@ -4259,7 +3944,6 @@ function App() {
               <div className="nav-section-label" style={{ marginTop: '12px' }}>ADMINISTRATION</div>
               {[
                 { id: 'management', label: 'Control Center', icon: <Cpu size={18} /> },
-                { id: 'health', label: 'System Health', icon: <HeartPulse size={18} /> },
                 { id: 'school_analytics', label: 'School Analytics', icon: <BarChart3 size={18} /> },
                 { id: 'announcements', label: 'Academic Bulletins', icon: <Megaphone size={18} /> },
                 { id: 'messages', label: 'Messages', icon: <MessageSquare size={18} /> },
@@ -4413,6 +4097,30 @@ function App() {
                 <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-dim)' }}>Theme, AI config & alerts</p>
               </div>
             </motion.div>
+
+            {role === 'admin' && (
+              <motion.div
+                whileHover={{ background: 'var(--glass-surface-hover)' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTabChange('health');
+                  setShowProfileMenu(false);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 12px', borderRadius: '10px',
+                  cursor: 'pointer', transition: 'background 0.15s ease'
+                }}
+              >
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <HeartPulse size={16} />
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>System Health</p>
+                  <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-dim)' }}>View diagnostics & logs</p>
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* Logout Divider */}
@@ -4551,6 +4259,52 @@ function App() {
                   alert('Profile updated and synchronized.');
                 } catch (err) { alert('Update Error: ' + err.message); }
               }} style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '10px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: '#f8fafc', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {(editingUser.avatar_url || editingUser.photoURL || editingUser.profileImage || editingUser.avatar || editingUser.imageUrl || editingUser.image || editingUser.profile_image || editingUser.avatarUrl || editingUser.profilePic || editingUser.profile_pic) ? (
+                        <img src={editingUser.avatar_url || editingUser.photoURL || editingUser.profileImage || editingUser.avatar || editingUser.imageUrl || editingUser.image || editingUser.profile_image || editingUser.avatarUrl || editingUser.profilePic || editingUser.profile_pic} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                      ) : (
+                        <UserCircle size={40} color="#cbd5e1" />
+                      )}
+                    </div>
+                    <label style={{ position: 'absolute', bottom: '-8px', right: '-8px', background: '#059669', color: 'white', padding: '6px', borderRadius: '10px', cursor: 'pointer', border: '2px solid white', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                      <Camera size={14} />
+                      <input type="file" hidden accept="image/*" onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        try {
+                          setSyncingImage(true);
+                          const storageRef = ref(storage, `profiles/${editingUser.id}`);
+                          await uploadBytes(storageRef, file);
+                          const url = await getDownloadURL(storageRef);
+
+                          const updates = {
+                            avatar_url: url,
+                            photoURL: url,
+                            image: url,
+                            profile_image: url,
+                            avatar: url,
+                            imageUrl: url,
+                            profilePic: url,
+                            profile_pic: url
+                          };
+
+                          await updateDoc(doc(db, 'users', editingUser.id), updates);
+                          setEditingUser(prev => ({ ...prev, ...updates }));
+                          alert('Profile photo updated and synced to mobile app.');
+                        } catch (err) { alert('Upload Failed: ' + err.message); }
+                        finally { setSyncingImage(false); }
+                      }} />
+                    </label>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>Profile Identity</h4>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>Upload a photo to update it across all linked mobile devices.</p>
+                    {syncingImage && <div style={{ marginTop: '8px', fontSize: '11px', color: '#059669', fontWeight: '700' }}>Synchronizing Identity Hub...</div>}
+                  </div>
+                </div>
 
                 <div style={{ display: 'grid', gap: '16px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '16px' }}>
@@ -4754,4 +4508,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
