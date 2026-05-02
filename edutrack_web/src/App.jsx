@@ -3224,84 +3224,6 @@ function App() {
       case 'new_quiz':
       case 'quizzes':
         return (
-<<<<<<< HEAD
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3>Create New Quiz</h3>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                await addDoc(collection(db, 'quizzes'), {
-                  title: formData.get('title'),
-                  subject: formData.get('subject'),
-                  questions_count: parseInt(formData.get('count')),
-                  duration: parseInt(formData.get('duration')),
-                  class_id: formData.get('class'),
-                  teacher_id: user.uid,
-                  created_at: serverTimestamp()
-                });
-                alert('Quiz Published to Mobile App!');
-                e.target.reset();
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-                <input name="title" placeholder="Quiz Title" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <input name="subject" placeholder="Subject" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <input name="count" type="number" placeholder="No. of Questions" required style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                  <input name="duration" type="number" placeholder="Duration (mins)" required style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                </div>
-                <select name="class" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }}>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.standard} - {c.section}</option>)}
-                </select>
-                <button type="submit" style={{ background: '#f59e0b' }}>Publish Quiz</button>
-              </form>
-            </div>
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3>Active Quizzes</h3>
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {quizzes.map(q => (
-                  <div key={q.id} style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <p style={{ fontWeight: '600' }}>{q.title}</p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{q.subject} | {q.questions_count} Qs | {q.duration} mins</p>
-                    </div>
-                    <button
-                      onClick={() => deleteDoc(doc(db, 'quizzes', q.id))}
-                      style={{ padding: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none' }}
-                    >
-                      <Trash size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'manage_assignments':
-        return (
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h2>All Assignments</h2>
-            <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {assignments.map(a => (
-                <div key={a.id} className="glass-card" style={{ padding: '20px', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h4 style={{ margin: 0 }}>{a.title}</h4>
-                      <p style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '4px' }}>{a.subject} | Class {a.class_id}</p>
-                    </div>
-                    <button onClick={() => deleteDoc(doc(db, 'assignments', a.id))} style={{ background: 'transparent', color: '#ef4444' }}>
-                      <Trash size={18} />
-                    </button>
-                  </div>
-                  <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ color: '#f59e0b' }}>Due: {a.due_date}</span>
-                    <span style={{ color: 'var(--text-dim)' }}>Created: {a.created_at?.toDate().toLocaleDateString()}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-=======
           <QuizHub
             classes={visibleClasses}
             quizzes={quizzes}
@@ -3315,7 +3237,6 @@ function App() {
             generateQuiz={generateQuiz}
             setActiveTab={setActiveTab}
           />
->>>>>>> 82a22ca (Professionalize Bulk Grading Hub with Auto-Sync and fix System Crash hook violation)
         );
 
       case 'leave_requests':
