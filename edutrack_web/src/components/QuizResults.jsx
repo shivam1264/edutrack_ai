@@ -456,7 +456,7 @@ export default function QuizResults({ role, user, quizzes, allUsers }) {
             </motion.div>
           </div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 }
