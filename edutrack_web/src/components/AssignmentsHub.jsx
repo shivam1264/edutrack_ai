@@ -246,14 +246,14 @@ const AssignmentsHub = ({
                                   onClick={async () => { if (window.confirm('Delete this mission?')) await deleteDoc(doc(db, 'assignments', a.id)); }}
                                   style={{ 
                                     width: '36px', height: '36px', borderRadius: '10px', 
-                                    background: '#fee2e2', color: '#ef4444', 
+                                    background: '#ef4444', color: 'white', 
                                     border: 'none', display: 'flex', alignItems: 'center', 
                                     justifyContent: 'center', cursor: 'pointer',
                                     transition: 'all 0.2s'
                                   }}
                                   title="Delete Assignment"
                                 >
-                                  <Trash size={16} strokeWidth={2.5} />
+                                  <Trash size={18} strokeWidth={2.5} />
                                 </button>
                               </div>
                             </td>
@@ -263,6 +263,112 @@ const AssignmentsHub = ({
                   </tbody>
                 </table>
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeView === 'create' && (
+          <motion.div 
+            key="create"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            style={{ maxWidth: '800px', margin: '0 auto' }}
+          >
+            {/* Step Progress Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '40px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: currentStep >= 1 ? '#6366f1' : 'var(--glass-surface)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>1</div>
+                <span style={{ fontWeight: '700', color: currentStep >= 1 ? 'var(--text-main)' : 'var(--text-dim)' }}>Mission Data</span>
+              </div>
+              <div style={{ width: '60px', height: '2px', background: currentStep >= 2 ? '#6366f1' : 'var(--glass-surface)' }}></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: currentStep >= 2 ? '#6366f1' : 'var(--glass-surface)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>2</div>
+                <span style={{ fontWeight: '700', color: currentStep >= 2 ? 'var(--text-main)' : 'var(--text-dim)' }}>Intelligence Assets</span>
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '40px', background: 'var(--card-bg)', borderRadius: '32px', border: '1px solid var(--glass-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.05)' }}>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                if (currentStep === 1) {
+                  setCurrentStep(2);
+                  return;
+                }
+                
+                try {
+                  const dueDate = new Date(formData.get('due_date'));
+                  await addDoc(collection(db, 'assignments'), {
+                    title: String(formData.get('title') || 'Untitled'),
+                    subject: String(formData.get('subject') || 'General'),
+                    description: String(formData.get('description') || ''),
+                    max_marks: parseFloat(formData.get('max_marks') || '0'),
+                    due_date: Timestamp.fromDate(dueDate),
+                    class_id: String(formData.get('class') || ''),
+                    teacher_id: user.uid,
+                    file_url: assignmentFileUrl || null,
+                    created_at: serverTimestamp()
+                  });
+                  alert('Mission Deployed! 🚀');
+                  setActiveView('manage');
+                } catch (err) { alert('Deployment Error: ' + err.message); }
+              }}>
+                
+                {currentStep === 1 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-dim)', marginBottom: '8px', display: 'block' }}>Mission Title</label>
+                      <input name="title" required placeholder="e.g. Quantum Mechanics Assignment" style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '15px', outline: 'none' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      <div>
+                        <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-dim)', marginBottom: '8px', display: 'block' }}>Subject</label>
+                        <select name="subject" required style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '15px', outline: 'none' }}>
+                          {availableSubjects.map(s => <option key={s} value={s} style={{ background: 'var(--bg-gradient-start)' }}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-dim)', marginBottom: '8px', display: 'block' }}>Target Class</label>
+                        <select name="class" required style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '15px', outline: 'none' }}>
+                          {classes.map(c => <option key={c.id} value={c.id} style={{ background: 'var(--bg-gradient-start)' }}>{c.displayName || c.standard}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <button type="submit" style={{ width: '100%', padding: '18px', background: '#6366f1', color: 'white', borderRadius: '16px', fontWeight: '900', border: 'none', cursor: 'pointer', fontSize: '16px' }}>
+                      Continue to Assets
+                    </button>
+                  </div>
+                )}
+
+                {currentStep === 2 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      <div>
+                        <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-dim)', marginBottom: '8px', display: 'block' }}>Max Marks</label>
+                        <input name="max_marks" type="number" required placeholder="100" style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '15px', outline: 'none' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-dim)', marginBottom: '8px', display: 'block' }}>Due Horizon</label>
+                        <input name="due_date" type="datetime-local" required style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '15px', outline: 'none' }} />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-dim)', marginBottom: '12px', display: 'block' }}>Intelligence Assets (PDF/JPG)</label>
+                      <div onClick={() => document.getElementById('assignment-file-input').click()} style={{ padding: '40px', borderRadius: '24px', border: '2px dashed var(--glass-border)', textAlign: 'center', cursor: 'pointer', background: assignmentFile ? 'rgba(99, 102, 241, 0.1)' : 'var(--glass-surface)', transition: 'all 0.2s' }}>
+                        <input id="assignment-file-input" type="file" hidden onChange={handleAssignmentFileChange} />
+                        <Zap size={32} color={assignmentFile ? '#7c3aed' : 'var(--text-dim)'} style={{ marginBottom: '12px' }} />
+                        <div style={{ fontWeight: '800', color: 'var(--text-main)' }}>{assignmentFile ? assignmentFile.name : 'Upload Mission Dossier'}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '4px' }}>Supported formats: PDF, PNG, JPG (Max 10MB)</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <button type="button" onClick={() => setCurrentStep(1)} style={{ flex: 1, padding: '18px', background: 'var(--glass-surface)', color: 'var(--text-main)', borderRadius: '16px', fontWeight: '900', border: '1px solid var(--glass-border)', cursor: 'pointer' }}>Back</button>
+                      <button type="submit" style={{ flex: 2, padding: '18px', background: '#6366f1', color: 'white', borderRadius: '16px', fontWeight: '900', border: 'none', cursor: 'pointer' }}>Deploy Mission</button>
+                    </div>
+                  </div>
+                )}
+              </form>
             </div>
           </motion.div>
         )}
