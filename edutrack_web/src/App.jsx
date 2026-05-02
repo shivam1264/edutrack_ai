@@ -102,6 +102,7 @@ import IntelligenceHub from './components/IntelligenceHub';
 import RiskMonitorHub from './components/RiskMonitorHub';
 import DoubtHub from './components/DoubtHub';
 import QuizHub from './components/QuizHub';
+import LessonPlanner from './components/LessonPlanner';
 import BulkGradingHub from './components/BulkGradingHub';
 import logo from './assets/Edu_track-logo.png';
 
@@ -3355,103 +3356,12 @@ function App() {
 
       case 'lesson_plans':
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3>AI Lesson Planner</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '20px' }}>Generate smart lesson plans synced to your mobile app.</p>
-              <form id="lesson-plan-form" onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const title = formData.get('title');
-                const subject = formData.get('subject');
-                const objectives = formData.get('objectives');
-                const classId = formData.get('class');
-
-                // Save to Firestore
-                await addDoc(collection(db, 'lesson_plans'), {
-                  title, subject, objectives,
-                  teacherId: user.uid,
-                  classId,
-                  aiGenerated: generatedPlan ? true : false,
-                  aiPlan: generatedPlan || null,
-                  createdAt: serverTimestamp()
-                });
-                alert('Lesson Plan Saved & Synced!');
-                setGeneratedPlan('');
-                e.target.reset();
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <input name="title" placeholder="Topic Title" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <input name="subject" placeholder="Subject" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }} />
-                <textarea name="objectives" placeholder="Learning Objectives (One per line)" rows="3" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)', resize: 'none' }} />
-                <select name="class" required style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--glass-border)' }}>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.standard} - {c.section}</option>)}
-                </select>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  {backendOnline && (
-                    <button
-                      type="button"
-                      disabled={aiPlanLoading}
-                      onClick={async () => {
-                        const form = document.getElementById('lesson-plan-form');
-                        const fd = new FormData(form);
-                        const subject = fd.get('subject');
-                        const title = fd.get('title');
-                        if (!subject || !title) { alert('Enter Subject and Topic first.'); return; }
-                        setAiPlanLoading(true);
-                        try {
-                          const result = await generateLessonPlan({ subject, topic: title, duration: '45 minutes', grade: 'Grade 9' });
-                          setGeneratedPlan(result.plan || '');
-                        } catch (e) { alert('AI generation failed: ' + e.message); }
-                        finally { setAiPlanLoading(false); }
-                      }}
-                      style={{ flex: 1, padding: '12px', background: 'linear-gradient(135deg, #7c3aed, #6366f1)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: aiPlanLoading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      {aiPlanLoading ? <><div style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div> Generating...</> : <><Zap size={14} /> AI Generate</>}
-                    </button>
-                  )}
-                  <button type="submit" style={{ flex: 1, background: '#1d4ed8', padding: '12px', borderRadius: '8px', fontWeight: '700', color: 'white', border: 'none', cursor: 'pointer' }}>
-                    Save & Sync
-                  </button>
-                </div>
-              </form>
-
-              {/* AI Generated Plan Preview */}
-              {generatedPlan && (
-                <div style={{ marginTop: '20px', padding: '20px', background: 'rgba(99,102,241,0.05)', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.2)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '1px' }}>AI Generated Preview</span>
-                    <button onClick={() => setGeneratedPlan('')} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: '12px' }}>Clear</button>
-                  </div>
-                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '12px', color: 'var(--text-main)', lineHeight: '1.7', maxHeight: '300px', overflowY: 'auto' }}>
-                    {generatedPlan}
-                  </pre>
-                </div>
-              )}
-            </div>
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3>My Lesson Plans</h3>
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {lessonPlans.map(lp => (
-                  <div key={lp.id} style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ fontWeight: '700' }}>{String(lp.title || 'Untitled Plan')}</div>
-                      {lp.aiGenerated && <span style={{ fontSize: '10px', color: '#6366f1', background: 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: '10px', fontWeight: '700', flexShrink: 0 }}>AI</span>}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{String(lp.subject || 'General')} | Hub {String(lp.classId || 'Global')}</div>
-                    <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-main)' }}>
-                      {(lp.objectives || '').split('\n').map((o, i) => <div key={i}>- {String(o)}</div>)}
-                    </div>
-                    {lp.aiPlan && (
-                      <details style={{ marginTop: '12px' }}>
-                        <summary style={{ cursor: 'pointer', fontSize: '12px', color: '#6366f1', fontWeight: '700' }}>View AI Plan</summary>
-                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: '11px', color: 'var(--text-dim)', marginTop: '8px', lineHeight: '1.6' }}>{lp.aiPlan}</pre>
-                      </details>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <LessonPlanner
+            user={user}
+            db={db}
+            classes={visibleClasses}
+            backendOnline={backendOnline}
+          />
         );
 
       case 'assignments':
