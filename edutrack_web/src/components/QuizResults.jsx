@@ -76,24 +76,24 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
   });
 
   return (
-    <div style={{ color: 'white', minHeight: '100vh' }}>
+    <div style={{ color: 'var(--text-main)', minHeight: '100vh' }}>
       {/* Header Section */}
       <div style={{ 
         marginBottom: '40px', 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'flex-end',
-        background: 'linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent)',
+        background: 'linear-gradient(to right, var(--primary-glow), transparent)',
         padding: '32px',
         borderRadius: '24px',
-        border: '1px solid rgba(255,255,255,0.05)'
+        border: '1px solid var(--glass-border)'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <div style={{ padding: '8px', background: 'var(--primary)', borderRadius: '10px' }}>
               <Trophy size={20} color="white" />
             </div>
-            <h2 style={{ fontSize: '32px', fontWeight: '900', margin: 0, letterSpacing: '-1px' }}>
+            <h2 style={{ fontSize: '32px', fontWeight: '900', margin: 0, letterSpacing: '-1px', color: 'var(--text-main)' }}>
               Quiz <span className="gradient-text">Analysis Hub</span>
             </h2>
           </div>
@@ -104,10 +104,10 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
         
         <div style={{ display: 'flex', gap: '16px' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: 'white' }}>{quizzes.length}</div>
+            <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)' }}>{quizzes.length}</div>
             <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Total Quizzes</div>
           </div>
-          <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }}></div>
+          <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 8px' }}></div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)' }}>{visibleClasses.length}</div>
             <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Active Units</div>
@@ -128,9 +128,7 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
               style={{ 
                 width: '100%', 
                 padding: '16px 16px 16px 48px', 
-                borderRadius: '16px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)'
+                borderRadius: '16px'
               }}
             />
           </div>
@@ -144,8 +142,8 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
             paddingRight: '8px'
           }}>
             {filteredQuizzes.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                <AlertTriangle size={32} style={{ opacity: 0.2, marginBottom: '12px' }} />
+              <div style={{ padding: '40px', textAlign: 'center', background: 'var(--glass-surface)', borderRadius: '20px', border: '1px dashed var(--glass-border)' }}>
+                <AlertTriangle size={32} style={{ opacity: 0.2, marginBottom: '12px', color: 'var(--text-dim)' }} />
                 <p style={{ fontSize: '14px', color: 'var(--text-dim)', fontWeight: '600' }}>No nodes found</p>
               </div>
             ) : (
@@ -155,15 +153,15 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                   whileHover={{ scale: 1.02, x: 4 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => loadResults(q)}
+                  className="glass-card"
                   style={{
                     padding: '20px',
                     borderRadius: '20px',
                     cursor: 'pointer',
                     background: selectedQuiz?.id === q.id 
-                      ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15))' 
-                      : 'rgba(255,255,255,0.02)',
-                    border: '1px solid',
-                    borderColor: selectedQuiz?.id === q.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                      ? 'var(--primary-glow)' 
+                      : 'var(--glass-surface)',
+                    borderColor: selectedQuiz?.id === q.id ? 'var(--primary)' : 'var(--glass-border)',
                     transition: 'all 0.2s ease',
                     position: 'relative',
                     overflow: 'hidden'
@@ -178,17 +176,17 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div style={{ 
                       padding: '8px', 
-                      background: 'rgba(255,255,255,0.05)', 
+                      background: 'var(--glass-surface)', 
                       borderRadius: '10px',
                       color: selectedQuiz?.id === q.id ? 'var(--primary)' : 'var(--text-dim)'
                     }}>
                       <BookOpen size={16} />
                     </div>
-                    <span style={{ fontSize: '10px', fontWeight: '900', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                       {q.class_id || 'Global'}
                     </span>
                   </div>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: 'white', marginBottom: '4px' }}>{q.title}</h4>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>{q.title}</h4>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-dim)', fontWeight: '600' }}>
                     <span>{q.subject}</span>
                     <span style={{ opacity: 0.2 }}>•</span>
@@ -209,15 +207,15 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
+                className="glass-card"
                 style={{ 
                   height: '100%', 
                   display: 'flex', 
                   flexDirection: 'column', 
                   alignItems: 'center', 
                   justifyContent: 'center',
-                  background: 'rgba(255,255,255,0.01)',
-                  borderRadius: '32px',
-                  border: '2px dashed rgba(255,255,255,0.03)',
+                  background: 'var(--glass-surface)',
+                  borderStyle: 'dashed',
                   padding: '60px'
                 }}
               >
@@ -225,15 +223,15 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                   <div style={{ position: 'absolute', inset: -20, background: 'var(--primary)', filter: 'blur(40px)', opacity: 0.1 }}></div>
                   <Target size={80} style={{ color: 'var(--primary)', opacity: 0.2 }} />
                 </div>
-                <h3 style={{ fontSize: '24px', fontWeight: '900', color: 'white', marginBottom: '12px' }}>Select an Assessment Node</h3>
+                <h3 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)', marginBottom: '12px' }}>Select an Assessment Node</h3>
                 <p style={{ color: 'var(--text-dim)', textAlign: 'center', maxWidth: '400px', lineHeight: '1.6', fontSize: '15px' }}>
                   Choose a quiz from the left panel to aggregate student data, generate performance insights, and analyze competency distribution.
                 </p>
                 <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
-                  <div style={{ padding: '12px 20px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', fontSize: '12px', fontWeight: '700', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ padding: '12px 20px', borderRadius: '14px', background: 'var(--glass-surface)', fontSize: '12px', fontWeight: '700', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--glass-border)' }}>
                     <ShieldCheck size={14} /> Encrypted Sync
                   </div>
-                  <div style={{ padding: '12px 20px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', fontSize: '12px', fontWeight: '700', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ padding: '12px 20px', borderRadius: '14px', background: 'var(--glass-surface)', fontSize: '12px', fontWeight: '700', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--glass-border)' }}>
                     <Zap size={14} /> Real-time Compute
                   </div>
                 </div>
@@ -259,11 +257,9 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
+                      className="glass-card"
                       style={{ 
-                        background: 'rgba(255,255,255,0.03)', 
                         padding: '24px', 
-                        borderRadius: '24px', 
-                        border: '1px solid rgba(255,255,255,0.05)',
                         position: 'relative',
                         overflow: 'hidden'
                       }}
@@ -272,7 +268,7 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                         <div style={{ padding: '10px', borderRadius: '12px', background: `${s.color}15`, color: s.color }}>{s.icon}</div>
                         <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>{s.label}</span>
                       </div>
-                      <div style={{ fontSize: '32px', fontWeight: '900', color: 'white', marginBottom: '4px' }}>{s.value}</div>
+                      <div style={{ fontSize: '32px', fontWeight: '900', color: 'var(--text-main)', marginBottom: '4px' }}>{s.value}</div>
                       <div style={{ fontSize: '11px', color: s.color, fontWeight: '700' }}>{s.trend}</div>
                     </motion.div>
                   ))}
@@ -280,10 +276,10 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
 
                 {/* Charts Section */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '32px', marginBottom: '32px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '32px', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="glass-card" style={{ padding: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900' }}>Competency Distribution</h3>
-                      <div style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: 'var(--text-main)' }}>Competency Distribution</h3>
+                      <div style={{ padding: '8px 16px', background: 'var(--glass-surface)', borderRadius: '12px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', border: '1px solid var(--glass-border)' }}>
                         LIVE DATA
                       </div>
                     </div>
@@ -299,8 +295,8 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                           <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 12 }} />
                           <YAxis hide />
                           <Tooltip 
-                            contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}
-                            itemStyle={{ color: 'white', fontSize: '13px', fontWeight: '700' }}
+                            contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
+                            itemStyle={{ color: 'var(--text-main)', fontSize: '13px', fontWeight: '700' }}
                           />
                           <Area type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
                         </AreaChart>
@@ -308,8 +304,8 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                     </div>
                   </div>
 
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '32px', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: '900', textAlign: 'center' }}>Pass/Fail Matrix</h3>
+                  <div className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)' }}>Pass/Fail Matrix</h3>
                     <div style={{ flex: 1, minHeight: '240px' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -332,7 +328,7 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                             ))}
                           </Pie>
                           <Tooltip 
-                            contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}
+                            contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '16px' }}
                             labelStyle={{ display: 'none' }}
                           />
                         </PieChart>
@@ -350,14 +346,14 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                 </div>
 
                 {/* Ledger Table */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-                  <div style={{ padding: '32px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="glass-card" style={{ overflow: 'hidden' }}>
+                  <div style={{ padding: '32px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>Student Performance Ledger</h3>
+                      <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>Student Performance Ledger</h3>
                       <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-dim)', fontWeight: '500' }}>Comprehensive assessment data for all participants.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
-                      <button style={{ padding: '10px 20px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button style={{ padding: '10px 20px', borderRadius: '12px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)', color: 'var(--text-main)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Filter size={16} /> Filter
                       </button>
                     </div>
@@ -371,14 +367,14 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                   ) : results.length === 0 ? (
                     <div style={{ padding: '80px', textAlign: 'center', color: 'var(--text-dim)' }}>
                       <Users size={48} style={{ opacity: 0.1, marginBottom: '20px' }} />
-                      <h4 style={{ color: 'white', marginBottom: '8px' }}>No Submissions Found</h4>
+                      <h4 style={{ color: 'var(--text-main)', marginBottom: '8px' }}>No Submissions Found</h4>
                       <p style={{ fontSize: '14px' }}>Wait for students to complete the assessment.</p>
                     </div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
-                          <tr style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--text-dim)', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          <tr style={{ background: 'var(--glass-surface)', color: 'var(--text-dim)', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
                             <th style={{ padding: '24px 32px' }}>Student</th>
                             <th style={{ padding: '24px' }}>Score</th>
                             <th style={{ padding: '24px' }}>Accuracy</th>
@@ -398,7 +394,7 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: idx * 0.05 }}
-                                style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
+                                style={{ borderBottom: '1px solid var(--glass-border)' }}
                               >
                                 <td style={{ padding: '20px 32px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -406,24 +402,24 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                                       width: '44px', height: '44px', borderRadius: '14px', 
                                       background: 'linear-gradient(135deg, #6366f1, #a855f7)',
                                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      fontSize: '16px', fontWeight: '900'
+                                      fontSize: '16px', fontWeight: '900', color: 'white'
                                     }}>
                                       {(student.name || r.studentName || 'S').charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                      <div style={{ fontWeight: '800', fontSize: '15px', color: 'white' }}>{student.name || r.studentName || 'Unknown Student'}</div>
+                                      <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>{student.name || r.studentName || 'Unknown Student'}</div>
                                       <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '600' }}>ID: {r.student_id?.slice(0, 8)}</div>
                                     </div>
                                   </div>
                                 </td>
                                 <td style={{ padding: '20px' }}>
-                                  <div style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>
-                                    {r.score} <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '13px' }}>/ {selectedQuiz.total_marks || 10}</span>
+                                  <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-main)' }}>
+                                    {r.score} <span style={{ color: 'var(--text-dim)', opacity: 0.3, fontSize: '13px' }}>/ {selectedQuiz.total_marks || 10}</span>
                                   </div>
                                 </td>
                                 <td style={{ padding: '20px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ flex: 1, height: '6px', width: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ flex: 1, height: '6px', width: '80px', background: 'var(--glass-surface)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                                       <div style={{ height: '100%', width: `${pct}%`, background: getGradeColor(pct), boxShadow: `0 0 12px ${getGradeColor(pct)}40` }}></div>
                                     </div>
                                     <span style={{ fontSize: '13px', fontWeight: '800', color: getGradeColor(pct) }}>{pct.toFixed(0)}%</span>
@@ -439,7 +435,7 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                                   <button
                                     onClick={() => { setActiveResult(r); setShowDetailModal(true); }}
                                     style={{ 
-                                      padding: '10px 18px', borderRadius: '12px', background: 'white', color: '#0f172a',
+                                      padding: '10px 18px', borderRadius: '12px', background: 'var(--text-main)', color: 'var(--card-bg)',
                                       fontSize: '12px', fontWeight: '800', cursor: 'pointer', border: 'none',
                                       display: 'inline-flex', alignItems: 'center', gap: '8px'
                                     }}
@@ -466,32 +462,32 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
         {showDetailModal && activeResult && (
           <div style={{ 
             position: 'fixed', inset: 0, zIndex: 10000, 
-            background: 'rgba(2, 6, 23, 0.95)', backdropFilter: 'blur(12px)',
+            background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(12px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' 
           }}>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-card"
               style={{ 
                 width: '100%', maxWidth: '900px', maxHeight: '90vh', 
-                background: '#0f172a', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.1)',
-                overflow: 'hidden', display: 'flex', flexDirection: 'column'
+                background: 'var(--card-bg)', overflow: 'hidden', display: 'flex', flexDirection: 'column'
               }}
             >
-              <div style={{ padding: '32px 40px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '32px 40px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                   <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <BarChart size={28} />
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '900' }}>Student Diagnostic Report</h3>
+                    <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: 'var(--text-main)' }}>Student Diagnostic Report</h3>
                     <p style={{ margin: '4px 0 0 0', color: 'var(--text-dim)', fontSize: '14px', fontWeight: '600' }}>
-                      Participant: <span style={{ color: 'white' }}>{studentMap[activeResult.student_id]?.name || activeResult.studentName}</span>
+                      Participant: <span style={{ color: 'var(--text-main)' }}>{studentMap[activeResult.student_id]?.name || activeResult.studentName}</span>
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer' }}>
+                <button onClick={() => setShowDetailModal(false)} style={{ background: 'var(--glass-surface)', border: 'none', color: 'var(--text-main)', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer' }}>
                   <XCircle size={24} />
                 </button>
               </div>
@@ -503,10 +499,10 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                     { label: 'Accuracy Index', value: `${((activeResult.score / (selectedQuiz.total_marks || 10)) * 100).toFixed(0)}%`, color: '#a855f7', icon: <Zap size={20}/> },
                     { label: 'Fidelity Status', value: 'VERIFIED', color: '#10b981', icon: <ShieldCheck size={20}/> },
                   ].map((stat, i) => (
-                    <div key={i} style={{ background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                    <div key={i} style={{ background: 'var(--glass-surface)', padding: '24px', borderRadius: '24px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
                       <div style={{ color: stat.color, marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>{stat.icon}</div>
                       <div style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '8px' }}>{stat.label}</div>
-                      <div style={{ fontSize: '28px', fontWeight: '900', color: 'white' }}>{stat.value}</div>
+                      <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-main)' }}>{stat.value}</div>
                     </div>
                   ))}
                 </div>
@@ -517,7 +513,7 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                   </h4>
                   
                   {(!selectedQuiz.questions || selectedQuiz.questions.length === 0) ? (
-                    <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                    <div style={{ padding: '40px', textAlign: 'center', background: 'var(--glass-surface)', borderRadius: '24px', border: '1px dashed var(--glass-border)' }}>
                       <p style={{ color: 'var(--text-dim)', fontSize: '14px' }}>Detailed question data unavailable for this assessment node.</p>
                     </div>
                   ) : (
@@ -526,23 +522,23 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                       const isCorrect = q.type === 'short_answer' ? true : (ans === (q.correct_option ?? q.correctOption));
                       return (
                         <div key={i} style={{ 
-                          padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', 
+                          padding: '24px', background: 'var(--glass-surface)', borderRadius: '24px', 
                           border: '1px solid', borderColor: isCorrect ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '8px' }}>Q{i+1} • {q.marks || 1} MARKS</span>
+                            <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-dim)', background: 'var(--glass-surface)', padding: '4px 10px', borderRadius: '8px' }}>Q{i+1} • {q.marks || 1} MARKS</span>
                             {isCorrect ? <CheckCircle2 size={18} color="#10b981" /> : <XCircle size={18} color="#ef4444" />}
                           </div>
-                          <p style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '600', lineHeight: '1.5' }}>{q.text || q.question}</p>
+                          <p style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '600', lineHeight: '1.5', color: 'var(--text-main)' }}>{q.text || q.question}</p>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px' }}>
+                            <div style={{ padding: '16px', background: 'var(--glass-surface)', borderRadius: '16px' }}>
                               <div style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', marginBottom: '4px' }}>STUDENT CHOICE</div>
                               <div style={{ fontSize: '14px', fontWeight: '700', color: isCorrect ? '#10b981' : '#ef4444' }}>{q.options?.[ans] || ans || 'No Answer'}</div>
                             </div>
                             {!isCorrect && (
                               <div style={{ padding: '16px', background: 'rgba(16,185,129,0.05)', borderRadius: '16px' }}>
                                 <div style={{ fontSize: '10px', fontWeight: '900', color: '#10b981', marginBottom: '4px' }}>CORRECT KEY</div>
-                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'white' }}>{q.options?.[q.correct_option ?? q.correctOption] || 'N/A'}</div>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>{q.options?.[q.correct_option ?? q.correctOption] || 'N/A'}</div>
                               </div>
                             )}
                           </div>
@@ -553,8 +549,8 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                 </div>
               </div>
 
-              <div style={{ padding: '32px 40px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowDetailModal(false)} style={{ padding: '14px 40px', borderRadius: '16px', background: 'white', color: '#0f172a', fontWeight: '900', fontSize: '14px', border: 'none', cursor: 'pointer' }}>
+              <div style={{ padding: '32px 40px', background: 'var(--glass-surface)', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowDetailModal(false)} style={{ padding: '14px 40px', borderRadius: '16px', background: 'var(--text-main)', color: 'var(--card-bg)', fontWeight: '900', fontSize: '14px', border: 'none', cursor: 'pointer' }}>
                   Close Report
                 </button>
               </div>
@@ -567,11 +563,11 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
         .glass-input:focus {
           outline: none;
           border-color: var(--primary) !important;
-          background: rgba(255,255,255,0.05) !important;
-          box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+          background: var(--glass-surface) !important;
+          box-shadow: 0 0 20px var(--primary-glow);
         }
         .spinning-loader {
-          border: 3px solid rgba(255,255,255,0.05);
+          border: 3px solid var(--glass-border);
           border-top-color: var(--primary);
           border-radius: 50%;
           animation: spin 1s linear infinite;
@@ -579,8 +575,8 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
         @keyframes spin { to { transform: rotate(360deg); } }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); borderRadius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); borderRadius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
       `}} />
     </div>
   );
