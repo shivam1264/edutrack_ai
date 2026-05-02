@@ -224,17 +224,17 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                 {/* Stats Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
                   {[
-                    { label: 'Total Submissions', value: results.length, icon: <Users size={18} />, color: '#6366f1' },
-                    { label: 'Class Competency', value: `${avgScore}%`, icon: <Brain size={18} />, color: '#a855f7' },
-                    { label: 'High Fidelity', value: maxScore, icon: <Award size={18} />, color: '#10b981' },
-                    { label: 'Passing Index', value: `${passRate}%`, icon: <Target size={18} />, color: '#f59e0b' },
+                    { label: 'Submissions', value: results.length, icon: <Users size={16} />, color: '#6366f1' },
+                    { label: 'Competency', value: `${avgScore}%`, icon: <Brain size={16} />, color: '#a855f7' },
+                    { label: 'High Score', value: maxScore, icon: <Award size={16} />, color: '#10b981' },
+                    { label: 'Pass Rate', value: `${passRate}%`, icon: <Target size={16} />, color: '#f59e0b' },
                   ].map((s, i) => (
-                    <div key={i} className="glass-card" style={{ padding: '20px', background: 'var(--glass-surface)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                        <div style={{ padding: '8px', borderRadius: '10px', background: `${s.color}20`, color: s.color }}>{s.icon}</div>
-                        <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</span>
+                    <div key={i} className="glass-card" style={{ padding: '14px 18px', background: 'var(--glass-surface)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{ padding: '6px', borderRadius: '8px', background: `${s.color}20`, color: s.color, display: 'flex' }}>{s.icon}</div>
+                        <span style={{ fontSize: '9px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</span>
                       </div>
-                      <div style={{ fontSize: '26px', fontWeight: '900', color: 'var(--text-main)' }}>{s.value}</div>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{s.value}</div>
                     </div>
                   ))}
                 </div>
