@@ -19,6 +19,7 @@ const AssignmentsHub = ({
   const [assignmentTab, setAssignmentTab] = useState('all');
   const [selectedAssignmentForGrading, setSelectedAssignmentForGrading] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
+  const [selectedClassId, setSelectedClassId] = useState('all');
 
   const availableSubjects = fullUserData?.specialization || fullUserData?.subjects || ['Mathematics', 'Science', 'English', 'History', 'Geography', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
   const isAdmin = fullUserData?.role === 'admin';
@@ -171,6 +172,30 @@ const AssignmentsHub = ({
                     </button>
                   ))}
                 </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Filter Hub:</span>
+                  <select 
+                    value={selectedClassId}
+                    onChange={(e) => setSelectedClassId(e.target.value)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--glass-border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-main)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Classes</option>
+                    {classes.map(c => (
+                      <option key={c.id} value={c.id}>{c.displayName || c.standard}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
@@ -186,6 +211,10 @@ const AssignmentsHub = ({
                   <tbody>
                     {myAssignments
                       .filter(a => {
+                        // Class filter
+                        if (selectedClassId !== 'all' && a.class_id !== selectedClassId) return false;
+
+                        // Tab filter
                         if (assignmentTab === 'all') return true;
                         const subs = (submissions || []).filter(s => s.assignment_id === a.id);
                         const targetClass = classes.find(c => c.id === a.class_id);
