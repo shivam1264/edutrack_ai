@@ -23,11 +23,11 @@ const AssignmentsHub = ({
   const availableSubjects = fullUserData?.specialization || fullUserData?.subjects || ['Mathematics', 'Science', 'English', 'History', 'Geography', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
   const isAdmin = fullUserData?.role === 'admin';
   const myAssignments = (assignments || []).filter(a => isAdmin ? true : a.teacher_id === user?.uid);
-  
+
   // Robust matching helper
   const findSubmission = (studentId, rollNo, assignmentId) => {
-    return (submissions || []).find(sub => 
-      sub.assignment_id === assignmentId && 
+    return (submissions || []).find(sub =>
+      sub.assignment_id === assignmentId &&
       (sub.student_id === studentId || sub.studentId === studentId || (rollNo && (sub.student_id === rollNo || sub.studentId === rollNo)))
     );
   };
@@ -63,23 +63,23 @@ const AssignmentsHub = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', minHeight: '100vh', paddingBottom: '40px', fontFamily: "'Inter', sans-serif", color: 'var(--text-main)' }}>
-      
+
       {/* Premium Header */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', 
-        padding: '40px 32px', 
+      <div style={{
+        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+        padding: '40px 32px',
         borderRadius: '32px',
         position: 'relative',
         overflow: 'hidden',
         boxShadow: '0 20px 40px rgba(99, 102, 241, 0.2)'
       }}>
         <Layers size={160} style={{ position: 'absolute', top: '-20px', right: '-20px', color: 'white', opacity: 0.1, transform: 'rotate(15deg)' }} />
-        
+
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
               {activeView !== 'manage' && (
-                <button 
+                <button
                   onClick={handleBack}
                   style={{ background: 'rgba(255,255,255,0.2)', border: 'none', padding: '8px', borderRadius: '10px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', backdropFilter: 'blur(10px)' }}
                 >
@@ -99,14 +99,14 @@ const AssignmentsHub = ({
 
           {activeView === 'manage' && (
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 onClick={() => window.location.reload()}
                 style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '12px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', backdropFilter: 'blur(10px)' }}
                 title="Refresh Registry"
               >
                 <RefreshCw size={20} />
               </button>
-              <button 
+              <button
                 onClick={() => { setActiveView('create'); setCurrentStep(1); }}
                 style={{ background: 'white', color: '#6366f1', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: '900', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(0,0,0,0.1)' }}
               >
@@ -119,7 +119,7 @@ const AssignmentsHub = ({
 
       <AnimatePresence mode="wait">
         {activeView === 'manage' && (
-          <motion.div 
+          <motion.div
             key="manage"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -250,11 +250,11 @@ const AssignmentsHub = ({
                                     border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', 
                                     justifyContent: 'center', cursor: 'pointer',
                                     transition: 'all 0.2s',
-                                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.05)'
+                                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.08)'
                                   }}
                                   title="Delete Assignment"
                                 >
-                                  <Trash size={18} strokeWidth={2} />
+                                  <Trash size={20} strokeWidth={2} />
                                 </button>
                               </div>
                             </td>
@@ -269,7 +269,7 @@ const AssignmentsHub = ({
         )}
 
         {activeView === 'create' && (
-          <motion.div 
+          <motion.div
             key="create"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -297,7 +297,7 @@ const AssignmentsHub = ({
                   setCurrentStep(2);
                   return;
                 }
-                
+
                 try {
                   const dueDate = new Date(formData.get('due_date'));
                   await addDoc(collection(db, 'assignments'), {
@@ -315,7 +315,7 @@ const AssignmentsHub = ({
                   setActiveView('manage');
                 } catch (err) { alert('Deployment Error: ' + err.message); }
               }}>
-                
+
                 {currentStep === 1 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     <div>
@@ -375,7 +375,7 @@ const AssignmentsHub = ({
         )}
 
         {activeView === 'review' && selectedAssignmentForGrading && (
-          <motion.div 
+          <motion.div
             key="review"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -384,14 +384,14 @@ const AssignmentsHub = ({
             <div className="glass-card" style={{ padding: '32px', background: 'var(--card-bg)', borderRadius: '32px', border: '1px solid var(--glass-border)', boxShadow: '0 4px 30px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
-                   <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>Member Roster & Grading</h3>
-                   <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-dim)', fontWeight: '600' }}>Reviewing: {selectedAssignmentForGrading.title}</p>
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>Member Roster & Grading</h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-dim)', fontWeight: '600' }}>Reviewing: {selectedAssignmentForGrading.title}</p>
                 </div>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-dim)', background: 'var(--glass-surface)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
                   Submissions: {(submissions || []).filter(s => s.assignment_id === selectedAssignmentForGrading.id).length}
                 </div>
               </div>
-              
+
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
@@ -404,15 +404,15 @@ const AssignmentsHub = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {(students || []).filter(s => 
-                      s.class_id === selectedAssignmentForGrading.class_id || 
+                    {(students || []).filter(s =>
+                      s.class_id === selectedAssignmentForGrading.class_id ||
                       s.classId === selectedAssignmentForGrading.class_id ||
                       (classes.find(c => c.id === selectedAssignmentForGrading.class_id)?.displayName === s.classId)
                     ).map(s => {
                       const sub = findSubmission(s.id, s.roll_no || s.rollNo || s.studentId, selectedAssignmentForGrading.id);
                       // Check all possible image fields
                       const imageUrl = sub?.file_url || sub?.fileUrl || sub?.image_url || sub?.imageUrl || sub?.submission_url;
-                      
+
                       return (
                         <tr key={s.id} style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.2s' }}>
                           <td style={{ padding: '16px' }}>
@@ -422,20 +422,20 @@ const AssignmentsHub = ({
                           <td style={{ padding: '16px' }}>
                             {imageUrl ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div 
+                                <div
                                   onClick={() => setPreviewFile(imageUrl)}
                                   style={{ width: '40px', height: '40px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '2px solid #6366f1', background: 'var(--glass-surface)' }}
                                 >
                                   <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
-                                <button 
+                                <button
                                   onClick={() => setPreviewFile(imageUrl)}
-                                  style={{ 
-                                    display: 'flex', alignItems: 'center', gap: '4px', 
-                                    padding: '4px 10px', borderRadius: '8px', 
-                                    background: '#f5f3ff', color: '#7c3aed', 
-                                    border: 'none', fontSize: '10px', fontWeight: '800', 
-                                    cursor: 'pointer' 
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                    padding: '4px 10px', borderRadius: '8px',
+                                    background: '#f5f3ff', color: '#7c3aed',
+                                    border: 'none', fontSize: '10px', fontWeight: '800',
+                                    cursor: 'pointer'
                                   }}
                                 >
                                   <Eye size={12} /> View Full
@@ -449,28 +449,28 @@ const AssignmentsHub = ({
                             )}
                           </td>
                           <td style={{ padding: '16px' }}>
-                            <span style={{ 
+                            <span style={{
                               padding: '4px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '900',
-                              background: sub ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
-                              color: sub ? '#10b981' : '#f59e0b' 
+                              background: sub ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                              color: sub ? '#10b981' : '#f59e0b'
                             }}>
                               {sub ? (String(sub.status).toUpperCase() === 'GRADED' ? 'GRADED' : 'SUBMITTED') : 'PENDING'}
                             </span>
                           </td>
                           <td style={{ padding: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                               <input id={`marks-${s.id}`} defaultValue={sub?.marks || ''} type="number" placeholder="0" style={{ width: '50px', padding: '6px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'var(--input-bg)', color: 'var(--text-main)', textAlign: 'center', fontWeight: '700' }} />
-                               <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>/{selectedAssignmentForGrading.max_marks || 100}</span>
+                              <input id={`marks-${s.id}`} defaultValue={sub?.marks || ''} type="number" placeholder="0" style={{ width: '50px', padding: '6px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'var(--input-bg)', color: 'var(--text-main)', textAlign: 'center', fontWeight: '700' }} />
+                              <span style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>/{selectedAssignmentForGrading.max_marks || 100}</span>
                             </div>
                           </td>
                           <td style={{ padding: '16px', textAlign: 'right' }}>
-                            <button 
+                            <button
                               onClick={async (e) => {
                                 const btn = e.currentTarget;
                                 btn.disabled = true;
                                 const originalText = btn.innerHTML;
                                 btn.innerHTML = '...';
-                                
+
                                 const m = document.getElementById(`marks-${s.id}`).value;
                                 try {
                                   if (sub) await updateDoc(doc(db, 'submissions', sub.id), { marks: parseFloat(m), status: 'graded', graded_at: serverTimestamp() });
@@ -501,32 +501,32 @@ const AssignmentsHub = ({
       {/* Photo Preview Modal */}
       <AnimatePresence>
         {previewFile && (
-          <div 
+          <div
             onClick={() => setPreviewFile(null)}
             style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(15px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
           >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.9, opacity: 0 }} 
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             >
-              <button 
-                onClick={() => setPreviewFile(null)} 
+              <button
+                onClick={() => setPreviewFile(null)}
                 style={{ position: 'absolute', top: '-50px', right: '0', background: 'white', border: 'none', color: 'black', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex', boxShadow: '0 10px 20px rgba(0,0,0,0.3)' }}
               >
                 <XCircle size={24} />
               </button>
-              
+
               <div style={{ background: 'white', padding: '12px', borderRadius: '24px', boxShadow: '0 30px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
                 <img src={previewFile} alt="Submission" style={{ maxWidth: '90vw', maxHeight: '80vh', display: 'block', borderRadius: '12px' }} />
-                
+
                 <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '16px' }}>
-                  <a 
-                    href={previewFile} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                  <a
+                    href={previewFile}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{ background: '#6366f1', color: 'white', padding: '10px 20px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
                     <ExternalLink size={16} /> Open Original
