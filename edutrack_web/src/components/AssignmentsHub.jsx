@@ -254,7 +254,7 @@ const AssignmentsHub = ({
                                   }}
                                   title="Delete Assignment"
                                 >
-                                  <Trash size={18} color="#ef4444" strokeWidth={2} />
+                                  <Trash size={20} color="#ef4444" style={{ display: 'block', minWidth: '20px', minHeight: '20px' }} />
                                 </button>
                               </div>
                             </td>
