@@ -103,12 +103,43 @@ GROQ_KEYS = [
 ]
 GROQ_KEYS = [k for k in GROQ_KEYS if k] # Filter out empty keys
 
+# Configure Gemini
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        print("[OK] Gemini AI configured.")
+    except Exception as e:
+        print(f"[ERROR] Gemini Configuration Error: {e}")
 GROQ_TEXT_MODEL = "llama-3.3-70b-versatile"
 GROQ_VISION_MODEL = "llama-3.2-11b-vision-preview"
 
 # Current key tracker for rotation
 _current_groq_key_index = 0
 
+def generate_with_gemini(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None):
+    """Fallback generation using Google Gemini 1.5 Flash"""
+    if not GEMINI_API_KEY:
+        return None
+    try:
+        print("[RETRY] Falling back to Gemini 1.5 Flash...")
+        model_name = 'gemini-1.5-flash'
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            system_instruction=system_instruction
+        )
+        
+        if image_data:
+            # Convert base64 to image bytes
+            img_bytes = base64.b64decode(image_data)
+            img = Image.open(io.BytesIO(img_bytes))
+            response = model.generate_content([prompt, img])
+        else:
+            response = model.generate_content(prompt)
+            
+        return response.text
+    except Exception as e:
+        print(f"[ERROR] Gemini Error: {e}")
+        return f"AI Error (Gemini): {str(e)}"
 def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistant.", image_data=None, max_retries=None):
     """AI Generation with Groq Key Rotation"""
     global _current_groq_key_index
@@ -150,7 +181,7 @@ def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistan
 
             # If rate limited, rotate to next key and try again
             if response.status_code == 429:
-                print(f"⚠️ Groq Key {_current_groq_key_index + 1} rate limited (429). Rotating...")
+                print(f"[WARNING] Groq Key {_current_groq_key_index + 1} rate limited (429). Rotating...")
                 _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
                 continue
 
@@ -161,8 +192,12 @@ def generate_with_groq(prompt, system_instruction="You are a helpful AI Assistan
             return response.json()['choices'][0]['message']['content']
 
         except Exception as e:
+<<<<<<< Updated upstream
             print(f"❌ Groq Error with Key {_current_groq_key_index + 1}: {e}")
             print(f"   Key prefix: {current_key[:10]}...{current_key[-4:]}")
+=======
+            print(f"[ERROR] Groq Error with Key {_current_groq_key_index + 1}: {e}")
+>>>>>>> Stashed changes
             # For other errors, also try rotating
             _current_groq_key_index = (_current_groq_key_index + 1) % len(GROQ_KEYS)
             continue
@@ -188,9 +223,9 @@ def parse_ai_json(text):
         raise
 
 if GROQ_KEYS:
-    print(f"✅ Groq configured with {len(GROQ_KEYS)} keys.")
+    print(f"[OK] Groq configured with {len(GROQ_KEYS)} keys.")
 else:
-    print("❌ WARNING: No Groq API keys found. Will use Gemini fallback if available.")
+    print("[WARNING] No Groq API keys found. Will use Gemini fallback if available.")
 
 # ─── Simple in-memory rate limiter ────────────────────────────────────────────
 _rate_store = defaultdict(list)
@@ -841,6 +876,64 @@ def detect_burnout():
     try:
         response_text = generate_with_groq(prompt, system_instruction=system_instruction)
         return jsonify(parse_ai_json(response_text))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ─── Smart Pressure Reduction System ──────────────────────────────────────
+@app.route('/analyze-pressure', methods=['POST'])
+def analyze_pressure():
+    data = request.get_json(silent=True) or {}
+    student_name = data.get('student_name', 'Student')
+    quiz_scores = data.get('quiz_scores', [])
+    accuracy = data.get('accuracy', 75.0)
+    completion_rate = data.get('completion_rate', 80.0)
+    usage_freq = data.get('app_usage_freq', 5)
+    study_hours = data.get('study_hours_per_day', 4.0)
+    mood = data.get('daily_mood', 'Good')
+    help_requests = data.get('help_requests_count', 1)
+    
+    # Simple rule-based heuristic for baseline
+    pressure_score = 0
+    if len(quiz_scores) > 2:
+        if quiz_scores[-1] < quiz_scores[-2] - 10: pressure_score += 20
+        if sum(quiz_scores)/len(quiz_scores) < 50: pressure_score += 30
+    
+    if accuracy < 60: pressure_score += 20
+    if study_hours > 6: pressure_score += 15
+    if mood.lower() in ['sad', 'tired', 'stressed', 'exhausted']: pressure_score += 25
+    
+    pressure_score = min(100, pressure_score)
+    
+    system_instruction = (
+        "You are an empathetic AI School Counselor. "
+        "Analyze the behavioral data of a student to detect academic pressure or stress. "
+        "Return a JSON object: {"
+        "'pressure_level': 'Low' | 'Medium' | 'High', "
+        "'reasons': ['string'], "
+        "'student_support_msg': 'Supportive text', "
+        "'study_recommendation': 'Adaptive plan advice', "
+        "'parent_alert': 'Advice for parents', "
+        "'teacher_alert': 'Advice for teachers', "
+        "'pressure_score': int"
+        "}"
+    )
+    
+    prompt = f\"\"\"
+    Student: {student_name}
+    Recent Quiz Scores: {quiz_scores}
+    Avg Accuracy: {accuracy}%
+    Assignment Completion: {completion_rate}%
+    Study Hours/Day: {study_hours}
+    Current Mood: {mood}
+    Help Requests: {help_requests}
+    Heuristic Score: {pressure_score}/100
+    \"\"\"
+    
+    try:
+        response_text = generate_with_groq(prompt, system_instruction=system_instruction)
+        result = parse_ai_json(response_text)
+        if 'pressure_score' not in result: result['pressure_score'] = pressure_score
+        return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

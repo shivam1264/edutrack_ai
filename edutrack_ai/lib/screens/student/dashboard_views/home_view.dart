@@ -20,6 +20,7 @@ import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:edutrack_ai/widgets/brain_dna_visualizer.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
 import 'package:edutrack_ai/widgets/subject_radar_chart.dart';
+import 'package:edutrack_ai/widgets/wellness_meter_card.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -163,6 +164,15 @@ class _HomeViewState extends State<HomeView> {
                         ),
                       );
                     },
+                  ),
+                  const SizedBox(height: 28),
+                  WellnessMeterCard(
+                    studentName: user?.name ?? 'Student',
+                    recentScores: const [45, 42, 38], // Example for testing
+                    accuracy: 52,
+                    completionRate: 65,
+                    studyHours: 7.5,
+                    mood: 'Tired',
                   ),
                   const SizedBox(height: 28),
                   _buildSectionHeader(

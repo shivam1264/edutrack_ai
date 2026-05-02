@@ -10,6 +10,7 @@ import 'package:edutrack_ai/screens/parent/parent_leave_request_screen.dart';
 import 'package:edutrack_ai/screens/parent/parent_reports_screen.dart';
 import 'package:edutrack_ai/utils/app_theme.dart';
 import 'package:edutrack_ai/widgets/premium_card.dart';
+import 'package:edutrack_ai/widgets/wellness_meter_card.dart';
 
 class ParentInsightsView extends StatelessWidget {
   const ParentInsightsView({super.key});
@@ -129,7 +130,25 @@ class ParentInsightsView extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 28),
+            const Text(
+              'Academic Wellness Monitor',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            WellnessMeterCard(
+              studentName: 'Your Child',
+              recentScores: const [45, 42, 38], // Demo context
+              accuracy: 52,
+              completionRate: 65,
+              studyHours: 7.5,
+              mood: 'Tired',
+            ),
+            const SizedBox(height: 28),
             PremiumCard(
               padding: const EdgeInsets.all(18),
               child: Row(

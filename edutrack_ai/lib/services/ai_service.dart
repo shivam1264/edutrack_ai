@@ -112,6 +112,25 @@ class AIService {
     }
   }
 
+  Future<Map<String, dynamic>> analyzePressure(Map<String, dynamic> data) async {
+    try {
+      return await _postBackendJson(
+        '/analyze-pressure',
+        body: data,
+      );
+    } catch (_) {
+      return {
+        'pressure_level': 'Low',
+        'reasons': [],
+        'student_support_msg': 'Stay positive and keep learning!',
+        'study_recommendation': 'Follow your current schedule.',
+        'parent_alert': 'Everything looks stable.',
+        'teacher_alert': 'Normal progress detected.',
+        'pressure_score': 10
+      };
+    }
+  }
+
   Future<String> generateMonthlyReport(Map<String, dynamic> data) async {
     try {
       final response = await _postBackendJson(

@@ -189,8 +189,6 @@ function App() {
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [profileTab, setProfileTab] = useState('identity');
   const [syncingImage, setSyncingImage] = useState(false);
-<<<<<<< HEAD
-=======
   const [quizDraftQuestions, setQuizDraftQuestions] = useState([]);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [brainDnaData, setBrainDnaData] = useState([]);
@@ -202,8 +200,6 @@ function App() {
   const [assignmentFileUrl, setAssignmentFileUrl] = useState('');
   const [submissions, setSubmissions] = useState([]);
   const [assignmentTab, setAssignmentTab] = useState('all');
-
->>>>>>> 82a22ca (Professionalize Bulk Grading Hub with Auto-Sync and fix System Crash hook violation)
 
   // Computed Chart Data
   const [attendanceChartData, setAttendanceChartData] = useState([]);
@@ -755,8 +751,6 @@ function App() {
   };
 
   const renderContent = () => {
-<<<<<<< HEAD
-=======
 
     if (!role) return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px' }}>
@@ -764,8 +758,6 @@ function App() {
         <p style={{ color: 'var(--text-dim)', fontWeight: '700' }}>Synchronizing Security Context...</p>
       </div>
     );
-
->>>>>>> 82a22ca (Professionalize Bulk Grading Hub with Auto-Sync and fix System Crash hook violation)
     // STUDENT VIEW
     if (role === 'student') {
       return (
