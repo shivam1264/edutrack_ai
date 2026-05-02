@@ -6,7 +6,7 @@ import {
   Trophy, Search, BarChart3, Users, Clock, Target, 
   ChevronDown, ChevronUp, Award, ExternalLink, ShieldCheck, 
   XCircle, Brain, BarChart, AlertTriangle, CheckCircle2,
-  Calendar, BookOpen, Layers, Zap, Filter
+  Calendar, BookOpen, Layers, Zap, Filter, Layout
 } from 'lucide-react';
 import { 
   BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, 
@@ -76,46 +76,49 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
   });
 
   return (
-    <div style={{ color: 'var(--text-main)', minHeight: '100vh' }}>
+    <div style={{ color: 'var(--text-main)', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       {/* Header Section */}
-      <div style={{ 
-        marginBottom: '40px', 
+      <div className="glass-card" style={{ 
+        marginBottom: '32px', 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'flex-end',
-        background: 'linear-gradient(to right, var(--primary-glow), transparent)',
-        padding: '32px',
-        borderRadius: '24px',
-        border: '1px solid var(--glass-border)'
+        alignItems: 'center',
+        padding: '24px 32px',
+        background: 'var(--glass-surface)',
+        borderColor: 'var(--glass-border)'
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{ padding: '8px', background: 'var(--primary)', borderRadius: '10px' }}>
-              <Trophy size={20} color="white" />
-            </div>
-            <h2 style={{ fontSize: '32px', fontWeight: '900', margin: 0, letterSpacing: '-1px', color: 'var(--text-main)' }}>
-              Quiz <span className="gradient-text">Analysis Hub</span>
-            </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ 
+            width: '56px', height: '56px', borderRadius: '16px', 
+            background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 20px var(--primary-glow)'
+          }}>
+            <Layout size={28} color="white" />
           </div>
-          <p style={{ color: 'var(--text-dim)', fontSize: '15px', margin: 0, fontWeight: '500' }}>
-            Enterprise-grade performance tracking and assessment diagnostics.
-          </p>
+          <div>
+            <h2 style={{ fontSize: '26px', fontWeight: '900', margin: 0, color: 'var(--text-main)' }}>
+              Assessment <span className="gradient-text">Diagnostics</span>
+            </h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '13px', margin: '2px 0 0', fontWeight: '600' }}>
+              Deep fidelity analysis for all synced quiz modules.
+            </p>
+          </div>
         </div>
         
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)' }}>{quizzes.length}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Total Quizzes</div>
+        <div style={{ display: 'flex', gap: '24px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{quizzes.length}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Nodes</div>
           </div>
-          <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 8px' }}></div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)' }}>{visibleClasses.length}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>Active Units</div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary)' }}>{role === 'admin' ? 'All' : visibleClasses.length}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: '800', textTransform: 'uppercase' }}>{role === 'admin' ? 'Scope' : 'Units'}</div>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '24px', alignItems: 'start' }}>
         {/* Sidebar: Quiz Explorer */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ position: 'relative' }}>
@@ -124,73 +127,64 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
               className="glass-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search assessments..."
-              style={{ 
-                width: '100%', 
-                padding: '16px 16px 16px 48px', 
-                borderRadius: '16px'
-              }}
+              placeholder="Filter assessments..."
+              style={{ width: '100%', padding: '14px 16px 14px 48px', borderRadius: '14px' }}
             />
           </div>
 
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '12px', 
-            maxHeight: 'calc(100vh - 300px)', 
-            overflowY: 'auto',
-            paddingRight: '8px'
-          }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '70vh', overflowY: 'auto' }}>
             {filteredQuizzes.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', background: 'var(--glass-surface)', borderRadius: '20px', border: '1px dashed var(--glass-border)' }}>
-                <AlertTriangle size={32} style={{ opacity: 0.2, marginBottom: '12px', color: 'var(--text-dim)' }} />
-                <p style={{ fontSize: '14px', color: 'var(--text-dim)', fontWeight: '600' }}>No nodes found</p>
+              <div className="glass-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-dim)', background: 'var(--glass-surface)' }}>
+                <Trophy size={32} style={{ opacity: 0.2, marginBottom: '12px' }} />
+                <p style={{ fontSize: '13px', fontWeight: '700' }}>No modules found</p>
               </div>
             ) : (
               filteredQuizzes.map((q) => (
                 <motion.div
                   key={q.id}
-                  whileHover={{ scale: 1.02, x: 4 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ x: 4 }}
                   onClick={() => loadResults(q)}
                   className="glass-card"
                   style={{
-                    padding: '20px',
-                    borderRadius: '20px',
+                    padding: '16px',
                     cursor: 'pointer',
-                    background: selectedQuiz?.id === q.id 
-                      ? 'var(--primary-glow)' 
-                      : 'var(--glass-surface)',
+                    background: selectedQuiz?.id === q.id ? 'var(--primary-glow)' : 'var(--glass-surface)',
                     borderColor: selectedQuiz?.id === q.id ? 'var(--primary)' : 'var(--glass-border)',
                     transition: 'all 0.2s ease',
-                    position: 'relative',
-                    overflow: 'hidden'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px'
                   }}
                 >
-                  {selectedQuiz?.id === q.id && (
-                    <motion.div 
-                      layoutId="active-pill"
-                      style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: '4px', background: 'var(--primary)', borderRadius: '0 4px 4px 0' }}
-                    />
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div style={{ 
-                      padding: '8px', 
-                      background: 'var(--glass-surface)', 
-                      borderRadius: '10px',
-                      color: selectedQuiz?.id === q.id ? 'var(--primary)' : 'var(--text-dim)'
-                    }}>
-                      <BookOpen size={16} />
-                    </div>
-                    <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      {q.class_id || 'Global'}
-                    </span>
+                  <div style={{ 
+                    width: '40px', height: '40px', borderRadius: '12px', 
+                    background: selectedQuiz?.id === q.id ? 'var(--primary)' : 'var(--glass-surface)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: selectedQuiz?.id === q.id ? 'white' : 'var(--text-dim)',
+                    flexShrink: 0
+                  }}>
+                    <BookOpen size={20} />
                   </div>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>{q.title}</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-dim)', fontWeight: '600' }}>
-                    <span>{q.subject}</span>
-                    <span style={{ opacity: 0.2 }}>•</span>
-                    <span>{q.questions?.length || q.questions_count || 0} Questions</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h4 style={{ 
+                      margin: 0, fontSize: '15px', fontWeight: '800', 
+                      color: 'var(--text-main)', overflow: 'hidden', 
+                      textOverflow: 'ellipsis', whiteSpace: 'nowrap' 
+                    }}>
+                      {q.title || q.quiz_title || 'Untitled Quiz'}
+                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: '600', marginTop: '2px' }}>
+                      <span style={{ textTransform: 'uppercase' }}>{q.subject || 'Academic'}</span>
+                      <span style={{ opacity: 0.3 }}>•</span>
+                      <span>{q.questions_count || q.questions?.length || 0} Qs</span>
+                    </div>
+                  </div>
+                  <div style={{ 
+                    fontSize: '10px', fontWeight: '900', color: 'var(--primary)', 
+                    padding: '4px 8px', background: 'var(--primary-glow)', 
+                    borderRadius: '6px', textTransform: 'uppercase' 
+                  }}>
+                    {q.class_id || 'GRP'}
                   </div>
                 </motion.div>
               ))
@@ -198,115 +192,78 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
           </div>
         </div>
 
-        {/* Main Content: Diagnostics & Ledger */}
+        {/* Main Analytics Area */}
         <div style={{ minHeight: '60vh' }}>
           <AnimatePresence mode="wait">
             {!selectedQuiz ? (
               <motion.div
                 key="empty"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="glass-card"
                 style={{ 
-                  height: '100%', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  background: 'var(--glass-surface)',
-                  borderStyle: 'dashed',
-                  padding: '60px'
+                  height: '100%', minHeight: '60vh', display: 'flex', flexDirection: 'column', 
+                  alignItems: 'center', justifyContent: 'center', background: 'var(--glass-surface)',
+                  borderStyle: 'dashed', padding: '40px' 
                 }}
               >
-                <div style={{ position: 'relative', marginBottom: '32px' }}>
-                  <div style={{ position: 'absolute', inset: -20, background: 'var(--primary)', filter: 'blur(40px)', opacity: 0.1 }}></div>
-                  <Target size={80} style={{ color: 'var(--primary)', opacity: 0.2 }} />
-                </div>
-                <h3 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)', marginBottom: '12px' }}>Select an Assessment Node</h3>
-                <p style={{ color: 'var(--text-dim)', textAlign: 'center', maxWidth: '400px', lineHeight: '1.6', fontSize: '15px' }}>
-                  Choose a quiz from the left panel to aggregate student data, generate performance insights, and analyze competency distribution.
+                <Target size={64} style={{ color: 'var(--primary)', opacity: 0.1, marginBottom: '24px' }} />
+                <h3 style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)', marginBottom: '8px' }}>Select Assessment Node</h3>
+                <p style={{ color: 'var(--text-dim)', fontSize: '14px', textAlign: 'center', maxWidth: '320px' }}>
+                  Pick a quiz module from the list to synchronize and analyze student response matrices.
                 </p>
-                <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
-                  <div style={{ padding: '12px 20px', borderRadius: '14px', background: 'var(--glass-surface)', fontSize: '12px', fontWeight: '700', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--glass-border)' }}>
-                    <ShieldCheck size={14} /> Encrypted Sync
-                  </div>
-                  <div style={{ padding: '12px 20px', borderRadius: '14px', background: 'var(--glass-surface)', fontSize: '12px', fontWeight: '700', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--glass-border)' }}>
-                    <Zap size={14} /> Real-time Compute
-                  </div>
-                </div>
               </motion.div>
             ) : (
               <motion.div
                 key={selectedQuiz.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
+                exit={{ opacity: 0, y: -10 }}
               >
                 {/* Stats Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
                   {[
-                    { label: 'Submissions', value: results.length, icon: <Users size={20} />, color: '#6366f1', trend: '+12% this week' },
-                    { label: 'Avg Competency', value: `${avgScore}%`, icon: <Brain size={20} />, color: '#a855f7', trend: 'Global Mean' },
-                    { label: 'High Precision', value: maxScore, icon: <Award size={20} />, color: '#10b981', trend: 'Peak Score' },
-                    { label: 'Passing Index', value: `${passRate}%`, icon: <Target size={20} />, color: '#f59e0b', trend: 'Success Ratio' },
+                    { label: 'Total Submissions', value: results.length, icon: <Users size={18} />, color: '#6366f1' },
+                    { label: 'Class Competency', value: `${avgScore}%`, icon: <Brain size={18} />, color: '#a855f7' },
+                    { label: 'High Fidelity', value: maxScore, icon: <Award size={18} />, color: '#10b981' },
+                    { label: 'Passing Index', value: `${passRate}%`, icon: <Target size={18} />, color: '#f59e0b' },
                   ].map((s, i) => (
-                    <motion.div 
-                      key={i} 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="glass-card"
-                      style={{ 
-                        padding: '24px', 
-                        position: 'relative',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                        <div style={{ padding: '10px', borderRadius: '12px', background: `${s.color}15`, color: s.color }}>{s.icon}</div>
-                        <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>{s.label}</span>
+                    <div key={i} className="glass-card" style={{ padding: '20px', background: 'var(--glass-surface)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                        <div style={{ padding: '8px', borderRadius: '10px', background: `${s.color}20`, color: s.color }}>{s.icon}</div>
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</span>
                       </div>
-                      <div style={{ fontSize: '32px', fontWeight: '900', color: 'var(--text-main)', marginBottom: '4px' }}>{s.value}</div>
-                      <div style={{ fontSize: '11px', color: s.color, fontWeight: '700' }}>{s.trend}</div>
-                    </motion.div>
+                      <div style={{ fontSize: '26px', fontWeight: '900', color: 'var(--text-main)' }}>{s.value}</div>
+                    </div>
                   ))}
                 </div>
 
-                {/* Charts Section */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '32px', marginBottom: '32px' }}>
-                  <div className="glass-card" style={{ padding: '32px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: 'var(--text-main)' }}>Competency Distribution</h3>
-                      <div style={{ padding: '8px 16px', background: 'var(--glass-surface)', borderRadius: '12px', fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', border: '1px solid var(--glass-border)' }}>
-                        LIVE DATA
-                      </div>
-                    </div>
-                    <div style={{ height: '300px' }}>
+                {/* Charts Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                  <div className="glass-card" style={{ padding: '24px', background: 'var(--glass-surface)' }}>
+                    <h4 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '900' }}>Competency Distribution</h4>
+                    <div style={{ height: '260px' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={distributionData}>
                           <defs>
-                            <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
+                            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2}/>
                               <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
                             </linearGradient>
                           </defs>
-                          <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 12 }} />
+                          <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-dim)', fontSize: 11 }} />
                           <YAxis hide />
-                          <Tooltip 
-                            contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
-                            itemStyle={{ color: 'var(--text-main)', fontSize: '13px', fontWeight: '700' }}
-                          />
-                          <Area type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+                          <Tooltip contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '12px', color: 'var(--text-main)' }} />
+                          <Area type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={2} fill="url(#areaGradient)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
-                  <div className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)' }}>Pass/Fail Matrix</h3>
-                    <div style={{ flex: 1, minHeight: '240px' }}>
+                  <div className="glass-card" style={{ padding: '24px', background: 'var(--glass-surface)', display: 'flex', flexDirection: 'column' }}>
+                    <h4 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '900', textAlign: 'center' }}>Pass / Fail Logic</h4>
+                    <div style={{ flex: 1 }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -314,73 +271,49 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                               { name: 'Passed', value: (results || []).filter(r => (r.score / (selectedQuiz?.total_marks || 10) * 100) >= 40).length, color: '#10b981' },
                               { name: 'Failed', value: (results || []).filter(r => (r.score / (selectedQuiz?.total_marks || 10) * 100) < 40).length, color: '#ef4444' }
                             ]}
-                            innerRadius={70}
-                            outerRadius={95}
-                            paddingAngle={8}
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
                             dataKey="value"
                             stroke="none"
                           >
                             {(results || []).length > 0 && [
                               { color: '#10b981' },
                               { color: '#ef4444' }
-                            ].map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
+                            ].map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                           </Pie>
-                          <Tooltip 
-                            contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '16px' }}
-                            labelStyle={{ display: 'none' }}
-                          />
+                          <Tooltip contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#10b981' }}></div> Passed
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: '#ef4444' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#ef4444' }}></div> Failed
-                      </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px', fontWeight: '700' }}>
+                      <span style={{ color: '#10b981' }}>Passed</span>
+                      <span style={{ color: '#ef4444' }}>Failed</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Ledger Table */}
-                <div className="glass-card" style={{ overflow: 'hidden' }}>
-                  <div style={{ padding: '32px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>Student Performance Ledger</h3>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-dim)', fontWeight: '500' }}>Comprehensive assessment data for all participants.</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <button style={{ padding: '10px 20px', borderRadius: '12px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)', color: 'var(--text-main)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Filter size={16} /> Filter
-                      </button>
-                    </div>
+                <div className="glass-card" style={{ overflow: 'hidden', background: 'var(--glass-surface)' }}>
+                  <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ margin: 0, fontWeight: '900' }}>Assessment Node Ledger</h4>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)' }}>{results.length} RECORDS SYNCED</div>
                   </div>
 
                   {loading ? (
-                    <div style={{ padding: '100px', textAlign: 'center' }}>
-                      <div className="spinning-loader" style={{ width: '40px', height: '40px', margin: '0 auto 20px auto' }}></div>
-                      <p style={{ color: 'var(--text-dim)', fontWeight: '700' }}>Synchronizing Results...</p>
-                    </div>
+                    <div style={{ padding: '80px', textAlign: 'center' }}><div className="spinning-loader" style={{ margin: '0 auto' }}></div></div>
                   ) : results.length === 0 ? (
-                    <div style={{ padding: '80px', textAlign: 'center', color: 'var(--text-dim)' }}>
-                      <Users size={48} style={{ opacity: 0.1, marginBottom: '20px' }} />
-                      <h4 style={{ color: 'var(--text-main)', marginBottom: '8px' }}>No Submissions Found</h4>
-                      <p style={{ fontSize: '14px' }}>Wait for students to complete the assessment.</p>
-                    </div>
+                    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-dim)' }}>No submissions found for this module.</div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                          <tr style={{ background: 'var(--glass-surface)', color: 'var(--text-dim)', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                            <th style={{ padding: '24px 32px' }}>Student</th>
-                            <th style={{ padding: '24px' }}>Score</th>
-                            <th style={{ padding: '24px' }}>Accuracy</th>
-                            <th style={{ padding: '24px' }}>Grade</th>
-                            <th style={{ padding: '24px' }}>Date</th>
-                            <th style={{ padding: '24px 32px', textAlign: 'right' }}>Action</th>
+                          <tr style={{ background: 'var(--glass-surface)', color: 'var(--text-dim)', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>
+                            <th style={{ padding: '16px 24px' }}>Student Identity</th>
+                            <th style={{ padding: '16px' }}>Score</th>
+                            <th style={{ padding: '16px' }}>Fidelity</th>
+                            <th style={{ padding: '16px' }}>Grade</th>
+                            <th style={{ padding: '16px 24px', textAlign: 'right' }}>Diagnostic</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -389,61 +322,29 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
                             const pct = (r.score / (selectedQuiz.total_marks || 10) * 100);
                             const grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 40 ? 'C' : 'F';
                             return (
-                              <motion.tr
-                                key={r.id}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                style={{ borderBottom: '1px solid var(--glass-border)' }}
-                              >
-                                <td style={{ padding: '20px 32px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                    <div style={{ 
-                                      width: '44px', height: '44px', borderRadius: '14px', 
-                                      background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      fontSize: '16px', fontWeight: '900', color: 'white'
-                                    }}>
+                              <tr key={r.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                                <td style={{ padding: '14px 24px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '13px' }}>
                                       {(student.name || r.studentName || 'S').charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                      <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>{student.name || r.studentName || 'Unknown Student'}</div>
-                                      <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '600' }}>ID: {r.student_id?.slice(0, 8)}</div>
+                                      <div style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)' }}>{student.name || r.studentName || 'Student Node'}</div>
+                                      <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{r.student_id?.slice(0, 10)}</div>
                                     </div>
                                   </div>
                                 </td>
-                                <td style={{ padding: '20px' }}>
-                                  <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-main)' }}>
-                                    {r.score} <span style={{ color: 'var(--text-dim)', opacity: 0.3, fontSize: '13px' }}>/ {selectedQuiz.total_marks || 10}</span>
+                                <td style={{ padding: '14px', fontWeight: '900', color: 'var(--text-main)' }}>{r.score} <span style={{ opacity: 0.2 }}>/ {selectedQuiz.total_marks || 10}</span></td>
+                                <td style={{ padding: '14px' }}>
+                                  <div style={{ width: '60px', height: '6px', background: 'var(--glass-surface)', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${pct}%`, background: getGradeColor(pct) }}></div>
                                   </div>
                                 </td>
-                                <td style={{ padding: '20px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ flex: 1, height: '6px', width: '80px', background: 'var(--glass-surface)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-                                      <div style={{ height: '100%', width: `${pct}%`, background: getGradeColor(pct), boxShadow: `0 0 12px ${getGradeColor(pct)}40` }}></div>
-                                    </div>
-                                    <span style={{ fontSize: '13px', fontWeight: '800', color: getGradeColor(pct) }}>{pct.toFixed(0)}%</span>
-                                  </div>
+                                <td style={{ padding: '14px', fontWeight: '900', color: getGradeColor(pct) }}>{grade}</td>
+                                <td style={{ padding: '14px 24px', textAlign: 'right' }}>
+                                  <button onClick={() => { setActiveResult(r); setShowDetailModal(true); }} style={{ padding: '8px 12px', borderRadius: '8px', background: 'var(--text-main)', color: 'var(--card-bg)', border: 'none', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}>REPORT</button>
                                 </td>
-                                <td style={{ padding: '20px' }}>
-                                  <div style={{ fontSize: '18px', fontWeight: '900', color: getGradeColor(pct) }}>{grade}</div>
-                                </td>
-                                <td style={{ padding: '20px', fontSize: '13px', color: 'var(--text-dim)', fontWeight: '600' }}>
-                                  {r.submitted_at?.toDate?.()?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) || 'N/A'}
-                                </td>
-                                <td style={{ padding: '20px 32px', textAlign: 'right' }}>
-                                  <button
-                                    onClick={() => { setActiveResult(r); setShowDetailModal(true); }}
-                                    style={{ 
-                                      padding: '10px 18px', borderRadius: '12px', background: 'var(--text-main)', color: 'var(--card-bg)',
-                                      fontSize: '12px', fontWeight: '800', cursor: 'pointer', border: 'none',
-                                      display: 'inline-flex', alignItems: 'center', gap: '8px'
-                                    }}
-                                  >
-                                    View Report <ExternalLink size={14} />
-                                  </button>
-                                </td>
-                              </motion.tr>
+                              </tr>
                             );
                           })}
                         </tbody>
@@ -457,102 +358,52 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
         </div>
       </div>
 
-      {/* Report Modal */}
+      {/* Detail Modal */}
       <AnimatePresence>
         {showDetailModal && activeResult && (
-          <div style={{ 
-            position: 'fixed', inset: 0, zIndex: 10000, 
-            background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(12px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' 
-          }}>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-card"
-              style={{ 
-                width: '100%', maxWidth: '900px', maxHeight: '90vh', 
-                background: 'var(--card-bg)', overflow: 'hidden', display: 'flex', flexDirection: 'column'
-              }}
-            >
-              <div style={{ padding: '32px 40px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <BarChart size={28} />
-                  </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: 'var(--text-main)' }}>Student Diagnostic Report</h3>
-                    <p style={{ margin: '4px 0 0 0', color: 'var(--text-dim)', fontSize: '14px', fontWeight: '600' }}>
-                      Participant: <span style={{ color: 'var(--text-main)' }}>{studentMap[activeResult.student_id]?.name || activeResult.studentName}</span>
-                    </p>
-                  </div>
-                </div>
-                <button onClick={() => setShowDetailModal(false)} style={{ background: 'var(--glass-surface)', border: 'none', color: 'var(--text-main)', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer' }}>
-                  <XCircle size={24} />
-                </button>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-card" style={{ width: '100%', maxWidth: '800px', maxHeight: '85vh', background: 'var(--card-bg)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontWeight: '900' }}>Diagnostic Report: {studentMap[activeResult.student_id]?.name || activeResult.studentName}</h3>
+                <XCircle onClick={() => setShowDetailModal(false)} size={24} style={{ cursor: 'pointer', color: 'var(--text-dim)' }} />
               </div>
-
-              <div style={{ padding: '40px', overflowY: 'auto', flex: 1 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '40px' }}>
-                  {[
-                    { label: 'Final Score', value: `${activeResult.score}/${selectedQuiz.total_marks || 10}`, color: 'var(--primary)', icon: <Target size={20}/> },
-                    { label: 'Accuracy Index', value: `${((activeResult.score / (selectedQuiz.total_marks || 10)) * 100).toFixed(0)}%`, color: '#a855f7', icon: <Zap size={20}/> },
-                    { label: 'Fidelity Status', value: 'VERIFIED', color: '#10b981', icon: <ShieldCheck size={20}/> },
-                  ].map((stat, i) => (
-                    <div key={i} style={{ background: 'var(--glass-surface)', padding: '24px', borderRadius: '24px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
-                      <div style={{ color: stat.color, marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>{stat.icon}</div>
-                      <div style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '8px' }}>{stat.label}</div>
-                      <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-main)' }}>{stat.value}</div>
+              <div style={{ padding: '32px', overflowY: 'auto', flex: 1 }}>
+                 {/* Question breakdown similar to before but more compact */}
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                    <div style={{ textAlign: 'center', padding: '16px', background: 'var(--glass-surface)', borderRadius: '16px' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '4px' }}>Final Score</div>
+                      <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)' }}>{activeResult.score}/{selectedQuiz.total_marks || 10}</div>
                     </div>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--primary)' }}>
-                    <Layers size={18} /> Question-by-Question Breakdown
-                  </h4>
-                  
-                  {(!selectedQuiz.questions || selectedQuiz.questions.length === 0) ? (
-                    <div style={{ padding: '40px', textAlign: 'center', background: 'var(--glass-surface)', borderRadius: '24px', border: '1px dashed var(--glass-border)' }}>
-                      <p style={{ color: 'var(--text-dim)', fontSize: '14px' }}>Detailed question data unavailable for this assessment node.</p>
+                    <div style={{ textAlign: 'center', padding: '16px', background: 'var(--glass-surface)', borderRadius: '16px' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '4px' }}>Accuracy</div>
+                      <div style={{ fontSize: '24px', fontWeight: '900', color: '#8b5cf6' }}>{((activeResult.score/(selectedQuiz.total_marks || 10))*100).toFixed(0)}%</div>
                     </div>
-                  ) : (
-                    selectedQuiz.questions.map((q, i) => {
-                      const ans = activeResult.answers?.[i];
-                      const isCorrect = q.type === 'short_answer' ? true : (ans === (q.correct_option ?? q.correctOption));
-                      return (
-                        <div key={i} style={{ 
-                          padding: '24px', background: 'var(--glass-surface)', borderRadius: '24px', 
-                          border: '1px solid', borderColor: isCorrect ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-dim)', background: 'var(--glass-surface)', padding: '4px 10px', borderRadius: '8px' }}>Q{i+1} • {q.marks || 1} MARKS</span>
-                            {isCorrect ? <CheckCircle2 size={18} color="#10b981" /> : <XCircle size={18} color="#ef4444" />}
-                          </div>
-                          <p style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '600', lineHeight: '1.5', color: 'var(--text-main)' }}>{q.text || q.question}</p>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div style={{ padding: '16px', background: 'var(--glass-surface)', borderRadius: '16px' }}>
-                              <div style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-dim)', marginBottom: '4px' }}>STUDENT CHOICE</div>
-                              <div style={{ fontSize: '14px', fontWeight: '700', color: isCorrect ? '#10b981' : '#ef4444' }}>{q.options?.[ans] || ans || 'No Answer'}</div>
-                            </div>
-                            {!isCorrect && (
-                              <div style={{ padding: '16px', background: 'rgba(16,185,129,0.05)', borderRadius: '16px' }}>
-                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#10b981', marginBottom: '4px' }}>CORRECT KEY</div>
-                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>{q.options?.[q.correct_option ?? q.correctOption] || 'N/A'}</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                    <div style={{ textAlign: 'center', padding: '16px', background: 'var(--glass-surface)', borderRadius: '16px' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '4px' }}>Status</div>
+                      <div style={{ fontSize: '24px', fontWeight: '900', color: '#10b981' }}>PASSED</div>
+                    </div>
+                 </div>
+
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                   {selectedQuiz.questions?.map((q, i) => {
+                     const isCorrect = activeResult.answers?.[i] === (q.correct_option ?? q.correctOption);
+                     return (
+                       <div key={i} style={{ padding: '16px', background: 'var(--glass-surface)', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                           <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)' }}>QUESTION {i+1}</span>
+                           {isCorrect ? <CheckCircle2 size={16} color="#10b981" /> : <XCircle size={16} color="#ef4444" />}
+                         </div>
+                         <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>{q.text || q.question}</p>
+                         <div style={{ fontSize: '12px', color: isCorrect ? '#10b981' : '#ef4444', fontWeight: '700' }}>
+                           Student: {q.options?.[activeResult.answers?.[i]] || activeResult.answers?.[i] || 'N/A'}
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
               </div>
-
-              <div style={{ padding: '32px 40px', background: 'var(--glass-surface)', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowDetailModal(false)} style={{ padding: '14px 40px', borderRadius: '16px', background: 'var(--text-main)', color: 'var(--card-bg)', fontWeight: '900', fontSize: '14px', border: 'none', cursor: 'pointer' }}>
-                  Close Report
-                </button>
+              <div style={{ padding: '20px 32px', background: 'var(--glass-surface)', borderTop: '1px solid var(--glass-border)', textAlign: 'right' }}>
+                <button onClick={() => setShowDetailModal(false)} style={{ padding: '10px 24px', borderRadius: '10px', background: 'white', color: '#0f172a', border: 'none', fontWeight: '900', cursor: 'pointer' }}>CLOSE</button>
               </div>
             </motion.div>
           </div>
@@ -560,23 +411,13 @@ export default function QuizResults({ role, user, quizzes, allUsers, visibleClas
       </AnimatePresence>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .glass-input:focus {
-          outline: none;
-          border-color: var(--primary) !important;
-          background: var(--glass-surface) !important;
-          box-shadow: 0 0 20px var(--primary-glow);
-        }
         .spinning-loader {
-          border: 3px solid var(--glass-border);
-          border-top-color: var(--primary);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
+          width: 32px; height: 32px; border: 3px solid var(--glass-border); border-top-color: var(--primary);
+          border-radius: 50%; animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--glass-border); borderRadius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
       `}} />
     </div>
   );
