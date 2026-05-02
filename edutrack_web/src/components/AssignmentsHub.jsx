@@ -246,14 +246,15 @@ const AssignmentsHub = ({
                                   onClick={async () => { if (window.confirm('Delete this mission?')) await deleteDoc(doc(db, 'assignments', a.id)); }}
                                   style={{ 
                                     width: '36px', height: '36px', borderRadius: '10px', 
-                                    background: '#ef4444', color: 'white', 
-                                    border: 'none', display: 'flex', alignItems: 'center', 
+                                    background: 'white', color: '#ef4444', 
+                                    border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', 
                                     justifyContent: 'center', cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.05)'
                                   }}
                                   title="Delete Assignment"
                                 >
-                                  <Trash size={18} strokeWidth={2.5} />
+                                  <Trash size={18} strokeWidth={2} />
                                 </button>
                               </div>
                             </td>
