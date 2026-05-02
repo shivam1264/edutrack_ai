@@ -3516,7 +3516,7 @@ function App() {
         return <Messages role={role} user={user} classes={visibleClasses} allUsers={allUsers} fullUserData={fullUserData} />;
 
       case 'quiz_results':
-        return <QuizResults role={role} user={user} quizzes={quizzes} allUsers={allUsers} />;
+        return <QuizResults role={role} user={user} quizzes={quizzes} allUsers={allUsers} visibleClasses={visibleClasses} />;
 
       case 'student_analytics':
         return <StudentAnalytics role={role} allUsers={allUsers} classes={visibleClasses} quizResults={quizResults} quizzes={quizzes} />;

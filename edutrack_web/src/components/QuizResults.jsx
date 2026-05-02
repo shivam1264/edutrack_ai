@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Search, BarChart3, Users, Clock, Target, ChevronDown, ChevronUp, Award, ExternalLink, ShieldCheck, XCircle, Brain, BarChart, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
-export default function QuizResults({ role, user, quizzes, allUsers }) {
+export default function QuizResults({ role, user, quizzes, allUsers, visibleClasses }) {
   const [results, setResults] = useState([]);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,10 +54,22 @@ export default function QuizResults({ role, user, quizzes, allUsers }) {
     { range: '81-100%', count: (results || []).filter(r => (r.score / (selectedQuiz?.total_marks || 10) * 100) >= 80).length },
   ];
 
-  const filteredQuizzes = (quizzes || []).filter(q =>
-    q.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    q.subject?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredQuizzes = (quizzes || []).filter(q => {
+    // 1. Search Filter
+    const matchesSearch = q.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          q.subject?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+
+    // 2. Role-based Access Control
+    if (role === 'admin') return true;
+
+    if (role === 'teacher') {
+      const visibleClassIds = (visibleClasses || []).map(c => c.id);
+      return visibleClassIds.includes(q.class_id);
+    }
+
+    return false; // Student/Other shouldn't see this hub anyway
+  });
 
   return (
     <div>
