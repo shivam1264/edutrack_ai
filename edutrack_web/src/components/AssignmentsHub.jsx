@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Layers, Clock, ClipboardList, CheckCircle, BookOpen, Users, FileText, Trash, Zap, ArrowLeft, PlusCircle, Calendar, TrendingUp
+  Layers, Clock, ClipboardList, CheckCircle, BookOpen, Users, FileText, Trash, Zap, ArrowLeft, PlusCircle, Calendar, TrendingUp, ExternalLink, Eye, XCircle
 } from 'lucide-react';
 import {
   doc, updateDoc, addDoc, collection, serverTimestamp, deleteDoc
@@ -18,6 +18,7 @@ const AssignmentsHub = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [assignmentTab, setAssignmentTab] = useState('all');
   const [selectedAssignmentForGrading, setSelectedAssignmentForGrading] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
 
   const availableSubjects = fullUserData?.specialization || fullUserData?.subjects || ['Mathematics', 'Science', 'English', 'History', 'Geography', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
   const isAdmin = fullUserData?.role === 'admin';
@@ -53,7 +54,7 @@ const AssignmentsHub = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', minHeight: '100vh', paddingBottom: '40px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', minHeight: '100vh', paddingBottom: '40px', fontFamily: "'Inter', sans-serif" }}>
       
       {/* Premium Header */}
       <div style={{ 
@@ -169,9 +170,9 @@ const AssignmentsHub = ({
                     {myAssignments
                       .filter(a => {
                         if (assignmentTab === 'all') return true;
-                        const subs = submissions.filter(s => s.assignment_id === a.id);
+                        const subs = (submissions || []).filter(s => s.assignment_id === a.id);
                         const targetClass = classes.find(c => c.id === a.class_id);
-                        const totalInClass = students.filter(s =>
+                        const totalInClass = (students || []).filter(s =>
                           (s.class_id === a.class_id) || (s.classId === a.class_id) || (targetClass && s.classId === targetClass.displayName)
                         ).length;
                         if (assignmentTab === 'pending') return subs.length < totalInClass || subs.length === 0;
@@ -180,12 +181,11 @@ const AssignmentsHub = ({
                         return true;
                       })
                       .map((a) => {
-                        const subs = submissions.filter(s => s.assignment_id === a.id);
+                        const subs = (submissions || []).filter(s => s.assignment_id === a.id);
                         const targetClass = classes.find(c => c.id === a.class_id);
-                        const totalInClass = students.filter(s =>
+                        const totalInClass = (students || []).filter(s =>
                           (s.class_id === a.class_id) || (s.classId === a.class_id) || (targetClass && s.classId === targetClass.displayName)
                         ).length;
-                        const gradedCount = subs.filter(s => String(s.status).toLowerCase() === 'graded').length;
                         const progress = totalInClass > 0 ? (subs.length / totalInClass) * 100 : 0;
 
                         return (
@@ -218,18 +218,25 @@ const AssignmentsHub = ({
                               </div>
                             </td>
                             <td style={{ padding: '24px 32px', textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <button
                                   onClick={() => { setSelectedAssignmentForGrading(a); setActiveView('review'); }}
-                                  style={{ padding: '8px 16px', borderRadius: '10px', background: '#f1f5f9', color: '#475569', border: 'none', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                                  style={{ padding: '10px 18px', borderRadius: '10px', background: '#f1f5f9', color: '#475569', border: 'none', fontSize: '12px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}
                                 >
                                   Review
                                 </button>
                                 <button
                                   onClick={async () => { if (window.confirm('Delete this mission?')) await deleteDoc(doc(db, 'assignments', a.id)); }}
-                                  style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fef2f2', color: '#ef4444', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                  style={{ 
+                                    width: '38px', height: '38px', borderRadius: '10px', 
+                                    background: '#fee2e2', color: '#ef4444', 
+                                    border: 'none', display: 'flex', alignItems: 'center', 
+                                    justifyContent: 'center', cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  title="Delete Assignment"
                                 >
-                                  <Trash size={18} />
+                                  <Trash size={18} strokeWidth={2.5} />
                                 </button>
                               </div>
                             </td>
@@ -360,7 +367,7 @@ const AssignmentsHub = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>Member Roster & Grading</h3>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: '#64748b' }}>
-                  Submissions: {submissions.filter(s => s.assignment_id === selectedAssignmentForGrading.id).length}
+                  Submissions: {(submissions || []).filter(s => s.assignment_id === selectedAssignmentForGrading.id).length}
                 </div>
               </div>
               
@@ -369,19 +376,38 @@ const AssignmentsHub = ({
                   <thead>
                     <tr style={{ background: '#f8fafc' }}>
                       <th style={{ padding: '16px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Member</th>
+                      <th style={{ padding: '16px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Submission Assets</th>
                       <th style={{ padding: '16px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Status</th>
                       <th style={{ padding: '16px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Marks</th>
                       <th style={{ padding: '16px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.filter(s => s.class_id === selectedAssignmentForGrading.class_id || s.classId === selectedAssignmentForGrading.class_id).map(s => {
-                      const sub = submissions.find(sub => sub.student_id === s.id && sub.assignment_id === selectedAssignmentForGrading.id);
+                    {(students || []).filter(s => s.class_id === selectedAssignmentForGrading.class_id || s.classId === selectedAssignmentForGrading.class_id).map(s => {
+                      const sub = (submissions || []).find(sub => sub.student_id === s.id && sub.assignment_id === selectedAssignmentForGrading.id);
                       return (
                         <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '16px' }}>
                             <div style={{ fontWeight: '700', fontSize: '14px' }}>{s.name}</div>
                             <div style={{ fontSize: '11px', color: '#64748b' }}>{s.roll_no || '--'}</div>
+                          </td>
+                          <td style={{ padding: '16px' }}>
+                            {sub?.file_url || sub?.fileUrl ? (
+                              <button 
+                                onClick={() => setPreviewFile(sub.file_url || sub.fileUrl)}
+                                style={{ 
+                                  display: 'flex', alignItems: 'center', gap: '6px', 
+                                  padding: '6px 12px', borderRadius: '8px', 
+                                  background: '#f5f3ff', color: '#7c3aed', 
+                                  border: 'none', fontSize: '11px', fontWeight: '800', 
+                                  cursor: 'pointer' 
+                                }}
+                              >
+                                <Eye size={14} /> View Photo
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No file attached</span>
+                            )}
                           </td>
                           <td style={{ padding: '16px' }}>
                             <span style={{ fontSize: '11px', fontWeight: '800', color: sub ? '#10b981' : '#f59e0b' }}>
@@ -399,7 +425,7 @@ const AssignmentsHub = ({
                                 else await addDoc(collection(db, 'submissions'), { student_id: s.id, assignment_id: selectedAssignmentForGrading.id, marks: parseFloat(m), status: 'graded', created_at: serverTimestamp() });
                                 alert('Grade Synced!');
                               }}
-                              style={{ padding: '6px 12px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontSize: '11px', fontWeight: '800' }}
+                              style={{ padding: '6px 12px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
                             >
                               Sync
                             </button>
@@ -412,6 +438,28 @@ const AssignmentsHub = ({
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Photo Preview Modal */}
+      <AnimatePresence>
+        {previewFile && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }}>
+              <button 
+                onClick={() => setPreviewFile(null)} 
+                style={{ position: 'absolute', top: '-40px', right: '-40px', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
+              >
+                <XCircle size={32} />
+              </button>
+              <img src={previewFile} alt="Submission" style={{ width: '100%', height: 'auto', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }} />
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                <a href={previewFile} target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <ExternalLink size={16} /> Open in New Tab
+                </a>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
