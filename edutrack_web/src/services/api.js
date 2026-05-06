@@ -43,7 +43,7 @@ export const analyzePerformance = (data) => aiClient.analyzePerformanceClient(da
 export const generateQuiz = (data) => aiClient.generateQuizClient(data);
 
 // --- AI Lesson Plan Generator ---
-export const generateLessonPlan = (data) => aiClient.generalChatClient(`Generate a lesson plan for: ${JSON.stringify(data)}`, 'teacher');
+export const generateLessonPlan = (data) => aiClient.generateLessonPlanClient(data);
 
 // --- AI Flashcard Generator ---
 export const generateFlashcards = (data) => aiClient.analyzePerformanceClient({ ...data, task: 'flashcards' });

@@ -15,7 +15,7 @@ import {
   checkSystemStatus
 } from './services/api';
 import { auth, db, storage, secondaryAuth } from './firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import {
   collection,
   query,
@@ -58,6 +58,8 @@ import {
   History,
   HeartPulse,
   MessageSquare,
+  Upload,
+  ExternalLink,
   Trash,
   Edit2,
   AlertTriangle,
@@ -80,7 +82,8 @@ import {
   XCircle,
   Layers,
   PlusCircle,
-  ClipboardList
+  ClipboardList,
+  Download
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell,
@@ -98,9 +101,9 @@ import StudentAnalytics from './components/StudentAnalytics';
 import SchoolAnalytics from './components/SchoolAnalytics';
 import AssignmentsHub from './components/AssignmentsHub';
 import AttendanceHub from './components/AttendanceHub';
-import IntelligenceHub from './components/IntelligenceHub';
 import RiskMonitorHub from './components/RiskMonitorHub';
 import DoubtHub from './components/DoubtHub';
+import LeaveHub from './components/LeaveHub';
 import QuizHub from './components/QuizHub';
 import LessonPlanner from './components/LessonPlanner';
 import BulkGradingHub from './components/BulkGradingHub';
@@ -151,13 +154,11 @@ function App() {
   const [predictions, setPredictions] = useState([]);
 
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const [showIntelligenceResults, setShowIntelligenceResults] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('student');
   const [attendanceClassFilter, setAttendanceClassFilter] = useState('');
+  const teachersList = useMemo(() => allUsers.filter(u => u.role === 'teacher'), [allUsers]);
   const [teacherStats, setTeacherStats] = useState({});
   const [alertTarget, setAlertTarget] = useState('all');
   const [alertClassId, setAlertClassId] = useState('');
@@ -176,8 +177,6 @@ function App() {
   const [lessonPlans, setLessonPlans] = useState([]);
   const [notes, setNotes] = useState([]);
   // --- Backend AI State ---
-  const [aiInsights, setAiInsights] = useState(null);
-  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
   const [dashboardAiAnalysis, setDashboardAiAnalysis] = useState(null);
   const [dashboardAiLoading, setDashboardAiLoading] = useState(false);
   const [quizResults, setQuizResults] = useState([]);
@@ -198,6 +197,15 @@ function App() {
   // Assignment States
   const [assignmentFile, setAssignmentFile] = useState(null);
   const [isUploadingAssignment, setIsUploadingAssignment] = useState(false);
+  const [isUploadingNote, setIsUploadingNote] = useState(false);
+  const [noteFormData, setNoteFormData] = useState({
+    title: '',
+    subject: 'Mathematics',
+    description: '',
+    classId: ''
+  });
+  const [noteFile, setNoteFile] = useState(null);
+  const [notePreview, setNotePreview] = useState(null);
   const [assignmentFileUrl, setAssignmentFileUrl] = useState('');
   const [submissions, setSubmissions] = useState([]);
   const [assignmentTab, setAssignmentTab] = useState('all');
@@ -232,6 +240,7 @@ function App() {
   const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0]);
   const [attSaving, setAttSaving] = useState(false);
   const [attLoading, setAttLoading] = useState(false);
+  const [attSubject, setAttSubject] = useState('Overall');
   const [aiModel, setAiModel] = useState('Gemini-1.5-Pro');
   const [editingUser, setEditingUser] = useState(null);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -259,12 +268,25 @@ function App() {
     return classes; // Fallback
   }, [classes, role, fullUserData]);
 
-  // Ensure selectedClass is valid for teachers
-  useEffect(() => {
-    if (role === 'teacher' && visibleClasses.length > 0 && !selectedClass) {
-      setSelectedClass(visibleClasses[0].id);
+  // Determine which subjects this teacher is allowed to manage
+  const visibleSubjects = useMemo(() => {
+    const defaultSubjects = ['Mathematics', 'Science', 'Physics', 'Chemistry', 'Biology', 'English', 'History', 'Geography'];
+    if (role === 'admin') return defaultSubjects;
+    if (role === 'teacher') {
+      const specs = fullUserData?.specialization || [];
+      if (specs.length === 0) return defaultSubjects; // Fallback if not set
+      return specs;
     }
-  }, [visibleClasses, role, selectedClass]);
+    return defaultSubjects;
+  }, [role, fullUserData]);
+
+  // Sync noteFormData subject with visible subjects
+  useEffect(() => {
+    if (role === 'teacher' && visibleSubjects.length > 0 && !visibleSubjects.includes(noteFormData.subject)) {
+      setNoteFormData(prev => ({ ...prev, subject: visibleSubjects[0] }));
+    }
+  }, [visibleSubjects, role]);
+
 
 
   const handleAssignmentFileChange = async (e) => {
@@ -273,14 +295,157 @@ function App() {
     setAssignmentFile(file);
     setIsUploadingAssignment(true);
     try {
-      const storageRef = ref(storage, `assignments/${user.uid}/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setAssignmentFileUrl(url);
+      console.log('Attempting Cloudinary Express upload for assignment...');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'edutrack_uploads');
+      formData.append('folder', 'edutrack_assignments');
+
+      const response = await fetch('https://api.cloudinary.com/v1_1/dwbpbi6zu/auto/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Cloudinary upload failed');
+
+      const data = await response.json();
+      setAssignmentFileUrl(data.secure_url);
+      console.log('Cloudinary Assignment Upload Success:', data.secure_url);
     } catch (err) {
-      alert('File Upload Failed: ' + err.message);
+      console.warn('Cloudinary failed, falling back to Firebase Storage...', err);
+      try {
+        const storageRef = ref(storage, `assignments/${user.uid}/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        setAssignmentFileUrl(url);
+      } catch (fallbackErr) {
+        alert('File Upload Failed: ' + fallbackErr.message);
+      }
     } finally {
       setIsUploadingAssignment(false);
+    }
+  };
+
+  const handleNoteUpload = async () => {
+    if (!user) {
+      alert('Error: You are not logged in.');
+      return;
+    }
+    if (!noteFile) {
+      alert('Error: No file selected.');
+      return;
+    }
+
+    setIsUploadingNote(true);
+
+    try {
+      const fileSizeMB = noteFile.size / (1024 * 1024);
+      console.log('File size:', fileSizeMB.toFixed(2), 'MB');
+
+      // Helper function to convert file to Base64
+      const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+
+      let finalUrl = '';
+
+      console.log('Attempting Cloudinary Express upload...');
+
+      try {
+        const formData = new FormData();
+        formData.append('file', noteFile);
+        formData.append('upload_preset', 'edutrack_uploads'); // Using your existing mobile preset
+        formData.append('folder', 'edutrack_web_uploads');
+
+        const response = await fetch('https://api.cloudinary.com/v1_1/dwbpbi6zu/auto/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) throw new Error('Cloudinary upload failed');
+
+        const data = await response.json();
+        finalUrl = data.secure_url;
+        console.log('Cloudinary Upload Success:', finalUrl);
+      } catch (cloudinaryErr) {
+        console.warn('Cloudinary failed, falling back to Firebase Storage...', cloudinaryErr);
+        // Fallback to Firebase Storage if Cloudinary is down
+        const storagePath = `assignments/notes/${user.uid}/${Date.now()}_${noteFile.name}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadResult = await uploadBytes(storageRef, noteFile);
+        finalUrl = await getDownloadURL(uploadResult.ref);
+      }
+
+      const fileType = noteFile.name.split('.').pop().toLowerCase();
+
+      console.log('Saving to Firestore...');
+      const targetClass = classes.find(c => c.id === noteFormData.classId);
+
+      const noteData = {
+        title: noteFormData.title || noteFile.name,
+        subject: noteFormData.subject,
+        subject_id: noteFormData.subject?.toLowerCase(),
+        description: noteFormData.description,
+        content: noteFormData.description || '', // Required by Mobile App
+        url: finalUrl,
+        imageUrl: finalUrl,
+        image_url: finalUrl,
+        downloadUrl: finalUrl,
+        download_url: finalUrl,
+        fileUrl: finalUrl, // Required by Mobile App NoteModel
+        fileType: fileType, // Required by Mobile App NoteModel
+        isBase64: false,
+        fileName: noteFile.name,
+        file_name: noteFile.name,
+        teacherId: user.uid,
+        teacher_id: user.uid,
+        teacher_uid: user.uid,
+        uid: user.uid,
+        faculty_id: user.uid,
+        author_id: user.uid,
+        email: user.email,
+        teacherName: fullUserData?.name || '',
+        teacher_name: fullUserData?.name || '',
+        studentId: '', // Mobile model requirement
+        student_id: '',
+        class_id: noteFormData.classId,
+        classId: noteFormData.classId,
+        standard: targetClass?.displayName || targetClass?.standard || '',
+        grade: targetClass?.standard || '',
+        section: targetClass?.section || '',
+        createdAt: serverTimestamp(),
+        created_at: serverTimestamp(),
+        timestamp: serverTimestamp(),
+        type: 'note',
+        size: noteFile.size,
+        views: 0,
+        view_count: 0,
+        status: 'published',
+        is_active: true,
+        visibility: 'public'
+      };
+
+      // Save to root collection
+      await addDoc(collection(db, 'notes'), noteData);
+
+      // Save to class sub-collection (Many mobile apps use this structure)
+      if (noteFormData.classId) {
+        await addDoc(collection(db, 'classes', noteFormData.classId, 'notes'), noteData);
+      }
+
+      alert('Success: Note Published! (Synced with mobile)');
+      setNoteFormData({ title: '', subject: 'Mathematics', description: '', classId: '' });
+      setNoteFile(null);
+      if (document.getElementById('note-file-picker')) document.getElementById('note-file-picker').value = '';
+
+    } catch (err) {
+      console.error('Final Upload Error:', err);
+      alert('Upload failed: ' + (err.code || err.message) + '\n\nTry uploading a smaller file (< 1MB).');
+    } finally {
+      setIsUploadingNote(false);
     }
   };
 
@@ -408,9 +573,8 @@ function App() {
   }, [allUsers, doubts, notes, assignments, quizzes, lessonPlans]);
 
   const handleTabChange = (tab) => {
-    if (tab !== 'intelligence') {
-      setShowIntelligenceResults(false);
-      setIsAnalyzing(false);
+    if (tab === 'attendance') {
+      setSelectedClass(null);
     }
     window.history.pushState({ tab }, '', `?tab=${tab}`);
     setActiveTab(tab);
@@ -482,6 +646,10 @@ function App() {
       setQuizzes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
+    const unsubLeaves = onSnapshot(collection(db, 'leave_requests'), (snap) => {
+      setLeaves(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     const unsubNotes = onSnapshot(collection(db, 'notes'), (snap) => {
       setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -549,6 +717,7 @@ function App() {
       unsubDoubts();
       unsubAttendance();
       unsubQuizzes();
+      unsubLeaves();
       unsubNotes();
       unsubLessonPlans();
       unsubTimetable();
@@ -673,9 +842,10 @@ function App() {
   const handleLogout = () => signOut(auth);
 
   // Load existing attendance from Firestore for the selected class + date
-  const loadExistingAttendance = async (classId, dateStr) => {
+  const loadExistingAttendance = async (classId, dateStr, subject) => {
     if (!classId || !dateStr) return;
     setAttLoading(true);
+    const subj = subject || attSubject || 'Overall';
     try {
       const q = query(
         collection(db, 'attendance'),
@@ -685,7 +855,12 @@ function App() {
       const snap = await getDocs(q);
       const map = {};
       snap.docs.forEach(d => {
-        map[d.data().student_id] = d.data().status; // 'present' | 'absent' | 'late'
+        const data = d.data();
+        // Filter by subject: if the record has a subject field, match it; legacy records without subject match 'Overall'
+        const recSubject = data.subject || 'Overall';
+        if (recSubject === subj) {
+          map[data.student_id] = data.status;
+        }
       });
       setAttStatusMap(map);
     } catch (e) {
@@ -698,14 +873,20 @@ function App() {
   const handleAttClassChange = async (classId) => {
     setSelectedClass(classId);
     setAttStatusMap({});
-    if (classId) await loadExistingAttendance(classId, attDate);
+    if (classId) await loadExistingAttendance(classId, attDate, attSubject);
+  };
+
+  const handleAttSubjectChange = async (subject) => {
+    setAttSubject(subject);
+    setAttStatusMap({});
+    if (selectedClass) await loadExistingAttendance(selectedClass, attDate, subject);
   };
 
   const handleAttDateChange = async (dateStr) => {
     if (!dateStr) return;
     setAttDate(dateStr);
     setAttStatusMap({});
-    if (selectedClass) await loadExistingAttendance(selectedClass, dateStr);
+    if (selectedClass) await loadExistingAttendance(selectedClass, dateStr, attSubject);
   };
 
   const shiftAttDate = (days) => {
@@ -720,8 +901,9 @@ function App() {
     setAttStatusMap(prev => ({ ...prev, [studentId]: status }));
   };
 
-  const saveAllAttendance = async (classStudents) => {
+  const saveAllAttendance = async (classStudents, subject) => {
     if (!selectedClass) return;
+    const subj = subject || attSubject || 'Overall';
     const unmarked = classStudents.filter(s => !attStatusMap[s.id]);
     if (unmarked.length === classStudents.length) {
       alert('Please mark at least one student before saving.');
@@ -732,18 +914,23 @@ function App() {
       const teacherName = fullUserData?.name || user?.email || 'Web-Teacher';
       for (const s of classStudents) {
         const status = attStatusMap[s.id];
-        if (!status) continue; // skip unmarked
+        if (!status) continue;
 
-        await markAttendance({
+        // Use setDoc with a deterministic ID so re-marking overwrites instead of duplicating
+        const docId = `${selectedClass}_${s.id}_${attDate}_${subj}`;
+        await setDoc(doc(db, 'attendance', docId), {
           student_id: s.id,
           class_id: selectedClass,
           date_string: attDate,
           status: status,
-          marked_by: teacherName
-        });
+          subject: subj,
+          marked_by: teacherName,
+          teacher_id: user?.uid || null,
+          timestamp: serverTimestamp()
+        }, { merge: true });
       }
       const saved = classStudents.filter(s => attStatusMap[s.id]).length;
-      alert(`Attendance saved for ${saved} student${saved !== 1 ? 's' : ''}! Synced with mobile app.`);
+      alert(`${subj} attendance saved for ${saved} student${saved !== 1 ? 's' : ''}! Synced with mobile app.`);
     } catch (e) {
       console.error('Save failed:', e);
       alert('Error saving attendance: ' + e.message);
@@ -802,6 +989,7 @@ function App() {
     }
 
     // ADMIN/TEACHER VIEW
+
     switch (activeTab) {
       case 'dashboard':
         if (role === 'teacher') {
@@ -812,71 +1000,6 @@ function App() {
                 <p style={{ color: 'var(--text-dim)' }}>Academic Insights & Class Analytics</p>
               </header>
 
-              {/* AI PERFORMANCE OVERVIEW */}
-              {(dashboardAiLoading || dashboardAiAnalysis) && (
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="glass-card"
-                  style={{
-                    padding: '24px',
-                    marginBottom: '24px',
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(168, 85, 247, 0.05))',
-                    border: '1px solid rgba(139, 92, 246, 0.2)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {dashboardAiLoading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--text-dim)' }}>
-                      <div className="spinning-loader" style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#8b5cf6', borderRadius: '50%' }}></div>
-                      <span style={{ fontSize: '14px', fontWeight: '600' }}>AI is scanning academic nodes...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ padding: '8px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '10px', color: '#8b5cf6' }}>
-                            <Zap size={20} />
-                          </div>
-                          <div>
-                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800' }}>AI Performance Matrix</h3>
-                            <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Latest intelligence from Groq Llama-3</p>
-                          </div>
-                        </div>
-                        <div style={{
-                          padding: '6px 12px',
-                          borderRadius: '20px',
-                          fontSize: '11px',
-                          fontWeight: '900',
-                          background: (dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
-                          color: (dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? '#ef4444' : '#10b981',
-                          border: `1px solid ${(dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}`
-                        }}>
-                          RISK: {dashboardAiAnalysis.risk_level || 'LOW'}
-                        </div>
-                      </div>
-                      <p style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-main)', marginBottom: '16px', opacity: 0.9 }}>
-                        {dashboardAiAnalysis.summary}
-                      </p>
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        <button
-                          onClick={() => handleTabChange('intelligence')}
-                          style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', border: 'none', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                        >
-                          View Full AI Report
-                        </button>
-                        <button
-                          onClick={() => { setDashboardAiAnalysis(null); }}
-                          style={{ padding: '8px 16px', borderRadius: '8px', background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--glass-border)', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                        >
-                          Re-Analyze
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </motion.div>
-              )}
 
               <div className="stats-grid">
                 {[
@@ -1001,7 +1124,9 @@ function App() {
                       <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
                       <input
                         placeholder="Search student..."
-                        style={{ padding: '8px 12px 8px 36px', fontSize: '13px', borderRadius: '8px', width: '200px' }}
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        style={{ padding: '8px 12px 8px 36px', fontSize: '13px', borderRadius: '8px', width: '200px', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-main)', outline: 'none' }}
                       />
                     </div>
                   </div>
@@ -1015,27 +1140,29 @@ function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(students || []).map(s => {
-                          const studentClass = (classes || []).find(c =>
-                            c.id === (s.classId || s.class_id) ||
-                            c.displayName === (s.classId || s.class_id || s.className)
-                          );
-                          const className = studentClass
-                            ? (studentClass.standard ? (studentClass.section ? `${studentClass.standard} - ${studentClass.section}` : studentClass.standard) : (studentClass.name || studentClass.className || 'Class'))
-                            : (s.classId || s.class_id || '-');
+                        {(students || [])
+                          .filter(s => !userSearchQuery || s.name.toLowerCase().includes(userSearchQuery.toLowerCase()))
+                          .map(s => {
+                            const studentClass = (classes || []).find(c =>
+                              c.id === (s.classId || s.class_id) ||
+                              c.displayName === (s.classId || s.class_id || s.className)
+                            );
+                            const className = studentClass
+                              ? (studentClass.standard ? (studentClass.section ? `${studentClass.standard} - ${studentClass.section}` : studentClass.standard) : (studentClass.name || studentClass.className || 'Class'))
+                              : (s.classId || s.class_id || '-');
 
-                          return (
-                            <tr key={s.id} style={{ borderTop: '1px solid var(--glass-border)', fontSize: '14px' }}>
-                              <td style={{ padding: '12px', fontWeight: '600' }}>{s.name}</td>
-                              <td style={{ padding: '12px' }}>{className}</td>
-                              <td style={{ padding: '12px' }}>
-                                <div style={{ width: '60px', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
-                                  <div style={{ width: `${s.mastery || 75}%`, height: '100%', background: '#3b82f6', borderRadius: '3px' }} />
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                            return (
+                              <tr key={s.id} style={{ borderTop: '1px solid var(--glass-border)', fontSize: '14px' }}>
+                                <td style={{ padding: '12px', fontWeight: '600' }}>{s.name}</td>
+                                <td style={{ padding: '12px' }}>{className}</td>
+                                <td style={{ padding: '12px' }}>
+                                  <div style={{ width: '60px', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
+                                    <div style={{ width: `${s.mastery || 75}%`, height: '100%', background: '#3b82f6', borderRadius: '3px' }} />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>
@@ -1053,71 +1180,6 @@ function App() {
               <p style={{ color: 'var(--text-dim)' }}>Interconnected with your Mobile App</p>
             </header>
 
-            {/* AI PERFORMANCE OVERVIEW - Compact */}
-            {(dashboardAiLoading || dashboardAiAnalysis) && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass-card"
-                style={{
-                  padding: '16px 20px',
-                  marginBottom: '20px',
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05))',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-              >
-                {dashboardAiLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-dim)' }}>
-                    <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    <span style={{ fontSize: '13px', fontWeight: '700' }}>Aggregating Matrix Data...</span>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ padding: '6px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', color: '#3b82f6' }}>
-                          <Zap size={16} />
-                        </div>
-                        <div>
-                          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800' }}>Institutional AI Matrix</h3>
-                          <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-dim)' }}>Node Analysis Active</p>
-                        </div>
-                      </div>
-                      <div style={{
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '10px',
-                        fontWeight: '900',
-                        background: (dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
-                        color: (dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? '#ef4444' : '#10b981',
-                        border: `1px solid ${(dashboardAiAnalysis.risk_level || 'Low').toLowerCase() === 'high' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}`
-                      }}>
-                        {(dashboardAiAnalysis.risk_level || 'HEALTHY').toUpperCase()}
-                      </div>
-                    </div>
-                    <p style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--text-main)', marginBottom: '12px', opacity: 0.85 }}>
-                      {dashboardAiAnalysis.summary}
-                    </p>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={() => handleTabChange('intelligence')}
-                        style={{ padding: '6px 14px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        Intel Node
-                      </button>
-                      <button
-                        onClick={() => { setDashboardAiAnalysis(null); }}
-                        style={{ padding: '6px 14px', borderRadius: '6px', background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--glass-border)', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        Recalibrate
-                      </button>
-                    </div>
-                  </>
-                )}
-              </motion.div>
-            )}
             <div className="stats-grid">
               {[
                 { label: 'Total Students', value: students.length, icon: <Users size={20} />, color: '#ec4899' },
@@ -1322,7 +1384,6 @@ function App() {
                   { id: 'manage_users', label: 'Manage Users', icon: <UserCircle size={32} />, color: '#8b5cf6', desc: 'Control permissions' },
                   { id: 'manage_classes', label: 'Manage Classes', icon: <BookOpen size={32} />, color: '#06b6d4', desc: 'Hub configurations' },
                   { id: 'attendance_archive', label: 'Attendance Archive', icon: <Clock size={32} />, color: '#f59e0b', desc: 'Historical logs' },
-                  { id: 'intelligence', label: 'Intelligence', icon: <Brain size={32} />, color: '#10b981', desc: 'AI node monitoring' },
                   { id: 'teacher_tracking', label: 'Teacher Tracking', icon: <MapPin size={32} />, color: '#3b82f6', desc: 'Real-time telemetry' },
                   { id: 'institution_stats', label: 'Institution Stats', icon: <BarChart3 size={32} />, color: '#d946ef', desc: 'Big data analytics' },
                   { id: 'master_timetable', label: 'Master Timetable', icon: <Grid size={32} />, color: '#eab308', desc: 'Schedule matrix' },
@@ -1370,18 +1431,24 @@ function App() {
         return (
           <AttendanceHub
             classes={visibleClasses}
+            allClasses={classes}
             students={students}
             selectedClass={selectedClass}
             attDate={attDate}
+            attSubject={attSubject}
             attStatusMap={attStatusMap}
             attLoading={attLoading}
             attSaving={attSaving}
             handleAttClassChange={handleAttClassChange}
             handleAttDateChange={handleAttDateChange}
+            handleAttSubjectChange={handleAttSubjectChange}
             shiftAttDate={shiftAttDate}
             setStudentStatus={setStudentStatus}
             saveAllAttendance={saveAllAttendance}
             setAttStatusMap={setAttStatusMap}
+            role={role}
+            fullUserData={fullUserData}
+            visibleSubjects={visibleSubjects}
           />
         );
 
@@ -2170,6 +2237,9 @@ function App() {
                 const formData = new FormData(e.target);
                 const standard = formData.get('standard');
                 const section = formData.get('section');
+                const teacherId = formData.get('teacherId');
+                const teacherObj = teachersList.find(t => t.id === teacherId);
+                const teacherName = teacherObj ? teacherObj.name : null;
                 const displayName = section ? `${standard} - ${section}` : standard;
 
                 try {
@@ -2178,6 +2248,8 @@ function App() {
                     standard,
                     section: section || null,
                     displayName,
+                    classTeacher: teacherName,
+                    classTeacherId: teacherId || null,
                     createdAt: serverTimestamp()
                   });
                   alert('Hub Established Successfully!');
@@ -2202,6 +2274,16 @@ function App() {
                   <input name="section" placeholder="e.g. A, B, Alpha" style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '14px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none' }} />
                 </div>
 
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-dim)', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Class Teacher</label>
+                  <select name="teacherId" style={{ width: '100%', padding: '14px', borderRadius: '14px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', outline: 'none', fontWeight: '600' }}>
+                    <option value="">Unassigned</option>
+                    {teachersList.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <button type="submit" style={{ padding: '16px 32px', background: '#3b82f6', color: 'white', borderRadius: '14px', border: 'none', fontWeight: '900', cursor: 'pointer', boxShadow: '0 10px 20px rgba(59, 130, 246, 0.2)', fontSize: '14px' }}> + New Class </button>
               </form>
             </div>
@@ -2221,81 +2303,94 @@ function App() {
                 </div>
               ) : (
                 <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--glass-border)' }}>
-                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Hub Identifier</th>
-                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Enrolled Nodes</th>
-                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Status</th>
-                        <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {classes.map(cls => {
-                        const studentCount = allUsers.filter(u =>
-                          u.role === 'student' && (
-                            u.classId === cls.id ||
-                            u.class_id === cls.id ||
-                            u.classId === cls.displayName ||
-                            u.class_id === cls.displayName ||
-                            u.className === cls.displayName
-                          )
-                        ).length;
-                        return (
-                          <tr key={cls.id} style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                            <td style={{ padding: '16px 24px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.08)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <Cpu size={18} />
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', position: 'relative' }}>
+                      <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg)', zIndex: 10, backdropFilter: 'blur(10px)' }}>
+                        <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                          <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Hub Identifier</th>
+                          <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Class Teacher</th>
+                          <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Enrolled Nodes</th>
+                          <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Status</th>
+                          <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', letterSpacing: '1px' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {classes.map(cls => {
+                          const studentCount = allUsers.filter(u =>
+                            u.role === 'student' && (
+                              u.classId === cls.id ||
+                              u.class_id === cls.id ||
+                              u.classId === cls.displayName ||
+                              u.class_id === cls.displayName ||
+                              u.className === cls.displayName
+                            )
+                          ).length;
+                          return (
+                            <tr key={cls.id} style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                              <td style={{ padding: '16px 24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.08)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Cpu size={18} />
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)' }}>{cls.displayName}</div>
+                                    <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>ID: {cls.id.substring(0, 8).toUpperCase()}</div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)' }}>{cls.displayName}</div>
-                                  <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>ID: {cls.id.substring(0, 8).toUpperCase()}</div>
+                              </td>
+                              <td style={{ padding: '16px 24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+                                    {(cls.classTeacher || 'U').charAt(0)}
+                                  </div>
+                                  <span style={{ fontSize: '14px', fontWeight: '700', color: cls.classTeacher ? 'var(--text-main)' : 'var(--text-dim)' }}>
+                                    {cls.classTeacher || 'Not Assigned'}
+                                  </span>
                                 </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: '16px 24px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Users size={14} style={{ color: '#3b82f6' }} />
-                                <span style={{ fontSize: '14px', fontWeight: '700' }}>{studentCount} Students</span>
-                              </div>
-                            </td>
-                            <td style={{ padding: '16px 24px' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontSize: '11px', fontWeight: '800' }}>
-                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                                Active
-                              </div>
-                            </td>
-                            <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                <button
-                                  onClick={() => {
-                                    setEditingHub(cls);
-                                    setShowEditHubModal(true);
-                                  }}
-                                  className="action-btn-mini btn-blue"
-                                  style={{ padding: '8px 12px', borderRadius: '10px', gap: '6px', fontSize: '11px', fontWeight: '800' }}
-                                >
-                                  <Edit2 size={16} strokeWidth={2.5} /> Edit
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm('Archive this academic hub?')) {
-                                      await deleteDoc(doc(db, 'classes', cls.id));
-                                    }
-                                  }}
-                                  className="action-btn-mini btn-red"
-                                  style={{ padding: '8px', borderRadius: '10px' }}
-                                >
-                                  <Trash size={16} strokeWidth={2.5} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              </td>
+                              <td style={{ padding: '16px 24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <Users size={14} style={{ color: '#3b82f6' }} />
+                                  <span style={{ fontSize: '14px', fontWeight: '700' }}>{studentCount} Students</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: '16px 24px' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontSize: '11px', fontWeight: '800' }}>
+                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                                  Active
+                                </div>
+                              </td>
+                              <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => {
+                                      setEditingHub(cls);
+                                      setShowEditHubModal(true);
+                                    }}
+                                    className="action-btn-mini btn-blue"
+                                    style={{ padding: '8px 12px', borderRadius: '10px', gap: '6px', fontSize: '11px', fontWeight: '800' }}
+                                  >
+                                    <Edit2 size={16} strokeWidth={2.5} /> Edit
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm('Archive this academic hub?')) {
+                                        await deleteDoc(doc(db, 'classes', cls.id));
+                                      }
+                                    }}
+                                    className="action-btn-mini btn-red"
+                                    style={{ padding: '8px', borderRadius: '10px' }}
+                                  >
+                                    <Trash size={16} strokeWidth={2.5} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -2923,23 +3018,6 @@ function App() {
           />
         );
 
-      case 'intelligence':
-        return (
-          <IntelligenceHub
-            predictions={predictions}
-            allUsers={allUsers}
-            stats={stats}
-            attendanceArchive={attendanceArchive}
-            brainDnaData={brainDnaData}
-            isAnalyzing={isAnalyzing}
-            setIsAnalyzing={setIsAnalyzing}
-            aiInsights={aiInsights}
-            setAiInsights={setAiInsights}
-            showIntelligenceResults={showIntelligenceResults}
-            setShowIntelligenceResults={setShowIntelligenceResults}
-            analyzePerformance={analyzePerformance}
-          />
-        );
 
       case 'health': {
         const usersCount = allUsers.length;
@@ -3210,9 +3288,12 @@ function App() {
         );
 
       case 'doubts':
+        const visibleDoubts = role === 'admin' ? doubts : (doubts || []).filter(d =>
+          visibleClasses.some(c => c.id === d.classId || c.displayName === d.classId)
+        );
         return (
           <DoubtHub
-            doubts={doubts}
+            doubts={visibleDoubts}
             backendOnline={backendOnline}
             aiDoubtLoading={aiDoubtLoading}
             setAiDoubtLoading={setAiDoubtLoading}
@@ -3242,43 +3323,13 @@ function App() {
 
       case 'leave_requests':
         return (
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h2 style={{ marginBottom: '24px' }}>Leave Approvals</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {leaves.map(l => (
-                <div key={l.id} className="glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontWeight: '700', fontSize: '16px' }}>{l.studentName}</p>
-                    <p style={{ fontSize: '14px', color: 'var(--text-main)', marginTop: '4px' }}>{l.reason}</p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '8px' }}>{l.startDate} to {l.endDate}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {l.status === 'pending' ? (
-                      <>
-                        <button
-                          onClick={() => updateDoc(doc(db, 'leave_requests', l.id), { status: 'approved' })}
-                          style={{ background: '#10b981' }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => updateDoc(doc(db, 'leave_requests', l.id), { status: 'rejected' })}
-                          style={{ background: '#ef4444' }}
-                        >
-                          Reject
-                        </button>
-                      </>
-                    ) : (
-                      <span style={{ fontWeight: 'bold', color: l.status === 'approved' ? '#10b981' : '#ef4444', textTransform: 'uppercase', fontSize: '12px' }}>
-                        {l.status}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {leaves.length === 0 && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)' }}>No leave requests found.</div>}
-            </div>
-          </div>
+          <LeaveHub
+            leaves={leaves}
+            db={db}
+            fullUserData={fullUserData}
+            role={role}
+            visibleClasses={visibleClasses}
+          />
         );
       case 'classroom':
         return (
@@ -3309,7 +3360,6 @@ function App() {
               {[
                 { id: 'lesson_plans', label: 'AI Lesson Plan', icon: <Cpu size={32} />, color: '#1d4ed8' },
                 { id: 'upload_notes', label: 'Upload Notes', icon: <FileText size={32} />, color: '#059669' },
-                { id: 'intelligence', label: 'Smart Analysis', icon: <BarChart3 size={32} />, color: '#8b5cf6' },
                 { id: 'master_timetable', label: 'My Timetable', icon: <Grid size={32} />, color: '#eab308' },
               ].map(mod => (
                 <div key={mod.id} className="nav-item" onClick={() => handleTabChange(mod.id)} style={{ flexDirection: 'column', gap: '16px', padding: '32px 20px', background: 'var(--glass-surface)', border: '1px solid var(--glass-border)', height: 'auto', alignItems: 'center', textAlign: 'center' }}>
@@ -3361,6 +3411,7 @@ function App() {
             db={db}
             classes={visibleClasses}
             backendOnline={backendOnline}
+            allPlans={lessonPlans}
           />
         );
 
@@ -3390,30 +3441,196 @@ function App() {
 
       case 'upload_notes':
         return (
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2>Upload Class Notes</h2>
-              <button onClick={() => alert('File upload simulated. In a real environment, this would use Firebase Storage.')}>+ Select Files</button>
-            </div>
-            <div className="glass-card" style={{ padding: '40px', textAlign: 'center', border: '2px dashed var(--glass-border)', background: 'transparent' }}>
-              <FileText size={48} color="var(--text-dim)" style={{ marginBottom: '16px' }} />
-              <p style={{ color: 'var(--text-dim)' }}>Drag and drop PDF or Word documents here</p>
-              <p style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '8px' }}>Max size: 10MB</p>
+          <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '10px' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)',
+              padding: '28px 32px',
+              borderRadius: '24px',
+              color: 'white',
+              marginBottom: '28px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              boxShadow: '0 15px 35px rgba(5, 150, 105, 0.2)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Subtle glass effect accent */}
+              <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '150px', height: '150px', background: 'rgba(255,255,255,0.08)', borderRadius: '50%', filter: 'blur(30px)' }}></div>
+
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                <div style={{
+                  width: '56px', height: '56px', background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)'
+                }}>
+                  <FileText size={28} color="white" />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '900', letterSpacing: '-0.5px' }}>Upload Class <span style={{ color: '#d1fae5' }}>Notes</span></h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 10px #4ade80' }}></div>
+                    <p style={{ margin: 0, opacity: 0.9, fontSize: '13px', fontWeight: '600' }}>Academic Hub • Instant Student Sync</p>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
-            <div style={{ marginTop: '32px' }}>
-              <h3>Previously Uploaded</h3>
-              <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
-                {(notes || []).filter(n => n.teacherId === user.uid).map((file, i) => (
-                  <div key={file.id || i} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <FileText size={24} color="#059669" />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>{String(file.title || 'Note')}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-dim)', margin: '4px 0 0 0' }}>{file.createdAt && typeof file.createdAt.toDate === 'function' ? file.createdAt.toDate().toLocaleDateString() : 'Just now'}</div>
-                    </div>
-                    <Trash size={16} color="#ef4444" style={{ cursor: 'pointer' }} onClick={() => deleteDoc(doc(db, 'notes', file.id))} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '20px', alignItems: 'start' }}>
+              {/* Upload Form */}
+              <div className="glass-card" style={{ padding: '24px', position: 'sticky', top: '20px' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <PlusCircle size={18} color="#059669" /> Create New Entry
+                </h3>
+
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '700', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Note Title</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Algebra Basics"
+                      value={noteFormData.title}
+                      onChange={(e) => setNoteFormData({ ...noteFormData, title: e.target.value })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#f8fafc' }}
+                    />
                   </div>
-                ))}
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '700', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Subject</label>
+                    <select
+                      value={noteFormData.subject}
+                      onChange={(e) => setNoteFormData({ ...noteFormData, subject: e.target.value })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#f8fafc' }}
+                    >
+                      {visibleSubjects.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '700', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Target Class</label>
+                    <select
+                      value={noteFormData.classId}
+                      onChange={(e) => setNoteFormData({ ...noteFormData, classId: e.target.value })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', background: '#f8fafc' }}
+                    >
+                      <option value="">Select a Class</option>
+                      {visibleClasses.map(c => (
+                        <option key={c.id} value={c.id}>{c.displayName || c.standard}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '700', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Description</label>
+                    <textarea
+                      placeholder="Optional details..."
+                      value={noteFormData.description}
+                      onChange={(e) => setNoteFormData({ ...noteFormData, description: e.target.value })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', minHeight: '80px', background: '#f8fafc' }}
+                    />
+                  </div>
+
+                  <input type="file" id="note-file-picker" hidden onChange={(e) => setNoteFile(e.target.files[0])} />
+
+                  <div
+                    onClick={() => document.getElementById('note-file-picker').click()}
+                    style={{
+                      padding: '20px',
+                      border: '2px dashed #05966930',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: noteFile ? '#f0fdf4' : '#f8fafc',
+                    }}
+                  >
+                    <Upload size={24} color="#059669" style={{ marginBottom: '8px', opacity: 0.6 }} />
+                    <div style={{ fontWeight: '700', color: '#059669', fontSize: '13px' }}>
+                      {noteFile ? noteFile.name : 'Select PDF / Document'}
+                    </div>
+                  </div>
+
+                  <button
+                    disabled={isUploadingNote || !noteFile}
+                    onClick={handleNoteUpload}
+                    style={{
+                      width: '100%',
+                      background: '#059669',
+                      color: 'white',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      fontWeight: '800',
+                      fontSize: '14px',
+                      border: 'none',
+                      cursor: (isUploadingNote || !noteFile) ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 12px rgba(5, 150, 105, 0.2)',
+                      opacity: (isUploadingNote || !noteFile) ? 0.7 : 1
+                    }}
+                  >
+                    {isUploadingNote ? 'Uploading...' : 'Publish Note'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Uploaded List */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingLeft: '8px' }}>
+                  <FileText size={18} color="#64748b" />
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>Recent Uploads</h3>
+                </div>
+
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {(notes || []).filter(n => (n.teacherId === user.uid || n.teacher_id === user.uid)).length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '14px' }}>No notes uploaded yet.</div>
+                  )}
+                  {(notes || [])
+                    .filter(n => (n.teacherId === user.uid || n.teacher_id === user.uid))
+                    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+                    .map((n) => (
+                      <div
+                        key={n.id}
+                        className="glass-card"
+                        onClick={() => setNotePreview(n)}
+                        style={{
+                          padding: '16px',
+                          display: 'flex',
+                          gap: '16px',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          border: '1px solid #f1f5f9',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '14px' }}>
+                          <FileText size={22} color="#059669" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '15px' }}>{n.title}</div>
+                          <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                            <span style={{ fontWeight: '600' }}>{n.subject}</span>
+                            <span style={{ opacity: 0.3 }}>|</span>
+                            <span>{n.createdAt?.toDate?.().toLocaleDateString() || 'Just now'}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setNotePreview(n); }}
+                            style={{ padding: '10px', borderRadius: '10px', background: '#f1f5f9', color: '#64748b', border: 'none', cursor: 'pointer' }}
+                          >
+                            <ExternalLink size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete?')) deleteDoc(doc(db, 'notes', n.id)) }}
+                            style={{ padding: '10px', borderRadius: '10px', background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#ef4444' }}
+                          >
+                            <Trash size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
           </div>
@@ -3429,7 +3646,7 @@ function App() {
         return <QuizResults role={role} user={user} quizzes={quizzes} allUsers={allUsers} visibleClasses={visibleClasses} />;
 
       case 'student_analytics':
-        return <StudentAnalytics role={role} allUsers={allUsers} classes={visibleClasses} quizResults={quizResults} quizzes={quizzes} />;
+        return <StudentAnalytics role={role} allUsers={allUsers} classes={visibleClasses} subjects={visibleSubjects} quizResults={quizResults} quizzes={quizzes} />;
 
       case 'school_analytics':
         return <SchoolAnalytics students={students} allUsers={allUsers} classes={visibleClasses} attendanceArchive={attendanceArchive} assignments={assignments} quizzes={quizzes} />;
@@ -3484,9 +3701,20 @@ function App() {
                       if (!file) return;
                       try {
                         setSyncingImage(true);
-                        const storageRef = ref(storage, `profiles/${user.uid}`);
-                        await uploadBytes(storageRef, file);
-                        const url = await getDownloadURL(storageRef);
+                        console.log('Attempting Cloudinary Profile Upload...');
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('upload_preset', 'edutrack_uploads');
+                        formData.append('folder', 'profiles');
+
+                        const response = await fetch('https://api.cloudinary.com/v1_1/dwbpbi6zu/auto/upload', {
+                          method: 'POST',
+                          body: formData
+                        });
+
+                        if (!response.ok) throw new Error('Cloudinary upload failed');
+                        const data = await response.json();
+                        const url = data.secure_url;
 
                         const updates = {
                           avatar_url: url, // Primary Mobile Sync Key
@@ -3679,14 +3907,13 @@ function App() {
 
     // 2. Sub-modules categorization
     const classroomFeatures = ['attendance', 'attendance_archive', 'manage_assignments', 'quizzes', 'bulk_grading', 'new_quiz', 'create_assignment', 'classroom'];
-    const managementFeatures = ['history', 'manage_users', 'manage_classes', 'attendance_archive', 'intelligence', 'teacher_tracking', 'global_alerts', 'institution_stats', 'master_timetable', 'risk_monitor', 'manage_assignments'];
+    const managementFeatures = ['history', 'manage_users', 'manage_classes', 'attendance_archive', 'teacher_tracking', 'global_alerts', 'institution_stats', 'master_timetable', 'risk_monitor', 'manage_assignments'];
 
     // 3. Parental & Mapping logic
     if (tabId === 'classroom' && classroomFeatures.includes(activeTab)) return true;
     if (tabId === 'management' && managementFeatures.includes(activeTab)) return true;
 
     // AI Labs Mapping
-    if (tabId === 'ailabs' && activeTab === 'intelligence') return true;
 
     return false;
   };
@@ -3711,6 +3938,22 @@ function App() {
             <div style={{ fontSize: '9px', color: '#10b981', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: '2px', whiteSpace: 'nowrap' }}> System Active</div>
           </div>
         </div>
+
+        {!sidebarCollapsed && (
+          <div style={{ padding: '0 16px 16px' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+              <input
+                placeholder="Global Search..."
+                style={{
+                  width: '100%', padding: '10px 10px 10px 34px', borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)',
+                  color: 'white', fontSize: '12px', outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="nav-section-label" style={{ marginTop: '4px' }}>MAIN</div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -4099,9 +4342,20 @@ function App() {
                         if (!file) return;
                         try {
                           setSyncingImage(true);
-                          const storageRef = ref(storage, `profiles/${editingUser.id}`);
-                          await uploadBytes(storageRef, file);
-                          const url = await getDownloadURL(storageRef);
+                          console.log('Attempting Cloudinary Admin User Edit Upload...');
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          formData.append('upload_preset', 'edutrack_uploads');
+                          formData.append('folder', 'profiles');
+
+                          const response = await fetch('https://api.cloudinary.com/v1_1/dwbpbi6zu/auto/upload', {
+                            method: 'POST',
+                            body: formData
+                          });
+
+                          if (!response.ok) throw new Error('Cloudinary upload failed');
+                          const data = await response.json();
+                          const url = data.secure_url;
 
                           const updates = {
                             avatar_url: url,
@@ -4291,13 +4545,18 @@ function App() {
               const formData = new FormData(e.target);
               const standard = formData.get('standard');
               const section = formData.get('section');
+              const teacherId = formData.get('teacherId');
+              const teacherObj = teachersList.find(t => t.id === teacherId);
+              const teacherName = teacherObj ? teacherObj.name : null;
               const displayName = section ? `${standard} - ${section}` : standard;
 
               try {
                 await updateDoc(doc(db, 'classes', editingHub.id), {
                   standard,
                   section: section || null,
-                  displayName
+                  displayName,
+                  classTeacher: teacherName,
+                  classTeacherId: teacherId || null
                 });
                 setShowEditHubModal(false);
                 setEditingHub(null);
@@ -4319,12 +4578,118 @@ function App() {
                 <input name="section" defaultValue={editingHub.section || ''} placeholder="e.g. A, B, Alpha" style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '14px', background: '#f8fafc', color: '#1e293b', border: '1px solid #e2e8f0', outline: 'none', fontWeight: '600' }} />
               </div>
 
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#64748b', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Assigned Class Teacher</label>
+                <select name="teacherId" defaultValue={editingHub.classTeacherId || ''} style={{ width: '100%', boxSizing: 'border-box', padding: '14px', borderRadius: '14px', background: '#f8fafc', color: '#1e293b', border: '1px solid #e2e8f0', outline: 'none', fontWeight: '600' }}>
+                  <option value="">Unassigned</option>
+                  {teachersList.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="button" onClick={() => setShowEditHubModal(false)} style={{ flex: 1, padding: '16px', borderRadius: '14px', background: '#f1f5f9', color: '#475569', border: 'none', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>Discard</button>
                 <button type="submit" style={{ flex: 2, padding: '16px', borderRadius: '14px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: '900', cursor: 'pointer', fontSize: '14px', boxShadow: '0 10px 20px rgba(59, 130, 246, 0.2)' }}>Save Changes</button>
               </div>
             </form>
           </motion.div>
+        </div>
+      )}
+
+      {notePreview && (
+        <div
+          onClick={() => setNotePreview(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: 'relative', width: '90vw', height: '85vh', background: 'white', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            <div style={{ padding: '15px 25px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#f0fdf4', padding: '8px', borderRadius: '8px' }}>
+                  <FileText size={18} color="#059669" />
+                </div>
+                <span style={{ fontWeight: '800', color: '#1e293b' }}>{notePreview.title}</span>
+              </div>
+              <button
+                onClick={() => setNotePreview(null)}
+                style={{
+                  background: '#fee2e2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '12px',
+                  width: '40px',
+                  height: '40px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ef4444',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease',
+                  zIndex: 100
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ flex: 1, background: '#f8fafc', position: 'relative', overflow: 'hidden' }}>
+              {(() => {
+                // Primary check for known keys
+                let targetUrl = notePreview.url || notePreview.imageUrl || notePreview.image_url || notePreview.downloadUrl || notePreview.download_url || notePreview.file_url || notePreview.pdf_url || notePreview.attachment;
+
+                // Deep scan: If still not found, look for any string that looks like a URL
+                if (!targetUrl) {
+                  const allValues = Object.values(notePreview);
+                  targetUrl = allValues.find(v => typeof v === 'string' && v.startsWith('http'));
+                }
+
+                if (!targetUrl) return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', padding: '40px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔍</div>
+                    <div style={{ fontWeight: '800', color: '#64748b', marginBottom: '8px' }}>Sync Registry Incomplete</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>The mobile record exists but contains no valid external link.</div>
+                  </div>
+                );
+
+                const isImage = targetUrl.toLowerCase().includes('.jpg') ||
+                  targetUrl.toLowerCase().includes('.jpeg') ||
+                  targetUrl.toLowerCase().includes('.png') ||
+                  targetUrl.toLowerCase().includes('.gif') ||
+                  targetUrl.toLowerCase().includes('image') ||
+                  (targetUrl.toLowerCase().includes('firebase') && !targetUrl.toLowerCase().includes('.pdf'));
+
+                if (isImage) {
+                  return (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', overflow: 'auto' }}>
+                      <img
+                        src={targetUrl}
+                        alt={notePreview.title}
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
+                      />
+                    </div>
+                  );
+                }
+                return (
+                  <iframe
+                    src={targetUrl}
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                    title="Note Preview"
+                  />
+                );
+              })()}
+            </div>
+
+            <div style={{ padding: '15px', textAlign: 'center', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <a href={notePreview.url || notePreview.imageUrl || notePreview.image_url || notePreview.downloadUrl} download={notePreview.title} target="_blank" rel="noreferrer" style={{ background: '#059669', color: 'white', padding: '10px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: '700', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Download size={16} /> Download File
+              </a>
+              <button onClick={() => setNotePreview(null)} style={{ background: '#f1f5f9', color: '#64748b', padding: '10px 24px', borderRadius: '12px', border: 'none', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

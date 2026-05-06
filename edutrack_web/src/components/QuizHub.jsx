@@ -57,6 +57,7 @@ const QuizHub = ({
   const [activeView, setActiveView] = useState('manage');
   const [registryTab, setRegistryTab] = useState('Active');
   const [editingQuizId, setEditingQuizId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentStep, setCurrentStep] = useState(1); // 1: Setup, 2: Questions
   const [expandedQuestion, setExpandedQuestion] = useState(null);
   const [quizTitle, setQuizTitle] = useState('');
@@ -408,20 +409,45 @@ const QuizHub = ({
             exit={{ opacity: 0, y: 10 }}
             style={{ maxWidth: '1000px', margin: '0 auto' }}
           >
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', background: 'white', padding: '6px', borderRadius: '14px', width: 'fit-content', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              {['Active', 'Upcoming', 'Expired'].map(t => (
-                <button 
-                  key={t} 
-                  onClick={() => setRegistryTab(t)} 
-                  style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: registryTab === t ? '#3b82f6' : 'transparent', color: registryTab === t ? 'white' : '#64748b', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  {t}
-                </button>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', gap: '12px', background: 'white', padding: '6px', borderRadius: '14px', width: 'fit-content', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                {['Active', 'Upcoming', 'Expired'].map(t => (
+                  <button 
+                    key={t} 
+                    onClick={() => setRegistryTab(t)} 
+                    style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: registryTab === t ? '#3b82f6' : 'transparent', color: registryTab === t ? 'white' : '#64748b', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input
+                  placeholder="Search quiz title..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    padding: '12px 16px 12px 44px',
+                    borderRadius: '14px',
+                    border: '1px solid #e2e8f0',
+                    background: 'white',
+                    color: '#1e293b',
+                    fontSize: '14px',
+                    width: '280px',
+                    outline: 'none',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  }}
+                />
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {teacherQuizzes.filter(q => getStatus(q) === registryTab).map(q => (
+              {teacherQuizzes
+                .filter(q => getStatus(q) === registryTab)
+                .filter(q => !searchQuery || q.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map(q => (
                 <div key={q.id} className="glass-card" style={{ padding: '24px', background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', position: 'relative' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

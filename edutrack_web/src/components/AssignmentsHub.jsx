@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Layers, Clock, ClipboardList, CheckCircle, BookOpen, Users, FileText, Trash, Zap, ArrowLeft, PlusCircle, Calendar, TrendingUp, ExternalLink, Eye, XCircle, RefreshCw, AlertCircle
+  Layers, Clock, ClipboardList, CheckCircle, BookOpen, Users, FileText, Trash, Zap, ArrowLeft, PlusCircle, Calendar, TrendingUp, ExternalLink, Eye, XCircle, RefreshCw, AlertCircle, Search
 } from 'lucide-react';
 import {
   doc, updateDoc, addDoc, collection, serverTimestamp, deleteDoc
@@ -20,6 +20,7 @@ const AssignmentsHub = ({
   const [selectedAssignmentForGrading, setSelectedAssignmentForGrading] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const availableSubjects = fullUserData?.specialization || fullUserData?.subjects || ['Mathematics', 'Science', 'English', 'History', 'Geography', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
   const isAdmin = fullUserData?.role === 'admin';
@@ -173,28 +174,48 @@ const AssignmentsHub = ({
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Filter Hub:</span>
-                  <select 
-                    value={selectedClassId}
-                    onChange={(e) => setSelectedClassId(e.target.value)}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '10px',
-                      border: '1px solid var(--glass-border)',
-                      background: 'var(--input-bg)',
-                      color: 'var(--text-main)',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="all">All Classes</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id}>{c.displayName || c.standard}</option>
-                    ))}
-                  </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                    <input
+                      placeholder="Search mission title..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        padding: '10px 12px 10px 36px',
+                        fontSize: '13px',
+                        borderRadius: '12px',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--glass-border)',
+                        color: 'var(--text-main)',
+                        width: '240px',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Filter Hub:</span>
+                    <select
+                      value={selectedClassId}
+                      onChange={(e) => setSelectedClassId(e.target.value)}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--glass-border)',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-main)',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="all">All Classes</option>
+                      {classes.map(c => (
+                        <option key={c.id} value={c.id}>{c.displayName || c.standard}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -213,6 +234,9 @@ const AssignmentsHub = ({
                       .filter(a => {
                         // Class filter
                         if (selectedClassId !== 'all' && a.class_id !== selectedClassId) return false;
+
+                        // Search filter
+                        if (searchQuery && !a.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
                         // Tab filter
                         if (assignmentTab === 'all') return true;
@@ -273,10 +297,10 @@ const AssignmentsHub = ({
                                 </button>
                                 <button
                                   onClick={async () => { if (window.confirm('Delete this mission?')) await deleteDoc(doc(db, 'assignments', a.id)); }}
-                                  style={{ 
-                                    width: '36px', height: '36px', borderRadius: '10px', 
-                                    background: 'white', color: '#ef4444', 
-                                    border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', 
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '10px',
+                                    background: 'white', color: '#ef4444',
+                                    border: '1px solid #fee2e2', display: 'flex', alignItems: 'center',
                                     justifyContent: 'center', cursor: 'pointer',
                                     transition: 'all 0.2s',
                                     boxShadow: '0 2px 8px rgba(239, 68, 68, 0.08)'
@@ -329,17 +353,38 @@ const AssignmentsHub = ({
 
                 try {
                   const dueDate = new Date(formData.get('due_date'));
-                  await addDoc(collection(db, 'assignments'), {
+                  const assignmentData = {
                     title: String(formData.get('title') || 'Untitled'),
                     subject: String(formData.get('subject') || 'General'),
+                    subject_id: String(formData.get('subject') || 'General').toLowerCase(),
                     description: String(formData.get('description') || ''),
                     max_marks: parseFloat(formData.get('max_marks') || '0'),
                     due_date: Timestamp.fromDate(dueDate),
                     class_id: String(formData.get('class') || ''),
+                    classId: String(formData.get('class') || ''),
                     teacher_id: user.uid,
+                    teacherId: user.uid,
+                    faculty_id: user.uid,
                     file_url: assignmentFileUrl || null,
-                    created_at: serverTimestamp()
-                  });
+                    url: assignmentFileUrl || null,
+                    imageUrl: assignmentFileUrl || null,
+                    image_url: assignmentFileUrl || null,
+                    downloadUrl: assignmentFileUrl || null,
+                    created_at: serverTimestamp(),
+                    createdAt: serverTimestamp(),
+                    timestamp: serverTimestamp(),
+                    status: 'published',
+                    is_active: true
+                  };
+
+                  // Root Save
+                  await addDoc(collection(db, 'assignments'), assignmentData);
+
+                  // Class Sub-collection Save
+                  const classId = String(formData.get('class'));
+                  if (classId) {
+                    await addDoc(collection(db, 'classes', classId, 'assignments'), assignmentData);
+                  }
                   alert('Mission Deployed! 🚀');
                   setActiveView('manage');
                 } catch (err) { alert('Deployment Error: ' + err.message); }

@@ -40,7 +40,7 @@ const BulkGradingHub = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
-  const [isAutoSync, setIsAutoSync] = useState(false);
+  const isAutoSync = true;
   const [syncingRows, setSyncingRows] = useState({}); // { [studentId]: boolean }
 
 
@@ -339,31 +339,6 @@ const BulkGradingHub = ({
             </div>
           </div>
 
-          <div 
-            onClick={() => setIsAutoSync(!isAutoSync)}
-            style={{ 
-              background: isAutoSync ? '#ecfdf5' : '#f8fafc', 
-              padding: '16px 20px', borderRadius: '16px', 
-              border: `1px solid ${isAutoSync ? '#10b981' : '#e2e8f0'}`, 
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: '900', color: isAutoSync ? '#059669' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Auto-Sync App</div>
-              <div style={{ fontSize: '13px', fontWeight: '800', color: isAutoSync ? '#059669' : '#94a3b8', marginTop: '2px' }}>{isAutoSync ? 'ENABLED' : 'OFF'}</div>
-            </div>
-            <div style={{ 
-              width: '36px', height: '18px', background: isAutoSync ? '#10b981' : '#cbd5e1', 
-              borderRadius: '20px', position: 'relative', transition: 'all 0.2s' 
-            }}>
-              <div style={{ 
-                width: '14px', height: '14px', background: 'white', borderRadius: '50%', 
-                position: 'absolute', top: '2px', left: isAutoSync ? '20px' : '2px',
-                transition: 'all 0.2s'
-              }} />
-            </div>
-          </div>
         </div>
       </div>
 

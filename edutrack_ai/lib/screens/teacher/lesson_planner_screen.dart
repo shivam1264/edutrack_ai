@@ -122,12 +122,15 @@ class _LessonPlannerScreenState extends State<LessonPlannerScreen> {
       final user = context.read<AuthProvider>().user;
       await FirebaseFirestore.instance.collection('lesson_plans').add({
         'teacherId': user?.uid,
+        'teacher_id': user?.uid, // For web compatibility
         'subject': _selectedSubject,
         'topic': _topicCtrl.text.trim(),
         'grade': _selectedGrade,
         'duration': _selectedDuration,
         'plan': plan,
+        'activities': plan, // For web compatibility
         'createdAt': FieldValue.serverTimestamp(),
+        'created_at': FieldValue.serverTimestamp(), // For web compatibility
       });
       _loadSavedPlans();
     } catch (e) {
@@ -177,13 +180,16 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
     final user = context.read<AuthProvider>().user;
     await FirebaseFirestore.instance.collection('lesson_plans').add({
       'teacherId': user?.uid,
+      'teacher_id': user?.uid, // For web compatibility
       'teacherName': user?.name,
       'subject': _selectedSubject,
       'topic': _topicCtrl.text.trim(),
       'grade': _selectedGrade,
       'duration': _selectedDuration,
       'plan': _generatedPlan,
+      'activities': _generatedPlan, // For web compatibility
       'createdAt': FieldValue.serverTimestamp(),
+      'created_at': FieldValue.serverTimestamp(), // For web compatibility
     });
     _loadSavedPlans();
     if (mounted) {
@@ -436,7 +442,7 @@ Grade: $_selectedGrade | Duration: $_selectedDuration
               const Divider(height: 20),
               Flexible(
                 child: SingleChildScrollView(
-                  child: MarkdownBody(data: plan['plan'] ?? ''),
+                  child: MarkdownBody(data: plan['plan'] ?? plan['activities'] ?? ''),
                 ),
               ),
               const SizedBox(height: 16),

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Brain, BookOpen, MessageSquare, Search, Zap, Target, Users, ChevronRight, Activity, Radar as RadarIcon, BarChart3 } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, Treemap } from 'recharts';
 
-export default function StudentAnalytics({ role, allUsers, classes, quizResults, quizzes }) {
+export default function StudentAnalytics({ role, allUsers, classes, subjects, quizResults, quizzes }) {
   const [activeTab, setActiveTab] = useState('brain_dna');
   const [brainDnaData, setBrainDnaData] = useState([]);
   const [studyTasks, setStudyTasks] = useState([]);
@@ -14,8 +14,28 @@ export default function StudentAnalytics({ role, allUsers, classes, quizResults,
   const [knowledgeNodes, setKnowledgeNodes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedClassId, setSelectedClassId] = useState('all');
+  const students = (() => {
+    const allowedStudents = allUsers.filter(u => {
+      if (u.role !== 'student') return false;
+      if (role === 'admin') return true;
+      if (role === 'teacher') {
+        const allowedClassIds = classes.map(c => c.id);
+        const allowedClassNames = classes.map(c => c.displayName);
+        return allowedClassIds.includes(u.class_id) || allowedClassIds.includes(u.classId) ||
+          allowedClassNames.includes(u.standard) || allowedClassNames.includes(u.grade);
+      }
+      return true;
+    });
 
-  const students = allUsers.filter(u => u.role === 'student');
+    if (selectedClassId === 'all') return allowedStudents;
+
+    return allowedStudents.filter(s =>
+      s.class_id === selectedClassId || s.classId === selectedClassId ||
+      s.standard === selectedClassId || s.grade === selectedClassId
+    );
+  })();
+
   const studentMap = {};
   students.forEach(s => { studentMap[s.id] = s; });
 
@@ -132,16 +152,29 @@ export default function StudentAnalytics({ role, allUsers, classes, quizResults,
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ position: 'relative', marginBottom: '20px' }}>
-        <Search size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-        <input
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+          <input
+            className="glass-input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search students..."
+            style={{ width: '100%', paddingLeft: '40px' }}
+          />
+        </div>
+
+        <select
           className="glass-input"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search students..."
-          style={{ width: '100%', paddingLeft: '40px' }}
-        />
+          value={selectedClassId}
+          onChange={(e) => setSelectedClassId(e.target.value)}
+          style={{ width: '200px', cursor: 'pointer' }}
+        >
+          <option value="all">All Classes</option>
+          {classes.map(c => (
+            <option key={c.id} value={c.id}>{c.displayName || c.id}</option>
+          ))}
+        </select>
       </div>
 
       {/* Content based on active tab */}
@@ -163,9 +196,16 @@ export default function StudentAnalytics({ role, allUsers, classes, quizResults,
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={(() => {
                   const subjectMap = {};
-                  const dataToProcess = selectedStudent
+                  let dataToProcess = selectedStudent
                     ? brainDnaData.filter(d => d.student_id === selectedStudent)
                     : brainDnaData;
+
+                  // Teacher Subject Filtering
+                  if (role === 'teacher' && subjects) {
+                    dataToProcess = dataToProcess.filter(d =>
+                      subjects.some(s => (d.subject || '').toLowerCase().includes(s.toLowerCase()))
+                    );
+                  }
 
                   ['Math', 'Science', 'English', 'History', 'Physics', 'Arts', 'Logic', 'Code'].forEach(s => {
                     subjectMap[s] = { subject: s, mastery: 0, count: 0 };
@@ -221,10 +261,17 @@ export default function StudentAnalytics({ role, allUsers, classes, quizResults,
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={(() => {
                     const distribution = { '0-20%': 0, '20-40%': 0, '40-60%': 0, '60-80%': 0, '80-100%': 0 };
-                    const dataToProcess = quizResults.filter(r => {
+                    let dataToProcess = quizResults.filter(r => {
                       const student = studentMap[r.student_id] || studentMap[r.studentId] || {};
                       return !searchTerm || student.name?.toLowerCase().includes(searchTerm.toLowerCase());
                     });
+
+                    // Teacher Subject Filtering
+                    if (role === 'teacher' && subjects) {
+                      dataToProcess = dataToProcess.filter(r =>
+                        subjects.some(s => (r.subject || '').toLowerCase().includes(s.toLowerCase()))
+                      );
+                    }
 
                     dataToProcess.forEach(r => {
                       const pct = (r.score / (r.total || 1)) * 100;
@@ -274,7 +321,16 @@ export default function StudentAnalytics({ role, allUsers, classes, quizResults,
                       const quizLookup = {};
                       if (quizzes) quizzes.forEach(q => quizLookup[q.id] = q.title);
 
-                      quizResults.forEach(r => {
+                      let dataToFilter = quizResults;
+
+                      // Teacher Subject Filtering
+                      if (role === 'teacher' && subjects) {
+                        dataToFilter = dataToFilter.filter(r =>
+                          subjects.some(s => (r.subject || '').toLowerCase().includes(s.toLowerCase()))
+                        );
+                      }
+
+                      dataToFilter.forEach(r => {
                         // Priority: quiz_title (sync) > quizLookup[id] > title (legacy) > 'Quiz'
                         const t = r.quiz_title || quizLookup[r.quiz_id] || quizLookup[r.quizId] || r.title || 'Quiz';
                         if (!qMap[t]) qMap[t] = { name: t.length > 10 ? t.substring(0, 10) + '...' : t, totalScore: 0, count: 0 };
@@ -331,7 +387,16 @@ export default function StudentAnalytics({ role, allUsers, classes, quizResults,
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={(() => {
                     const stats = {};
-                    studyTasks.forEach(t => {
+                    let tasksToProcess = studyTasks;
+
+                    // Teacher Subject Filtering
+                    if (role === 'teacher' && subjects) {
+                      tasksToProcess = tasksToProcess.filter(t =>
+                        subjects.some(s => (t.subject || '').toLowerCase().includes(s.toLowerCase()))
+                      );
+                    }
+
+                    tasksToProcess.forEach(t => {
                       const sub = t.subject || 'Other';
                       if (!stats[sub]) stats[sub] = { name: sub, completed: 0, pending: 0 };
                       if (t.status === 'completed' || t.completed) stats[sub].completed++;
@@ -519,13 +584,30 @@ export default function StudentAnalytics({ role, allUsers, classes, quizResults,
             </h3>
             <div style={{ width: '100%', height: '300px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[
-                  { name: 'Mon', queries: 24, sessions: 12 },
-                  { name: 'Tue', queries: 45, sessions: 18 },
-                  { name: 'Wed', queries: 32, sessions: 15 },
-                  { name: 'Thu', queries: 67, sessions: 22 },
-                  { name: 'Fri', queries: 58, sessions: 20 },
-                ]}>
+                <BarChart data={(() => {
+                  const dayMap = {};
+                  const last7Days = [...Array(7)].map((_, i) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    return d.toLocaleDateString('en-US', { weekday: 'short' });
+                  }).reverse();
+
+                  last7Days.forEach(day => dayMap[day] = { name: day, queries: 0, sessions: 0 });
+
+                  homeworkChats.forEach(chat => {
+                    const date = chat.timestamp?.toDate?.() || new Date();
+                    const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    if (dayMap[day]) dayMap[day].queries++;
+                  });
+
+                  homeworkUsage.forEach(usage => {
+                    const date = usage.timestamp?.toDate?.() || new Date();
+                    const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    if (dayMap[day]) dayMap[day].sessions++;
+                  });
+
+                  return Object.values(dayMap);
+                })()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: 'var(--text-dim)', fontSize: 12, fontWeight: '800' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: 'var(--text-dim)', fontSize: 12, fontWeight: '800' }} axisLine={false} tickLine={false} />

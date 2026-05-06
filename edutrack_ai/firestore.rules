@@ -89,6 +89,16 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ── notes ──────────────────────────────────────────────────────────────────
+    // Read: all authenticated users
+    // Write: teacher, admin
+    match /notes/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdminOrTeacher();
+      allow update: if isAdminOrTeacher();
+      allow delete: if isAdmin();
+    }
+
     // ── submissions ────────────────────────────────────────────────────────────
     // Read: own student, teacher, admin
     // Write: student (own), teacher (for grading), admin

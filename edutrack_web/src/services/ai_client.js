@@ -52,7 +52,7 @@ async function generateWithGemini(prompt, systemInstruction = "You are a helpful
   if (!GEMINI_API_KEY) throw new Error("Gemini API Key missing");
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  
+
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -81,9 +81,30 @@ async function generateAI(prompt, systemInstruction) {
       return await generateWithGemini(prompt, systemInstruction);
     } catch (geminiErr) {
       console.error("All AI providers failed. Activating Demo Mode Fallback.", geminiErr);
-      
+
+      const lowerPrompt = prompt.toLowerCase();
+
+      // Professional Demo Fallback for Lesson Plans
+      if (lowerPrompt.includes("lesson plan")) {
+        return `### 🎯 Lesson Strategy: ${prompt.split(':').pop() || 'Topic Analysis'}
+        
+#### 📖 Learning Objectives
+1. Understand the core principles and foundational concepts of the topic.
+2. Demonstrate the ability to apply theoretical knowledge to practical scenarios.
+3. Critically analyze the relationship between different components of the subject.
+
+#### 🛠️ Teaching Strategy
+- **Introduction (10 mins):** Hook students with a real-world application or a provocative question.
+- **Direct Instruction (20 mins):** Step-by-step breakdown of the concept using visual aids and interactive examples.
+- **Guided Practice (10 mins):** Collaborative problem-solving or group discussion to reinforce learning.
+
+#### 📝 Assessment & Feedback
+- Quick formative quiz or "exit ticket" to gauge immediate understanding.
+- Peer-review activity to encourage collaborative critique.`;
+      }
+
       // Professional Demo Fallback for Quiz Generation
-      if (prompt.toLowerCase().includes("create") || prompt.toLowerCase().includes("generate")) {
+      if (lowerPrompt.includes("create") || lowerPrompt.includes("generate") || lowerPrompt.includes("quiz") || lowerPrompt.includes("questions")) {
         return JSON.stringify([
           { "text": "What is the primary function of the concept mentioned in your topic?", "options": ["Option A: Core Function", "Option B: Secondary Role", "Option C: Structural Support", "Option D: None of the above"], "correctOption": 0, "marks": 2, "type": "mcq" },
           { "text": "Which of the following best describes the historical context of this subject?", "options": ["Ancient Origin", "Modern Innovation", "Industrial Revolution Era", "Digital Age Milestone"], "correctOption": 1, "marks": 2, "type": "mcq" },
@@ -92,7 +113,7 @@ async function generateAI(prompt, systemInstruction) {
           { "text": "What is the most common misconception about this topic among students?", "options": ["Overcomplication", "Lack of Utility", "Universal Acceptance", "Limited Scope"], "correctOption": 0, "marks": 2, "type": "mcq" }
         ]);
       }
-      
+
       throw new Error("AI Service Unavailable");
     }
   }
@@ -103,7 +124,7 @@ async function generateAI(prompt, systemInstruction) {
 export const analyzePerformanceClient = async (data) => {
   const task = data.task || 'analysis';
   let systemInstruction = "You are a senior academic analyst. Return ONLY raw JSON with keys: summary, insights, recommendations, risk_level.";
-  
+
   if (task === 'wellness_analysis') {
     systemInstruction = "You are an empathetic school counselor. Return ONLY raw JSON with keys: risk_level, insights, recommendations, summary. insights and recommendations must be arrays of short strings.";
   }
@@ -119,7 +140,7 @@ export const generateQuizClient = async (data) => {
   Structure: [{"text": "Question?", "options": ["Choice1", "Choice2"], "correctOption": 0, "marks": 1, "type": "mcq"}]`;
 
   const prompt = `Create ${count} ${type} questions for Class 9/10 students. Topic: ${topic} | Subject: ${subject} | Difficulty: ${difficulty}.`;
-  
+
   const responseText = await generateAI(prompt, systemInstruction);
   return parseAIJson(responseText);
 };
@@ -127,6 +148,17 @@ export const generateQuizClient = async (data) => {
 export const generalChatClient = async (message, context = 'teacher') => {
   const systemInstruction = `You are EduTrack AI. Current role: ${context}. Reply in concise, practical language. Keep answers under 4 sentences.`;
   const responseText = await generateAI(message, systemInstruction);
+  return { answer: responseText };
+};
+
+export const generateLessonPlanClient = async (data) => {
+  const { topic, subject, grade, duration } = data;
+  const systemInstruction = `You are a Senior Academic Coordinator. Generate a professional, highly-detailed lesson plan.
+  Include learning objectives, detailed teaching methodology, interactive activities, and assessment strategies.
+  Use markdown for structured formatting. Be comprehensive and educational.`;
+
+  const prompt = `Generate a comprehensive lesson plan for: Topic: ${topic}, Subject: ${subject}, Grade: ${grade}, Duration: ${duration}`;
+  const responseText = await generateAI(prompt, systemInstruction);
   return { answer: responseText };
 };
 
@@ -138,7 +170,7 @@ export const predictGradeClient = (data) => {
 
   const perf = (attendance * 0.3 + avgScore * 0.35 + submissions * 0.2 + quizAvg * 0.15);
   const risk = perf >= 75 ? 'low' : (perf >= 55 ? 'medium' : 'high');
-  
+
   let grade = 'F';
   if (perf >= 90) grade = 'A+';
   else if (perf >= 80) grade = 'A';
@@ -156,14 +188,34 @@ export const predictGradeClient = (data) => {
 // --- Helpers ---
 
 function parseAIJson(text) {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```json/, "").replace(/```$/, "").trim();
-  }
   try {
-    return JSON.parse(cleaned);
+    // 1. Try direct parse
+    return JSON.parse(text);
   } catch (e) {
-    console.error("Failed to parse AI JSON", cleaned);
-    return { error: "Failed to parse AI response" };
+    try {
+      // 2. Extract JSON from markdown blocks (handles ```json ... ``` or ``` ... ```)
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      if (jsonMatch && jsonMatch[1]) {
+        return JSON.parse(jsonMatch[1].trim());
+      }
+      
+      // 3. Fallback: find first '{' or '[' and last matching brace/bracket
+      const firstBrace = text.indexOf('{');
+      const lastBrace = text.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        return JSON.parse(text.substring(firstBrace, lastBrace + 1));
+      }
+      
+      const firstBracket = text.indexOf('[');
+      const lastBracket = text.lastIndexOf(']');
+      if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+        return JSON.parse(text.substring(firstBracket, lastBracket + 1));
+      }
+      
+      throw new Error("No JSON structure found in text");
+    } catch (innerE) {
+      console.error("Failed to parse AI JSON:", text, innerE);
+      return { error: "Failed to parse AI response" };
+    }
   }
 }
