@@ -107,6 +107,7 @@ import LeaveHub from './components/LeaveHub';
 import QuizHub from './components/QuizHub';
 import LessonPlanner from './components/LessonPlanner';
 import BulkGradingHub from './components/BulkGradingHub';
+import AcademicCalendar from './components/AcademicCalendar';
 import logo from './assets/Edu_track-logo.png';
 
 class ErrorBoundary extends React.Component {
@@ -1449,6 +1450,17 @@ function App() {
             role={role}
             fullUserData={fullUserData}
             visibleSubjects={visibleSubjects}
+          />
+        );
+      case 'calendar':
+        return (
+          <AcademicCalendar
+            assignments={assignments}
+            quizzes={quizzes}
+            notes={notes}
+            lessonPlans={lessonPlans}
+            classes={visibleClasses}
+            role={role}
           />
         );
 
@@ -3939,21 +3951,7 @@ function App() {
           </div>
         </div>
 
-        {!sidebarCollapsed && (
-          <div style={{ padding: '0 16px 16px' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-              <input
-                placeholder="Global Search..."
-                style={{
-                  width: '100%', padding: '10px 10px 10px 34px', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)',
-                  color: 'white', fontSize: '12px', outline: 'none'
-                }}
-              />
-            </div>
-          </div>
-        )}
+
 
         <div className="nav-section-label" style={{ marginTop: '4px' }}>MAIN</div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -3971,6 +3969,7 @@ function App() {
               <div className="nav-section-label" style={{ marginTop: '12px' }}>ACADEMIC</div>
               {[
                 { id: 'classroom', label: 'Classroom', icon: <GraduationCap size={18} /> },
+                { id: 'calendar', label: 'Academic Calendar', icon: <Calendar size={18} /> },
                 { id: 'ailabs', label: 'AI Labs', icon: <Brain size={18} /> },
                 { id: 'quiz_results', label: 'Quiz Results', icon: <CheckCircle size={18} /> },
                 { id: 'student_analytics', label: 'Student Analytics', icon: <BarChart3 size={18} /> },
